@@ -10,3 +10,4 @@ downloads/
 .idea/
 .vscode/
 node_modules/
+.json
