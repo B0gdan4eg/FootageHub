@@ -26,3 +26,7 @@ async def count_downloads_by_user(session: AsyncSession, user_id: int) -> int:
     )
     count = result.scalar_one()
     return count
+
+async def count_total_downloads(session: AsyncSession):
+    result = await session.execute(select(func.count()).select_from(Download))
+    return result.scalar()

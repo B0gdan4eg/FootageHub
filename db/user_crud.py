@@ -2,7 +2,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import User
 from datetime import datetime, timedelta
-from sqlalchemy import update
+from sqlalchemy import update, func
 
 async def get_user_by_telegram_id(session: AsyncSession, tg_id: int):
     result = await session.execute(select(User).where(User.tg_id == tg_id))
@@ -39,3 +39,18 @@ async def add_user_credits(session, user_id: int, credits: int):
         )
     )
     await session.commit()
+
+async def get_all_users(session: AsyncSession):
+    result = await session.execute(select(User))
+    return result.scalars().all()
+
+
+async def count_active_subs(session: AsyncSession):
+    result = await session.execute(
+        select(func.count()).select_from(User).where(
+            User.is_subscribed == True,
+            User.subscription_until != None,
+            User.subscription_until > func.now()
+        )
+    )
+    return result.scalar()
