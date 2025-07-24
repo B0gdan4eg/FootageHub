@@ -1,0 +1,36 @@
+name: Build and Deploy to VPS via GHCR
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Log in to GitHub Container Registry
+      run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+    - name: Build and push Docker image
+      run: |
+        docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/YOUR_REPO_NAME:latest ./bot
+        docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/YOUR_REPO_NAME:latest
+
+    - name: Set up SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.VPS_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy on VPS
+      run: |
+        ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+        docker login ghcr.io -u '${{ secrets.GHCR_USERNAME }}' -p '${{ secrets.GHCR_TOKEN }}'
+        docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/YOUR_REPO_NAME:latest
+        docker compose -f /opt/my_bot/docker-compose.yml up -d
+        EOF
