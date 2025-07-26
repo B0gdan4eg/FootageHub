@@ -14,7 +14,7 @@ services:
     environment:
       POSTGRES_DB: botdb
       POSTGRES_USER: botuser
-      POSTGRES_PASSWORD: botpass
+      POSTGRES_PASSWORD: {secrets.POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
 
