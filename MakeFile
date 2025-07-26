@@ -1,0 +1,23 @@
+# Параметры
+IMAGE_NAME=ghcr.io/$(GHCR_USERNAME)/your_bot_repo
+TAG=latest
+
+# Обфускация кода
+obfuscate:
+	@echo "🔐 Обфускация кода..."
+	pyarmor gen -O dist/ bot/
+
+# Сборка Docker-образа
+build: obfuscate
+	@echo "🐳 Сборка Docker-образа..."
+	docker build -t $(IMAGE_NAME):$(TAG) .
+
+# Push в GHCR
+push:
+	@echo "🚀 Публикация образа в GHCR..."
+	echo $(GHCR_TOKEN) | docker login ghcr.io -u $(GHCR_USERNAME) --password-stdin
+	docker push $(IMAGE_NAME):$(TAG)
+
+# Удаление билдов
+clean:
+	rm -rf dist

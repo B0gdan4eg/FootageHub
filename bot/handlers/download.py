@@ -114,7 +114,7 @@ async def handle_link(message: types.Message):
                 await session.commit()
 
             await message.answer("Файл скачан и сохранён, отправляю:")
-            await message.answer_document(types.FSInputFile(file_path))
+            await message.answer(file_path)
         else:
             await message.answer("Не удалось скачать файл по ссылке.")
 

@@ -11,3 +11,5 @@ downloads/
 .vscode/
 node_modules/
 .json
+key
+key.pub
