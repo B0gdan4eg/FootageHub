@@ -22,12 +22,12 @@ jobs:
 
     - name: Set up SSH
       run: |
+        mkdir -p ~/.ssh
+        printf "%s\n" "${{ secrets.VPS_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
     - name: Deploy on VPS
       run: |
-        ssh -i ${{ secrets.VPS_HOST }} -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << EOF
-        cd /opt/my_bot
-        docker compose pull
-        docker compose up -d
-        EOF
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+          "cd /opt/my_bot && docker compose pull && docker compose up -d"
