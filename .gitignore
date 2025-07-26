@@ -11,5 +11,5 @@ downloads/
 .vscode/
 node_modules/
 .json
-key
-key.pub
+github-actions-key
+github-actions-key.pub
