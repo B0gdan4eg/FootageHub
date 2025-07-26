@@ -29,7 +29,7 @@ jobs:
 
     - name: Deploy on VPS
       run: |
-        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+        ssh -i ~/.ssh/id_ed25519 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
         cd /opt/my_bot
         docker compose pull
         docker compose up -d
