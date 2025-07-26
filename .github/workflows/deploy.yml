@@ -17,8 +17,8 @@ jobs:
 
     - name: Build and push Docker image
       run: |
-        docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/YOUR_REPO_NAME:latest .
-        docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/YOUR_REPO_NAME:latest
+        docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/footagehub:latest .
+        docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/footagehub:latest
 
     - name: Set up SSH
       run: |
