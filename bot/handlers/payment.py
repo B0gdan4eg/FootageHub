@@ -76,7 +76,7 @@ async def process_purchase(callback_query: types.CallbackQuery):
         await callback_query.answer()
         return
 
-    with open(r"bot\prices_list.json", "r", encoding="utf-8") as f:
+    with open("prices_list.json", "r", encoding="utf-8") as f:
         data_dict = json.load(f)
 
     data = dict_to_namespace(data_dict)
