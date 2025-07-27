@@ -11,6 +11,6 @@ def dict_to_namespace(d):
     else:
         return d
 
-# Читаем JSON из файла
-with open(r"bot\prices_list.json", "r", encoding="utf-8") as f:
-    data_dict = json.load(f)
+# # Читаем JSON из файла
+# with open(r"bot\prices_list.json", "r", encoding="utf-8") as f:
+#     data_dict = json.load(f)
