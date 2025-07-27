@@ -1,7 +1,7 @@
 from aiosend import CryptoPay, TESTNET
 from bot.config import CRYPTO_BOT_API_KEY
 
-async def create_crypto_invoice(user_id: int, amount: float, type_: str = "subscription"):
+async def create_crypto_invoice(user_id: int, amount: float, type_: str):
     crypto = CryptoPay(token=CRYPTO_BOT_API_KEY, network=TESTNET)
 
     invoice = await crypto.create_invoice(
