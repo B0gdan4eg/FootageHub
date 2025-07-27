@@ -9,4 +9,4 @@ async def recreate_tables():
         # Создаем все таблицы заново
         await conn.run_sync(Base.metadata.create_all)
 
-asyncio.run(recreate_tables())
+#asyncio.run(recreate_tables())
