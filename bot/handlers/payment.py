@@ -15,7 +15,7 @@ router = Router()
 
 @router.callback_query(lambda c: c.data == "buy_subscription")
 async def choose_subscribe_plan(callback_query: types.CallbackQuery):
-    with open(r"bot\prices_list.json", "r", encoding="utf-8") as f:
+    with open("prices_list.json", "r", encoding="utf-8") as f:
         data_dict = json.load(f)
     data = dict_to_namespace(data_dict) 
        
@@ -36,7 +36,7 @@ async def choose_subscribe_plan(callback_query: types.CallbackQuery):
     
 @router.callback_query(lambda c: c.data == "buy_credits")
 async def choose_credit_plan(callback_query: types.CallbackQuery):
-    with open(r"bot\prices_list.json", "r", encoding="utf-8") as f:
+    with open("prices_list.json", "r", encoding="utf-8") as f:
         data_dict = json.load(f)
     data = dict_to_namespace(data_dict)
 
