@@ -1,6 +1,5 @@
 from db.models import Base
 from db.session import engine
-import asyncio
 
 async def recreate_tables():
     async with engine.begin() as conn:

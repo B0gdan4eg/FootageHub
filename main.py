@@ -5,7 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from fastapi import FastAPI
 
 from bot.config import BOT_TOKEN
-from bot.handlers import start, download, info, admin
+from bot.handlers import start, download, info, admin, payment
 from bot.webhook import cryptobot
 from init_db import recreate_tables
 
@@ -22,6 +22,7 @@ dp.include_router(start.router)
 dp.include_router(admin.router)
 dp.include_router(info.router)
 dp.include_router(download.router)
+dp.include_router(payment.router)
 
 
 async def main():
