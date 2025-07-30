@@ -1,4 +1,3 @@
-import json
 from types import SimpleNamespace
 
 def dict_to_namespace(d):
