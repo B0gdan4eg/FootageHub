@@ -21,7 +21,7 @@ def json_open(str):
     try:
         with open(PRICE_LIST, "r", encoding="utf-8") as f:
             data_dict = json.load(f)
-            return data_dict
+            return dict(data_dict)
     except Exception as e:
         print(f"❌ Ошибка при загрузке PRICE_LIST: {e}")
         return None  
