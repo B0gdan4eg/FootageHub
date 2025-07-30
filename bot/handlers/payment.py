@@ -9,7 +9,7 @@ from envato_utils.test_env import test
 router = Router()
 
 # Потом убрать
-PRICE_LIST = "prices_list.json"
+PRICE_LIST = "./prices_list.json"
 
 # Открывает JSON
 def json_open(str):

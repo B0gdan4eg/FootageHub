@@ -5,6 +5,7 @@ from db.downloaded_file_crud import create_media, create_download
 import datetime
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from envato_utils.test_env import test
+import asyncio
 
 router = Router()
 
@@ -77,6 +78,12 @@ async def handle_link(message: types.Message):
                 reply_markup=keyboard
             )
             return
+        
+        await message.answer_chat_action("typing")
+        thinking_msg = await message.answer("⏳")
+        for emoji in ["🤔", "💭", "🧠", "⏳"]:
+            await asyncio.sleep(0.5)
+            await thinking_msg.edit_text(emoji)
 
         file_path = await test(url)
         print(file_path,url)
@@ -84,11 +91,14 @@ async def handle_link(message: types.Message):
             media = await create_media(session, url=url, file_path=file_path, file_type="image")
             await create_download(session, user.id, media.id)
             
+            await thinking_msg.edit_text("✅ Готово!")
+            
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="⬇️ Скачать", url=file_path)]
                 ]
             )
+            
             await message.answer(
                 "Ваша ссылка:",
                 reply_markup=keyboard

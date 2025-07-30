@@ -42,5 +42,6 @@ async def cmd_start(message: types.Message, state: FSMContext):
     await message.answer(
         WELCOME_MESSAGE.format(name=message.from_user.first_name),
         parse_mode=ParseMode.HTML,
-        reply_markup=main_menu_kb
+        reply_markup=main_menu_kb,
+        disable_web_page_preview=True
     )
