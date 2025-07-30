@@ -8,7 +8,7 @@ from services.json_reader import dict_to_namespace
 router = Router()
 
 # Потом убрать
-PRICE_LIST = "./prices_list.json"
+PRICE_LIST = "bot\handlers\prices_list.json"
 
 # Коллбек на подписку
 @router.callback_query(lambda c: c.data == "buy_subscription")
