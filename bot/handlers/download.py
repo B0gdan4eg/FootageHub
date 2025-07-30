@@ -6,6 +6,7 @@ import datetime
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from envato_utils.test_env import test
 import asyncio
+from aiogram import Bot
 
 router = Router()
 
@@ -45,7 +46,7 @@ async def ask_for_link(message: types.Message):
     await message.answer("Находится в разработке, так же как и многие другие ресурсы, ждите обновлений")
 
 @router.message(F.text)
-async def handle_link(message: types.Message):
+async def handle_link(message: types.Message, bot: Bot):
     url = message.text.strip()
     if not url.startswith("https://elements.envato.com/"):
         await message.answer("❌ Это не похоже на ссылку от Envato Elements.")
@@ -79,11 +80,12 @@ async def handle_link(message: types.Message):
             )
             return
         
-        await message.answer_chat_action("typing")
+        await bot.send_chat_action(chat_id=message.chat.id, action="typing")
         thinking_msg = await message.answer("⏳")
         for emoji in ["🤔", "💭", "🧠", "⏳"]:
             await asyncio.sleep(0.5)
             await thinking_msg.edit_text(emoji)
+
 
         file_path = await test(url)
         print(file_path,url)
@@ -108,4 +110,4 @@ async def handle_link(message: types.Message):
                 user.credits -= 1
                 await session.commit()
         else:
-            await message.answer("Не удалось скачать файл по ссылке.")
+            await thinking_msg.edit_text("❌ Не удалось скачать файл по ссылке.")
