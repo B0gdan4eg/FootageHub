@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from db import get_session
+from db.session import get_session
 from db.models import User, Payment
 import json
 from datetime import datetime, timedelta
