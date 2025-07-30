@@ -66,9 +66,11 @@ async def handle_link(message: types.Message):
 
         # Если файл не в кеше
         if not has_active_sub and user.credits <= 0:
-            keyboard = InlineKeyboardMarkup(row_width=1)
-            pay_button = InlineKeyboardButton(text="Купить подписку или кредиты", callback_data="create_invoice")
-            keyboard.add(pay_button)
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text="Купить подписку или кредиты", callback_data="create_invoice")]
+                ]
+            )
 
             await message.answer(
                 "У вас закончились бесплатные скачивания. Купите подписку или пополните кредиты.",
