@@ -1,14 +1,9 @@
-import os
 from aiogram import Router, types, F
 from db.session import get_session
 from db.user_crud import get_user_by_telegram_id
-from db.downloaded_file_crud import get_media_by_url, create_media, create_download
-import mimetypes
-from uuid import uuid4
+from db.downloaded_file_crud import create_media, create_download
 import datetime
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from services.crypto import create_crypto_invoice
-from services.json_reader import dict_to_namespace
 from envato_utils.test_env import test
 
 router = Router()
@@ -69,32 +64,6 @@ async def handle_link(message: types.Message):
             and user.subscription_until > datetime.datetime.utcnow()
         )
 
-        media = await get_media_by_url(session, url)
-        if media:
-            if not has_active_sub and user.credits <= 0:
-                keyboard = InlineKeyboardMarkup(
-                    inline_keyboard=[
-                        [InlineKeyboardButton(text="💳 Купить подписку или кредиты", callback_data="create_invoice")]
-                    ]
-                )
-
-                await message.answer(
-                    "⚠️ У вас закончились кредиты и нет активной подписки.\n"
-                    "Пожалуйста, пополните баланс, чтобы продолжить загрузки.",
-                    reply_markup=keyboard
-                )
-                return
-
-            await create_download(session, user.id, media.id)
-
-            if not has_active_sub:
-                user.credits -= 1
-                await session.commit()
-
-            await message.answer("Файл найден в кеше, отправляю:")
-            await message.answer_document(types.FSInputFile(media.file_path))
-            return
-
         # Если файл не в кеше
         if not has_active_sub and user.credits <= 0:
             keyboard = InlineKeyboardMarkup(row_width=1)
@@ -107,8 +76,6 @@ async def handle_link(message: types.Message):
             )
             return
 
-        # filename = url.split("/")[-1].split("?")[0] or "file"
-        # file_path = await download_file(url, filename)
         file_path = await test(url)
         print(file_path,url)
         if file_path:
@@ -130,30 +97,3 @@ async def handle_link(message: types.Message):
                 await session.commit()
         else:
             await message.answer("Не удалось скачать файл по ссылке.")
-
-
-# @router.callback_query(lambda c: c.data == "create_invoice")
-# async def process_invoice_callback(callback_query: types.CallbackQuery):
-#     user_id = callback_query.from_user.id
-#     amount = 1.0  # Цена подписки или пакета кредитов
-
-#     pay_url, invoice_id = await create_crypto_invoice(user_id, amount, type_="subscription")
-
-#     if pay_url:
-#         keyboard = InlineKeyboardMarkup(
-#             inline_keyboard=[[
-#                     InlineKeyboardButton(text="Подписка"),
-#                     InlineKeyboardButton(text="Кредиты")
-#                 ]]
-#         )
-#         await callback_query.message.answer(
-#             "Пожалуйста, оплатите подписку по ссылке ниже:",
-#             reply_markup=keyboard
-#         )
-#     else:
-#         await callback_query.message.answer(
-#             "Произошла ошибка при создании инвойса, попробуйте позже."
-#         )
-
-#     await callback_query.answer()
-    
