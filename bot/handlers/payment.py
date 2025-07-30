@@ -4,11 +4,14 @@ import os
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from services.crypto import create_crypto_invoice
 from services.json_reader import dict_to_namespace
+from pathlib import Path
 
 router = Router()
 
-# Потом убрать
-PRICE_LIST = "bot\handlers\prices_list.json"
+
+PRICE_LIST = Path(__file__).resolve().parent / "prices_list.json"
+# # Потом убрать
+# PRICE_LIST = "bot\handlers\prices_list.json"
 
 # Коллбек на подписку
 @router.callback_query(lambda c: c.data == "buy_subscription")
