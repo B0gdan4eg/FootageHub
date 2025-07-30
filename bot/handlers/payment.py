@@ -10,36 +10,20 @@ router = Router()
 # Потом убрать
 PRICE_LIST = "./prices_list.json"
 
-# Открывает JSON
-def json_open(path: str):
-    if not os.path.exists(path):
-        print(f"❌ Файл {path} не найден.")
-        return None
-
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"❌ Ошибка при загрузке {path}: {e}")
-        return None
-    
-
 # Коллбек на подписку
 @router.callback_query(lambda c: c.data == "buy_subscription")
-async def choose_subscribe_plan(callback_query: types.CallbackQuery, message: types.Message):
+async def choose_subscribe_plan(callback_query: types.CallbackQuery):
     
-    raw_data = json_open(PRICE_LIST)
-    if raw_data is None:
-        await message.answer("⚠️ Не удалось загрузить файл с тарифами.")
-        return
-    
-    data = dict_to_namespace(json_open(PRICE_LIST)) 
+    # Загружаем цену из JSON
+    if not os.path.exists(PRICE_LIST):
+        print(f"❌ Файл {PRICE_LIST} не найден.")
+        return None
+
+    with open(PRICE_LIST, "r", encoding="utf-8") as f:
+        pr = json.load(f)
+        
+    data = dict_to_namespace(pr) 
     subscription = data.subscription_plans
-    # Теперь безопасно:
-    subscription = getattr(data, "credits_limit", None)
-    if subscription is None:
-        await message.answer("⚠️ Не найден лимит кредитов в тарифах.")
-        return
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -56,22 +40,20 @@ async def choose_subscribe_plan(callback_query: types.CallbackQuery, message: ty
    
 # Коллбек на скачивания   
 @router.callback_query(lambda c: c.data == "buy_credits")
-async def choose_credit_plan(callback_query: types.CallbackQuery, message: types.Message):
+async def choose_credit_plan(callback_query: types.CallbackQuery):
     
-    raw_data = json_open(PRICE_LIST)
-    if raw_data is None:
-        await message.answer("⚠️ Не удалось загрузить файл с тарифами.")
-        return
+    # Загружаем цену из JSON
+    if not os.path.exists(PRICE_LIST):
+        print(f"❌ Файл {PRICE_LIST} не найден.")
+        return None
+
+    with open(PRICE_LIST, "r", encoding="utf-8") as f:
+        pr = json.load(f)
+        
     
-    data = dict_to_namespace(json_open(PRICE_LIST))
+    data = dict_to_namespace(pr)
     credits = data.credits_limit
     
-    subscription = getattr(data, "credits_limit", None)
-    if subscription is None:
-        await message.answer("⚠️ Не найден лимит кредитов в тарифах.")
-        return
-    
-
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text=f"{item.max_downloads} кредит(ов) — {item.price} USD",
@@ -108,7 +90,16 @@ async def process_purchase(callback_query: types.CallbackQuery):
         await callback_query.answer()
         return
 
-    data = dict_to_namespace(json_open(PRICE_LIST))
+    # Загружаем цену из JSON
+    if not os.path.exists(PRICE_LIST):
+        print(f"❌ Файл {PRICE_LIST} не найден.")
+        return None
+
+    with open(PRICE_LIST, "r", encoding="utf-8") as f:
+        pr = json.load(f)
+        
+
+    data = dict_to_namespace(pr)
     user_id = callback_query.from_user.id
 
     # Выбор данных по типу покупки
