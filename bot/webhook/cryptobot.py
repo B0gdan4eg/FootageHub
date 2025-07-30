@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import os
 
+
 CRYPTO_BOT_API_KEY = os.getenv("CRYPTO_BOT_API_KEY")  # или захардкожен
 from decimal import Decimal
 import os
