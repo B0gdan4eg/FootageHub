@@ -3,7 +3,7 @@ from aiogram import Router, types, F
 from db.session import get_session
 from db.user_crud import get_user_by_telegram_id
 from db.downloaded_file_crud import get_media_by_url, create_media, create_download
-import mimetypes
+import os
 from uuid import uuid4
 import datetime
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -13,10 +13,24 @@ from envato_utils.test_env import test
 
 router = Router()
 
+PRICE_LIST = "prices_list.json"
+
+
+
 @router.callback_query(lambda c: c.data == "buy_subscription")
 async def choose_subscribe_plan(callback_query: types.CallbackQuery):
-    with open("prices_list.json", "r", encoding="utf-8") as f:
-        data_dict = json.load(f)
+    # Загружаем куки из JSON
+    if not os.path.exists(PRICE_LIST):
+        print(f"❌ Файл {PRICE_LIST} не найден.")
+        return None
+
+    try:
+        with open(PRICE_LIST, "r", encoding="utf-8") as f:
+            data_dict = json.load(f)
+    except Exception as e:
+        print(f"❌ Ошибка при загрузке PRICE_LIST: {e}")
+        return None    
+        
     data = dict_to_namespace(data_dict) 
        
     subscription = data.subscription_plans
