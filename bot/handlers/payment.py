@@ -1,11 +1,6 @@
 import json
 from aiogram import Router, types, F
-from db.session import get_session
-from db.user_crud import get_user_by_telegram_id
-from db.downloaded_file_crud import get_media_by_url, create_media, create_download
 import os
-from uuid import uuid4
-import datetime
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from services.crypto import create_crypto_invoice
 from services.json_reader import dict_to_namespace
@@ -13,13 +8,12 @@ from envato_utils.test_env import test
 
 router = Router()
 
+# Потом убрать
 PRICE_LIST = "prices_list.json"
 
-
-
-@router.callback_query(lambda c: c.data == "buy_subscription")
-async def choose_subscribe_plan(callback_query: types.CallbackQuery):
-    # Загружаем куки из JSON
+# Открывает JSON
+def json_open(str):
+    
     if not os.path.exists(PRICE_LIST):
         print(f"❌ Файл {PRICE_LIST} не найден.")
         return None
@@ -27,12 +21,17 @@ async def choose_subscribe_plan(callback_query: types.CallbackQuery):
     try:
         with open(PRICE_LIST, "r", encoding="utf-8") as f:
             data_dict = json.load(f)
+            return data_dict
     except Exception as e:
         print(f"❌ Ошибка при загрузке PRICE_LIST: {e}")
-        return None    
-        
-    data = dict_to_namespace(data_dict) 
-       
+        return None  
+    
+
+# Коллбек на подписку
+@router.callback_query(lambda c: c.data == "buy_subscription")
+async def choose_subscribe_plan(callback_query: types.CallbackQuery):
+      
+    data = dict_to_namespace(json_open(PRICE_LIST)) 
     subscription = data.subscription_plans
 
     keyboard = InlineKeyboardMarkup(
@@ -47,13 +46,12 @@ async def choose_subscribe_plan(callback_query: types.CallbackQuery):
     
     await callback_query.message.answer("💳 Выберите подписку:", reply_markup=keyboard)
     await callback_query.answer()
-    
+   
+# Коллбек на скачивания   
 @router.callback_query(lambda c: c.data == "buy_credits")
 async def choose_credit_plan(callback_query: types.CallbackQuery):
-    with open("prices_list.json", "r", encoding="utf-8") as f:
-        data_dict = json.load(f)
-    data = dict_to_namespace(data_dict)
-
+    
+    data = dict_to_namespace(json_open(PRICE_LIST))
     credits = data.credits_limit
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -67,8 +65,10 @@ async def choose_credit_plan(callback_query: types.CallbackQuery):
     await callback_query.message.answer("💳 Выберите пакет кредитов:", reply_markup=keyboard)
     await callback_query.answer()
 
+# Коллбек на создание инвойсы
 @router.callback_query(lambda c: c.data == "create_invoice")
 async def choose_product_type(callback_query: types.CallbackQuery):
+    
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[
             InlineKeyboardButton(text="🔐 Подписка", callback_data="buy_subscription"),
@@ -90,10 +90,7 @@ async def process_purchase(callback_query: types.CallbackQuery):
         await callback_query.answer()
         return
 
-    with open("prices_list.json", "r", encoding="utf-8") as f:
-        data_dict = json.load(f)
-
-    data = dict_to_namespace(data_dict)
+    data = dict_to_namespace(json_open(PRICE_LIST))
     user_id = callback_query.from_user.id
 
     # Выбор данных по типу покупки
@@ -142,4 +139,3 @@ async def process_purchase(callback_query: types.CallbackQuery):
         await callback_query.message.answer("❌ Ошибка при создании инвойса. Попробуйте позже.")
 
     await callback_query.answer()
-
