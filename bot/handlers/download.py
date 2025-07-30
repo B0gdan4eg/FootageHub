@@ -83,7 +83,7 @@ async def handle_link(message: types.Message, bot: Bot):
         await bot.send_chat_action(chat_id=message.chat.id, action="typing")
         thinking_msg = await message.answer("⏳")
         for emoji in ["🤔", "💭", "🧠", "⏳"]:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(3)
             await thinking_msg.edit_text(emoji)
 
 

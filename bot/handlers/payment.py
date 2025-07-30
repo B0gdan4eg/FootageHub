@@ -4,7 +4,6 @@ import os
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from services.crypto import create_crypto_invoice
 from services.json_reader import dict_to_namespace
-from envato_utils.test_env import test
 
 router = Router()
 
@@ -12,27 +11,35 @@ router = Router()
 PRICE_LIST = "./prices_list.json"
 
 # Открывает JSON
-def json_open(str):
-    
-    if not os.path.exists(PRICE_LIST):
-        print(f"❌ Файл {PRICE_LIST} не найден.")
+def json_open(path: str):
+    if not os.path.exists(path):
+        print(f"❌ Файл {path} не найден.")
         return None
 
     try:
-        with open(PRICE_LIST, "r", encoding="utf-8") as f:
-            data_dict = json.load(f)
-            return dict(data_dict)
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception as e:
-        print(f"❌ Ошибка при загрузке PRICE_LIST: {e}")
-        return None  
+        print(f"❌ Ошибка при загрузке {path}: {e}")
+        return None
     
 
 # Коллбек на подписку
 @router.callback_query(lambda c: c.data == "buy_subscription")
-async def choose_subscribe_plan(callback_query: types.CallbackQuery):
-      
+async def choose_subscribe_plan(callback_query: types.CallbackQuery, message: types.Message):
+    
+    raw_data = json_open(PRICE_LIST)
+    if raw_data is None:
+        await message.answer("⚠️ Не удалось загрузить файл с тарифами.")
+        return
+    
     data = dict_to_namespace(json_open(PRICE_LIST)) 
     subscription = data.subscription_plans
+    # Теперь безопасно:
+    subscription = getattr(data, "credits_limit", None)
+    if subscription is None:
+        await message.answer("⚠️ Не найден лимит кредитов в тарифах.")
+        return
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -49,10 +56,21 @@ async def choose_subscribe_plan(callback_query: types.CallbackQuery):
    
 # Коллбек на скачивания   
 @router.callback_query(lambda c: c.data == "buy_credits")
-async def choose_credit_plan(callback_query: types.CallbackQuery):
+async def choose_credit_plan(callback_query: types.CallbackQuery, message: types.Message):
+    
+    raw_data = json_open(PRICE_LIST)
+    if raw_data is None:
+        await message.answer("⚠️ Не удалось загрузить файл с тарифами.")
+        return
     
     data = dict_to_namespace(json_open(PRICE_LIST))
     credits = data.credits_limit
+    
+    subscription = getattr(data, "credits_limit", None)
+    if subscription is None:
+        await message.answer("⚠️ Не найден лимит кредитов в тарифах.")
+        return
+    
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
