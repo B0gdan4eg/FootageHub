@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from db import get_session  # твой dependency
+from db.session import get_session  # твой dependency
 from db.models import User, Payment
 import json
 import hmac
