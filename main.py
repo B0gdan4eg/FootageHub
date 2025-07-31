@@ -26,18 +26,21 @@ dp.include_router(download.router)
 dp.include_router(payment.router)
 
 
+async def start_uvicorn():
+    """Запуск Uvicorn в асинхронном режиме"""
+    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info", ssl_certfile="cert.pem", ssl_keyfile="key.pem")
+    server = uvicorn.Server(config)
+    await server.serve()
+
 async def main():
-    await recreate_tables() 
-    await dp.start_polling(bot)
+    await recreate_tables()
+
+    # Запускаем FastAPI и aiogram параллельно
+    await asyncio.gather(
+        start_uvicorn(),
+        dp.start_polling(bot)
+    )
+
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-
-    # FastAPI через Uvicorn (в фоне)
-    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
-    server = uvicorn.Server(config)
-    loop.create_task(server.serve())
-
-    # aiogram-бот
-    loop.run_until_complete(main())
-
+    asyncio.run(main())
