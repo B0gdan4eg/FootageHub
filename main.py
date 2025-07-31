@@ -3,7 +3,6 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from fastapi import FastAPI
-import uvicorn
 
 from bot.config import BOT_TOKEN
 from bot.handlers import start, download, info, admin, payment
@@ -26,21 +25,9 @@ dp.include_router(download.router)
 dp.include_router(payment.router)
 
 
-async def start_uvicorn():
-    """Запуск Uvicorn в асинхронном режиме"""
-    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info", ssl_certfile="cert.pem", ssl_keyfile="key.pem")
-    server = uvicorn.Server(config)
-    await server.serve()
-
 async def main():
-    await recreate_tables()
-
-    # Запускаем FastAPI и aiogram параллельно
-    await asyncio.gather(
-        start_uvicorn(),
-        dp.start_polling(bot)
-    )
-
+    await recreate_tables() 
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
