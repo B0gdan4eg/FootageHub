@@ -3,6 +3,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from fastapi import FastAPI
+import uvicorn
 
 from bot.config import BOT_TOKEN
 from bot.handlers import start, download, info, admin, payment
@@ -26,6 +27,7 @@ dp.include_router(payment.router)
 
 
 async def main():
+    await uvicorn.run("main:app", host="0.0.0.0", port=443, ssl_keyfile="key.pem", ssl_certfile="cert.pem")
     await recreate_tables() 
     await dp.start_polling(bot)
 
