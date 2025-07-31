@@ -13,7 +13,8 @@ services:
      - "8000:8000"
      - "8443:443"
     volumes:
-    - /opt/my_bot/:/app/ssl/
+    - /etc/letsencrypt/live/footage.com.by/fullchain.pem:/app/ssl/cert.pem:ro
+    - /etc/letsencrypt/live/footage.com.by/privkey.pem:/app/ssl/key.pem:ro
 
   db:
     image: postgres:15
