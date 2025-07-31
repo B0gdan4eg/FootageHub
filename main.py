@@ -1,5 +1,6 @@
 import sys
 import asyncio
+import uvicorn
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from fastapi import FastAPI
@@ -24,10 +25,23 @@ dp.include_router(info.router)
 dp.include_router(download.router)
 dp.include_router(payment.router)
 
+async def start_bot():
+    await recreate_tables()
+    await dp.start_polling(bot)
 
 async def main():
-    await recreate_tables() 
-    await dp.start_polling(bot)
+    config = uvicorn.Config(
+        app, host="0.0.0.0", port=443,
+        ssl_certfile="/app/ssl/cert.pem",
+        ssl_keyfile="/app/ssl/key.pem",
+        log_level="info"
+    )
+    server = uvicorn.Server(config)
+
+    await asyncio.gather(
+        server.serve(),
+        start_bot()
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
