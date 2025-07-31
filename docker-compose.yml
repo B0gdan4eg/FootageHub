@@ -11,7 +11,7 @@ services:
     # если нужен лог
     ports:
      - "8000:8000"
-     - "443:443"
+     - "8443:443"
     volumes:
     - /opt/my_bot/:/app/ssl/
     command: >
