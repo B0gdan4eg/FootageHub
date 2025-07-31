@@ -13,3 +13,5 @@ node_modules/
 .json
 github-actions-key
 github-actions-key.pub
+key.pem
+cert.pem
