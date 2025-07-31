@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-app = FastAPI()
+router = FastAPI()
 
-@app.post("/webhook/cryptobot")
+@router.post("/webhook/cryptobot")
 async def webhook(request: Request):
     data = await request.json()
     print("Получен webhook:", data)
