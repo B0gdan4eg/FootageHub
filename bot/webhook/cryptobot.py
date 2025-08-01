@@ -7,9 +7,10 @@ from db.payment_crud import create_payment
 from pathlib import Path
 import json
 import os
+from types import SimpleNamespace
 
 router = APIRouter()
-PRICE_LIST = Path(__file__).resolve().parent / "bot" / "handlers" / "prices_list.json"
+PRICE_LIST = Path(__file__).resolve().parent.parent / "handlers" / "prices_list.json"
 
 
 @router.post("/webhook/cryptobot")
@@ -73,18 +74,13 @@ def parse_payload(payload: str, plans: dict):
     try:
         user_id_str, type_, plan_key = payload.split(":")
         user_id = int(user_id_str)
-
+        plan = SimpleNamespace(plan_key)
+        
         if type_ == "subscription":
-            plan = plans["subscription_plans"].get(plan_key)
-            if not plan:
-                raise ValueError(f"Неизвестный план подписки: {plan_key}")
-            value = plan["period"]
+            value = int(plan.period)
 
         elif type_ == "credits":
-            plan = plans["credits_limit"].get(plan_key)
-            if not plan:
-                raise ValueError(f"Неизвестный кредитный план: {plan_key}")
-            value = plan["max_downloads"]
+            value = int(plan.max_downloads)
 
         else:
             raise ValueError("Тип должен быть 'subscription' или 'credits'")
