@@ -11,7 +11,7 @@ async def get_user_by_telegram_id(session: AsyncSession, tg_id: int):
 async def create_user(session: AsyncSession, tg_id: int):
     user = User(
         tg_id=tg_id,
-        credits=3
+        credits=0
         )
     session.add(user)
     await session.commit()
@@ -54,3 +54,27 @@ async def count_active_subs(session: AsyncSession):
         )
     )
     return result.scalar()
+
+async def grant_access(user_id: int, type_: str, value: int, session: AsyncSession):
+    result = await session.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise ValueError(f"Пользователь с id {user_id} не найден")
+
+    now = datetime.utcnow()
+
+    if type_ == "subscription":
+        if user.subscription_until and user.subscription_until > now:
+            user.subscription_until += timedelta(days=value)
+        else:
+            user.subscription_until = now + timedelta(days=value)
+        user.is_subscribed = True
+
+    elif type_ == "credits":
+        user.credits += value
+
+    else:
+        raise ValueError("Тип должен быть 'subscription' или 'credits'")
+
+    await session.commit()

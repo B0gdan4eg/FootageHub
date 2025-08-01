@@ -135,7 +135,8 @@ async def process_purchase(callback_query: types.CallbackQuery):
     pay_url, invoice_id = await create_crypto_invoice(
         user_id=user_id,
         amount=price,
-        type_=purchase_type
+        type_=purchase_type,
+        plan=plan
     )
 
     if pay_url:
