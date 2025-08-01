@@ -2,12 +2,11 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_session
-from db.user_crud import grant_access
+from db.user_crud import grant_access, get_user_by_telegram_id
 from db.payment_crud import create_payment
 from pathlib import Path
 import json
 import os
-from types import SimpleNamespace
 
 router = APIRouter()
 PRICE_LIST = Path(__file__).resolve().parent.parent / "handlers" / "prices_list.json"
@@ -50,6 +49,12 @@ async def webhook(request: Request):
         user_id, type_, value = parse_payload(user_payload, plans)
 
         async for session in get_session():
+            
+            user = await get_user_by_telegram_id(session, user_id)
+            if not user:
+                print(f"❌ Пользователь с id {user_id} не найден")
+                return JSONResponse(content={"error": f"User {user_id} not found"}, status_code=404)
+            
             # Выдача подписки или кредитов
             await grant_access(user_id=user_id, type_=type_, value=value, session=session)
 
