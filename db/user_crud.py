@@ -56,7 +56,7 @@ async def count_active_subs(session: AsyncSession):
     return result.scalar()
 
 async def grant_access(user_id: int, type_: str, value: int, session: AsyncSession):
-    result = await session.execute(select(User).where(User.id == user_id))
+    result = await session.execute(select(User).where(User.tg_id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
