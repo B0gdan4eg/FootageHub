@@ -65,7 +65,7 @@ async def webhook(request: Request):
                 amount=amount,
                 currency=currency,
                 payment_type=type_,
-                invoice_id=invoice_id
+                invoice_id=str(invoice_id)
             )
 
     except Exception as e:
