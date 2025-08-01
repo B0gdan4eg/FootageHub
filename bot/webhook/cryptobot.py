@@ -9,7 +9,7 @@ import json
 import os
 
 router = APIRouter()
-PRICE_LIST = Path(__file__).resolve().parent / "prices_list.json"
+PRICE_LIST = Path(__file__).resolve().parent / "bot" / "handlers" / "prices_list.json"
 
 
 @router.post("/webhook/cryptobot")
