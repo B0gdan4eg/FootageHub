@@ -74,18 +74,24 @@ def parse_payload(payload: str, plans: dict):
     try:
         user_id_str, type_, plan_key = payload.split(":")
         user_id = int(user_id_str)
-        plan = SimpleNamespace(plan_key)
-        
+
         if type_ == "subscription":
-            value = int(plan.period)
+            plan_dict = plans["subscription_plans"].get(plan_key)
+            if not plan_dict:
+                raise ValueError(f"Неизвестный план подписки: {plan_key}")
+            value = int(plan_dict["period"])
 
         elif type_ == "credits":
-            value = int(plan.max_downloads)
+            plan_dict = plans["credits_limit"].get(plan_key)
+            if not plan_dict:
+                raise ValueError(f"Неизвестный кредитный план: {plan_key}")
+            value = int(plan_dict["max_downloads"])
 
         else:
             raise ValueError("Тип должен быть 'subscription' или 'credits'")
 
-        return user_id, type_, int(value)
+        return user_id, type_, value
 
     except ValueError as e:
         raise ValueError(f"Некорректный payload: {payload}. Ошибка: {e}")
+

@@ -136,7 +136,7 @@ async def process_purchase(callback_query: types.CallbackQuery):
         user_id=user_id,
         amount=price,
         type_=purchase_type,
-        plan=plan
+        plan=plan_key
     )
 
     if pay_url:
