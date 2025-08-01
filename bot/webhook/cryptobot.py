@@ -61,7 +61,7 @@ async def webhook(request: Request):
             # Запись платежа
             await create_payment(
                 session=session,
-                user_id=user_id,
+                user_id=user.id,
                 amount=amount,
                 currency=currency,
                 payment_type=type_,
