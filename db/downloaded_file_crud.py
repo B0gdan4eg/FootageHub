@@ -6,9 +6,7 @@ async def get_media_by_url(session, url: str):
     result = await session.execute(select(Media).where(Media.url == url))
     return result.scalars().first()
 
-from sqlalchemy import select
-
-async def create_media(session, url: str, file_path: str, file_type: str):
+async def create_media(session, url: str, file_type: str):
     # Проверяем, есть ли уже запись с таким url
     result = await session.execute(select(Media).where(Media.url == url))
     media = result.scalar_one_or_none()
@@ -18,7 +16,7 @@ async def create_media(session, url: str, file_path: str, file_type: str):
         return media
 
     # Если не нашли — создаём новую запись
-    media = Media(url=url, file_path=file_path, file_type=file_type)
+    media = Media(url=url, file_type=file_type)
     session.add(media)
     await session.commit()
     await session.refresh(media)

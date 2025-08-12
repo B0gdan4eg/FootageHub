@@ -1,11 +1,18 @@
 from sqlalchemy import (
-    Column, Integer, String, Boolean, BigInteger, DateTime, ForeignKey, Numeric, Text
+    Column, Integer, String, Boolean, BigInteger, DateTime, ForeignKey, Numeric, Text, Enum
 )
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
+import enum
 
 Base = declarative_base()
 
+class UserRole(enum.Enum):
+    USER = "user"
+    ADMIN = "admin"
+    MANAGER = "manager"
+    PARTNER = "partner"
+    
 class User(Base):
     __tablename__ = "users"
 
@@ -16,10 +23,16 @@ class User(Base):
     subscription_until = Column(DateTime, nullable=True)
     credits = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
-
+    
+    # New fields
+    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    referral_code = Column(String, unique=True, nullable=True)
+    referred_by_id = Column(BigInteger, ForeignKey('users.id'), nullable=True)
+    
+    # Relationships
+    referrals = relationship("User", backref="referrer", remote_side=[id])
     downloads = relationship("Download", back_populates="user")
     payments = relationship("Payment", back_populates="user")
-
 
 class Media(Base):
     __tablename__ = "media"
@@ -27,8 +40,6 @@ class Media(Base):
     id = Column(BigInteger, primary_key=True)
     url = Column(Text, unique=True, nullable=False)
     file_type = Column(String)
-    file_path = Column(Text)
-    file_id = Column(Text)  # Telegram File ID
     created_at = Column(DateTime, default=datetime.utcnow)
 
     downloads = relationship("Download", back_populates="media")
@@ -60,4 +71,3 @@ class Payment(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="payments")
-
