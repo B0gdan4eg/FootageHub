@@ -1,20 +1,19 @@
 from aiogram import Router, types
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.enums.parse_mode import ParseMode
 
 from db.session import get_session
 from db.user_crud import get_user_by_telegram_id, create_user, set_user_referrer
 from bot.keyboards import main_menu_kb
-
 from bot.handlers.messages import WELCOME
 
 router = Router()
 
 @router.message(CommandStart())
-async def cmd_start(message: types.Message, state: FSMContext):
+async def cmd_start(message: types.Message, state: FSMContext, command: CommandObject):
     telegram_id = message.from_user.id
-    args = message.get_args()  # Получаем аргумент после /start
+    args = command.args  # Аргументы после /start (в 3.x так правильно)
 
     async for session in get_session():
         user = await get_user_by_telegram_id(session, telegram_id)
