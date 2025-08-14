@@ -16,7 +16,7 @@ from db.base import backup_database, run_migrations
 
 # Настройка Windows event loop
 if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # FastAPI app
 app = FastAPI()
@@ -46,16 +46,15 @@ async def weekly_backup_job():
     await backup_database()
 
 async def start_bot():
-    # await run_migrations()
     await dp.start_polling(bot)
 
-async def main():
-    # Инициализация планировщика
+async def start_scheduler():
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
     scheduler.add_job(scheduler_job, "cron", hour=3, minute=0)
     scheduler.add_job(weekly_backup_job, "cron", day_of_week="sun", hour=4, minute=0)
     scheduler.start()
 
+async def start_server():
     config = uvicorn.Config(
         app, host="0.0.0.0", port=443,
         ssl_certfile="/app/ssl/cert.pem",
@@ -63,11 +62,20 @@ async def main():
         log_level="info"
     )
     server = uvicorn.Server(config)
+    await server.serve()
 
+async def main():
+    # 1. Миграции перед стартом
+    await run_migrations()
+
+    # 2. Запускаем планировщик
+    await start_scheduler()
+
+    # 3. Запускаем бота и сервер параллельно
     await asyncio.gather(
-        server.serve(),  # Если нужен вебхук — раскомментировать
+        start_server(),
         start_bot()
     )
 
 if __name__ == "__main__":
-    asyncio.run(start_bot())
+    asyncio.run(main())
