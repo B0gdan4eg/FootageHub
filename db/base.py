@@ -4,6 +4,8 @@ from datetime import datetime
 from alembic import command
 from alembic.config import Config
 import asyncio
+from db.session import async_engine
+from db.models import Base
 
 BACKUP_DIR = os.path.join(os.getcwd(), "backups")  # папка backups в текущей директории
 
@@ -53,3 +55,8 @@ def _run_migrations_sync():
 async def run_migrations():
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _run_migrations_sync)
+
+async def create_tables():
+    """Создаёт все таблицы, если их нет."""
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

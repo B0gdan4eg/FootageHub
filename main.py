@@ -6,7 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.config import BOT_TOKEN
 from bot.handlers import start, download, info, admin, payment
-from db.base import run_migrations
+from db.base import run_migrations, create_tables
 from bot.schedule_tasks import scheduler_job, weekly_backup_job
 from bot.webhook.server_start import start_server
 
@@ -31,7 +31,12 @@ async def start_bot():
 
 async def main():
     # 1. Миграции перед стартом
-    await run_migrations()
+    try:
+        await run_migrations()
+    except Exception as e:
+        print(f"[WARN] Миграции не выполнены: {e}")
+        print("[INFO] Создаю таблицы напрямую...")
+        await create_tables()
 
     # 2. Планировщик
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
