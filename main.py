@@ -14,6 +14,52 @@ from bot.webhook import cryptobot
 from db.user_crud import add_daily_credits
 from db.base import backup_database, run_migrations
 
+
+
+
+
+
+
+# Добавить в самое начало файла, перед созданием приложения
+import os
+import logging
+from sqlalchemy import create_engine  # Если используете SQLAlchemy
+
+# Настройка логов для диагностики
+logging.basicConfig(level=logging.CRITICAL)
+logger = logging.getLogger(__name__)
+
+# Функция диагностики
+def log_db_config():
+    logger.critical("=== DIAGNOSTICS START ===")
+    logger.critical(f"DATABASE_URL: {os.getenv('DATABASE_URL')}")
+    logger.critical(f"POSTGRES_DB: {os.getenv('POSTGRES_DB')}")
+    logger.critical(f"DB_HOST: {os.getenv('DB_HOST', 'db')}")
+    
+    try:
+        engine = create_engine(os.getenv("DATABASE_URL"))
+        logger.critical(f"SQLAlchemy URL: {engine.url}")
+    except Exception as e:
+        logger.critical(f"SQLAlchemy error: {e}")
+
+# Вызов диагностики перед запуском приложения
+
+
+# ... ваш обычный код запуска приложения ...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Настройка Windows event loop
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -47,6 +93,7 @@ async def weekly_backup_job():
 
 async def start_bot():
     await run_migrations()
+    log_db_config()
     await dp.start_polling(bot)
 
 async def main():
