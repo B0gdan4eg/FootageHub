@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 # Функция диагностики
-def log_db_config():
+async def log_db_config():
     logger.critical("=== DIAGNOSTICS START ===")
     logger.critical(f"DATABASE_URL: {os.getenv('DATABASE_URL')}")
     logger.critical(f"POSTGRES_DB: {os.getenv('POSTGRES_DB')}")
@@ -93,7 +93,7 @@ async def weekly_backup_job():
 
 async def start_bot():
     await run_migrations()
-    log_db_config()
+    await log_db_config()
     await dp.start_polling(bot)
 
 async def main():
