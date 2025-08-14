@@ -46,7 +46,7 @@ async def weekly_backup_job():
     await backup_database()
 
 async def start_bot():
-    await run_migrations()
+    # await run_migrations()
     await dp.start_polling(bot)
 
 async def main():
