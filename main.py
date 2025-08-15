@@ -46,7 +46,7 @@ async def main():
 
     # 3. Запуск сервера и бота параллельно
     await asyncio.gather(
-        # start_server(),
+        start_server(),
         start_bot()
     )
 
