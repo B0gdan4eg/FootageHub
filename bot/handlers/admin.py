@@ -121,6 +121,8 @@ async def assign_manager_start(callback: types.CallbackQuery, state: FSMContext)
 @router.message(AdminStates.waiting_for_user_id)
 async def assign_manager(message: types.Message, state: FSMContext):
     user_id_text = message.text.strip()
+    if user_id_text == "q":
+        return await state.clear()
     if not user_id_text.isdigit():
         return await message.answer("❌ ID должен быть числом. Попробуйте снова.")
 
