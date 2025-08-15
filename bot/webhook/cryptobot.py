@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_session
 from db.user_crud import grant_access, get_user_by_telegram_id
 from db.payment_crud import create_payment

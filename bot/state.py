@@ -7,8 +7,8 @@ class DownloadFlow(StatesGroup):
     waiting_for_confirmation = State()  # Ждём подтверждение оплаты (вебхук или вручную)
 
 class ManagerFlow(StatesGroup):
-    choosing_action = State()     # Выбор действия
-    waiting_for_user_id = State() # (если нужно по ID глянуть)
+    waiting_for_description = State()     # Выбор действия
+    waiting_for_ref_code = State() # (если нужно по ID глянуть)
 
 class AdminStates(StatesGroup):
     waiting_for_user_id = State()

@@ -4,26 +4,39 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram import Bot
 
-from db.models import User  # предполагаемая модель
+from db.models import User, Download, Media, Payment, UserRole  # предполагаемая модель
 from db.session import get_session
-from db.user_crud import get_all_users, count_active_subs, get_user_by_telegram_id
+from db.user_crud import get_all_users, count_active_subs
 from db.downloaded_file_crud import count_total_downloads
-from sqlalchemy import select
+from sqlalchemy import select, update
 from bot.state import AdminStates
-
-from bot.config import ADMIN  # список Telegram ID админов
-from datetime import datetime, timedelta
-import os
+from io import BytesIO
+from sqlalchemy.ext.asyncio import AsyncSession
+import openpyxl
 import json
 from pathlib import Path
 
 router = Router()
 
+# УБРАТЬ!!!
 PRICE_LIST = Path(__file__).resolve().parent / "prices_list.json"
 
-def is_admin(user_id):
-    return str(user_id) in ADMIN
 
+# Метод проверки роли админа
+# ------------------------------------------------------------
+async def is_admin(user_id: int) -> bool:
+    """
+    Проверяет, имеет ли пользователь роль ADMIN.
+    """
+    async for session in get_session():
+        user = await session.scalar(select(User).where(User.tg_id == user_id))
+        if not user:
+            return False
+        return user.role == UserRole.ADMIN
+# ------------------------------------------------------------
+
+# Роутер на коллбэк статистику по всем пользователям
+# ------------------------------------------------------------
 @router.callback_query(F.data == "admin_stats")
 async def show_stats(callback: types.CallbackQuery):
     async for session in get_session():
@@ -38,8 +51,11 @@ async def show_stats(callback: types.CallbackQuery):
         f"⬇️ Скачиваний: {total_downloads}"
     )
     await callback.message.edit_text(text)
+# ------------------------------------------------------------
 
 
+# Роутер на коллбэк список пользователей
+# ------------------------------------------------------------
 @router.callback_query(F.data == "admin_users")
 async def list_users(callback: types.CallbackQuery):
     if not is_admin(callback.from_user.id):
@@ -69,7 +85,10 @@ async def list_users(callback: types.CallbackQuery):
         
     await callback.message.edit_text(text)
     await callback.answer()
+# ------------------------------------------------------------
 
+# Роутер на текст вызов панели админа
+# ------------------------------------------------------------
 @router.message(lambda message: message.text == "admin")
 async def admin_panel(message: types.Message, state: FSMContext):
     if not is_admin(message.from_user.id):
@@ -79,53 +98,62 @@ async def admin_panel(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
         [InlineKeyboardButton(text="👥 Пользователи", callback_data="admin_users")],
         [InlineKeyboardButton(text="👤 Назначить роль", callback_data="admin_assign_role")],
-        [InlineKeyboardButton(text="💳 Загрузить цены", callback_data="admin_upload_prices")]
+        [InlineKeyboardButton(text="💳 Загрузить цены", callback_data="admin_upload_prices")],
+        [InlineKeyboardButton(text="🧹 Очистка базы", callback_data="clear_db")],
+        [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")]
+        
     ])
     await message.answer("📂 Панель администратора", reply_markup=keyboard)
     await state.clear()
+# ------------------------------------------------------------
 
-# Назначение роли
+# Роутер на коллбэк выдача роли манагера
+# ------------------------------------------------------------
 @router.callback_query(lambda c: c.data == "admin_assign_role")
-async def assign_role_start(callback: types.CallbackQuery, state: FSMContext):
+async def assign_manager_start(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(AdminStates.waiting_for_user_id)
-    await callback.message.answer("Введите Telegram ID пользователя, которому хотите назначить роль:")
+    await callback.message.answer("Введите Telegram ID пользователя, которому хотите назначить роль менеджера:")
     await callback.answer()
+# ------------------------------------------------------------
 
+# Роутер на коллбэк ввод ид для выдачи роли
+# ------------------------------------------------------------
 @router.message(AdminStates.waiting_for_user_id)
-async def receive_user_id(message: types.Message, state: FSMContext):
-    user_id = message.text.strip()
-    if not user_id.isdigit():
+async def assign_manager(message: types.Message, state: FSMContext):
+    user_id_text = message.text.strip()
+    if not user_id_text.isdigit():
         return await message.answer("❌ ID должен быть числом. Попробуйте снова.")
-    await state.update_data(user_id=int(user_id))
-    await state.set_state(AdminStates.waiting_for_role)
-    await message.answer("Введите роль для пользователя (например: premium, vip):")
 
-@router.message(AdminStates.waiting_for_role)
-async def receive_role(message: types.Message, state: FSMContext):
-    role = message.text.strip()
-    data = await state.get_data()
-    user_id = data["user_id"]
+    user_id = int(user_id_text)
 
-    # Сохраняем роль в JSON
-    roles_file = "user_roles.json"
-    roles = {}
-    if os.path.exists(roles_file):
-        with open(roles_file, "r", encoding="utf-8") as f:
-            roles = json.load(f)
-    roles[str(user_id)] = role
-    with open(roles_file, "w", encoding="utf-8") as f:
-        json.dump(roles, f, indent=4, ensure_ascii=False)
+    async for session in get_session():
+        user = await session.scalar(select(User).where(User.tg_id == user_id))
+        if not user:
+            return await message.answer(f"❌ Пользователь с ID {user_id} не найден.")
 
-    await message.answer(f"✅ Роль '{role}' назначена пользователю с ID {user_id}")
+        # Назначаем роль MANAGER
+        await session.execute(
+            update(User)
+            .where(User.tg_id == user_id)
+            .values(role=UserRole.MANAGER)
+        )
+        await session.commit()
+
+    await message.answer(f"✅ Пользователю с ID {user_id} назначена роль MANAGER.")
     await state.clear()
+# ------------------------------------------------------------
 
-# Загрузка JSON цен
+# Роутер на коллбэк смена цен
+# ------------------------------------------------------------
 @router.callback_query(lambda c: c.data == "admin_upload_prices")
 async def upload_prices(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(AdminStates.waiting_for_price_json)
     await callback.message.answer("Отправьте JSON с ценами (например, кредиты и подписки):")
     await callback.answer()
+# ------------------------------------------------------------
 
+# Роутре на коллбэк ожидание json с ценами
+# ------------------------------------------------------------
 @router.message(AdminStates.waiting_for_price_json, F.content_type == "document")
 async def receive_price_json(message: types.Message, state: FSMContext, bot: Bot):
     file = await bot.download(message.document.file_id)
@@ -141,3 +169,77 @@ async def receive_price_json(message: types.Message, state: FSMContext, bot: Bot
 
     await message.answer("✅ Цены успешно обновлены.")
     await state.clear()
+# ------------------------------------------------------------    
+
+
+async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int):
+    """
+    Экспортирует все таблицы БД в XLSX и отправляет в Telegram.
+    """
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)  # Удаляем пустой первый лист
+
+    # Список моделей и названия листов
+    tables = [
+        (User, "Users"),
+        (Media, "Media"),
+        (Download, "Downloads"),
+        (Payment, "Payments")
+    ]
+
+    for model, sheet_name in tables:
+        # Создаём лист
+        ws = wb.create_sheet(title=sheet_name)
+
+        # Получаем все записи из модели
+        result = await session.execute(select(model))
+        rows = result.scalars().all()
+
+        if not rows:
+            ws.append(["Нет данных"])
+            continue
+
+        # Заголовки — это имена всех колонок в модели
+        columns = [col.name for col in model.__table__.columns]
+        ws.append(columns)
+
+        # Данные
+        for row in rows:
+            ws.append([
+                getattr(row, col) if getattr(row, col) is not None else ""
+                for col in columns
+            ])
+
+    # Сохраняем в память
+    file_stream = BytesIO()
+    wb.save(file_stream)
+    file_stream.seek(0)
+
+    # Отправляем в чат
+    await bot.send_document(
+        chat_id=chat_id,
+        document=file_stream,
+        filename="full_database_export.xlsx",
+        caption="📊 Полный экспорт базы данных"
+    )
+
+@router.callback_query(lambda c: c.data == "clear_db")
+async def clear_db_callback(callback_query: types.CallbackQuery, bot: Bot):
+    async for session in get_session():
+        # 1️⃣ Сначала выгружаем базу и отправляем пользователю
+        await export_full_db_and_send(session, bot, callback_query.message.chat.id)
+
+        # 2️⃣ После успешной отправки очищаем таблицы
+        await session.execute("DELETE FROM payments")
+        await session.execute("DELETE FROM downloads")
+        await session.execute("DELETE FROM media")
+        await session.execute("DELETE FROM users")
+        await session.commit()
+
+    await callback_query.answer("✅ База выгружена и очищена!")
+
+@router.callback_query(lambda c: c.data == "export_db")
+async def export_db_callback(callback_query: types.CallbackQuery, bot: Bot):
+    async for session in get_session():
+        await export_full_db_and_send(session, bot, callback_query.message.chat.id)
+    await callback_query.answer("📁 База выгружена!")

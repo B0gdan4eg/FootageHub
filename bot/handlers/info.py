@@ -3,7 +3,6 @@ from db.session import get_session
 from db.user_crud import get_user_by_telegram_id
 from db.downloaded_file_crud import count_downloads_by_user
 from aiogram.enums.parse_mode import ParseMode
-import datetime
 
 router = Router()
 

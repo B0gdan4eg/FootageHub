@@ -1,4 +1,4 @@
-from aiogram import Router, types, F
+from aiogram import Router, types
 from db.session import get_session
 from db.user_crud import get_user_by_telegram_id, has_user_downloaded
 from db.downloaded_file_crud import create_media, create_download

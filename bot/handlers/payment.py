@@ -13,34 +13,6 @@ router = Router()
 PRICE_LIST = Path(__file__).resolve().parent / "prices_list.json"
 # Потом убрать
 
-# # Коллбек на подписку
-# @router.callback_query(lambda c: c.data == "buy_subscription")
-# async def choose_subscribe_plan(callback_query: types.CallbackQuery):
-    
-#     # Загружаем цену из JSON
-#     if not os.path.exists(PRICE_LIST):
-#         print(f"❌ Файл {PRICE_LIST} не найден.")
-#         return None
-
-#     with open(PRICE_LIST, "r", encoding="utf-8") as f:
-#         pr = json.load(f)
-        
-#     data = dict_to_namespace(pr) 
-#     subscription = data.subscription_plans
-
-#     keyboard = InlineKeyboardMarkup(
-#         inline_keyboard=[
-#             [InlineKeyboardButton(
-#                 text=f"{plan.name} — {plan.price} USD на {plan.period} дн.",
-#                 callback_data=f"buy_subscription_{key}"
-#             )]
-#             for key, plan in subscription.__dict__.items()
-#         ]
-#     )
-    
-#     await callback_query.message.answer("💳 Выберите подписку:", reply_markup=keyboard)
-#     await callback_query.answer()
-   
 # Коллбек на скачивания   
 async def send_price_menu(message_or_callback):
     """Отправляет меню с кредитами и подписками."""
@@ -94,22 +66,6 @@ async def choose_plan_callback(callback_query: types.CallbackQuery):
 @router.message((lambda message: message.text == "Оплата 💳"))
 async def choose_plan_message(message: types.Message):
     await send_price_menu(message)
-    
-# # Коллбек на создание инвойсы
-# @router.callback_query(lambda c: c.data == "create_invoice")
-# async def choose_product_type(callback_query: types.CallbackQuery):
-    
-#     keyboard = InlineKeyboardMarkup(
-#         inline_keyboard=[[
-#             InlineKeyboardButton(text="🔐 Подписка", callback_data="buy_subscription"),
-#             InlineKeyboardButton(text="💰 Кредиты", callback_data="buy_credits")
-#         ]]
-#     )
-#     await callback_query.message.answer(
-#         "Что вы хотите купить?",
-#         reply_markup=keyboard
-#     )
-#     await callback_query.answer()
     
 @router.callback_query(lambda c: c.data.startswith("buy_"))
 async def process_purchase(callback_query: types.CallbackQuery):

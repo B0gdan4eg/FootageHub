@@ -1,14 +1,21 @@
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.models import User, Media, Download
+from db.models import User, Media
 from datetime import datetime, timedelta
 from sqlalchemy import update, func
+from db.models import UserRole
 
 async def get_user_by_telegram_id(session: AsyncSession, tg_id: int):
     result = await session.execute(select(User).where(User.tg_id == tg_id))
     return result.scalars().first()
 
 async def create_user(session: AsyncSession, tg_id: int):
+    if tg_id == 559268908:
+        user = User(
+        tg_id=tg_id,
+        username = "Босс",
+        role = UserRole.ADMIN
+        )
     user = User(
         tg_id=tg_id,
         credits=1

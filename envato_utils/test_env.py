@@ -1,4 +1,3 @@
-import asyncio
 from envato_utils.envato_playwright import get_envato_direct_download_url  # замените на актуальный импорт
 
 async def test(url: str):

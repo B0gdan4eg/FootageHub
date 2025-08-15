@@ -1,17 +1,21 @@
 # channel_check.py
-from aiogram import Bot, Router, types
+from aiogram import Bot, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.enums import ChatMemberStatus
-from aiogram import Bot, Router, types
 from bot.handlers.messages import CHANEL_CANCLE, CHANEL_APPLY
 from aiogram.enums.parse_mode import ParseMode
+from db.session import get_session
+from db.models import User
+from sqlalchemy import select
 
-# ID или @username канала
+# ID или @username канала УБРАТЬ!!!
 CHANNEL_ID = "@footageChanel"  # например, "@mycoolchannel"
 
 router = Router()
 
+# Метод проверки подписки на канал
+# ------------------------------------------------------------
 async def is_subscribed(bot: Bot, tg_user_id: int) -> bool:
     try:
         member = await bot.get_chat_member(
@@ -27,8 +31,11 @@ async def is_subscribed(bot: Bot, tg_user_id: int) -> bool:
     except Exception as e:
         print(f"Ошибка при проверке подписки: {e}")
         return False
+# ------------------------------------------------------------
 
 
+# Роутер по коллбэку на проверку подписки
+# ------------------------------------------------------------
 @router.callback_query(lambda c: c.data == "check_subscription")
 async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
     user_id = callback.from_user.id
@@ -49,6 +56,13 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
             reply_markup=keyboard
         )
     else:
+        
+        async for session in get_session():
+            user = await session.scalar(select(User).where(User.tg_id == user_id))
+            if user:
+                user.credits += 2
+                await session.commit()
+        
         await callback.message.edit_text(
             CHANEL_APPLY,
             parse_mode=ParseMode.HTML,
@@ -56,3 +70,4 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
         )
 
     await callback.answer()  # убирает "часики"
+    # ------------------------------------------------------------
