@@ -143,28 +143,29 @@ async def add_daily_credits(session: AsyncSession, bot):
 async def set_user_referrer(session: AsyncSession, new_user_tg_id: int, referral_code: str) -> bool:
     """
     Устанавливает для пользователя с tg_id new_user_tg_id реферала по referral_code.
-    Возвращает True, если реферал успешно установлен, False — если не найден реферал или пользователь.
+    Если реферал не найден — ставит None.
+    Возвращает True, если пользователь найден и обновлён, False — если пользователя нет.
 
     :param session: асинхронная сессия SQLAlchemy
     :param new_user_tg_id: telegram id нового пользователя
     :param referral_code: код реферала
     """
+    # Ищем реферала (может быть None)
     result = await session.execute(
         select(User).where(User.referral_code == referral_code)
     )
     referrer = result.scalar_one_or_none()
 
-    if not referrer:
-        return False
-
+    # Ищем нового пользователя
     result = await session.execute(
         select(User).where(User.tg_id == new_user_tg_id)
     )
     new_user = result.scalar_one_or_none()
 
     if not new_user:
-        return False
+        return False  # пользователя нет, обновить нельзя
 
-    new_user.referred_by_id = referrer.id
+    # Устанавливаем referred_by_id (None, если реферал не найден)
+    new_user.referred_by_id = referrer.id if referrer else None
     await session.commit()
     return True

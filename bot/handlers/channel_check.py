@@ -8,6 +8,10 @@ from aiogram.enums.parse_mode import ParseMode
 from db.session import get_session
 from db.models import User
 from sqlalchemy import select
+import os
+import json
+import aiofiles
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # ID или @username канала УБРАТЬ!!!
 CHANNEL_ID = "@footageChanel"  # например, "@mycoolchannel"
@@ -58,10 +62,11 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
     else:
         
         async for session in get_session():
-            user = await session.scalar(select(User).where(User.tg_id == user_id))
+            user = await session.scalar(select(User).where(User.tg_id == user_id)) 
             if user:
-                user.credits += 2
-                await session.commit()
+                if not await give_channel_bonus(user_id, CHANNEL_ID):
+                    user.credits += 2 
+                    await session.commit()
         
         await callback.message.edit_text(
             CHANEL_APPLY,
@@ -71,3 +76,26 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
 
     await callback.answer()  # убирает "часики"
     # ------------------------------------------------------------
+    
+async def give_channel_bonus(user_id: int, channel_id: str) -> bool:
+    
+    file_name = f"bonuses_channel_{channel_id}.json"
+
+    # Загружаем текущий словарь
+    if os.path.exists(file_name):
+        async with aiofiles.open(file_name, "r", encoding="utf-8") as f:
+            content = await f.read()
+            bonuses = json.loads(content)
+    else:
+        bonuses = {}
+
+    # Проверяем, получал ли пользователь
+    if str(user_id) in bonuses:
+        return False  # бонус уже был
+
+    # Записываем пользователя как получившего бонус
+    bonuses[str(user_id)] = True
+    async with aiofiles.open(file_name, "w", encoding="utf-8") as f:
+        await f.write(json.dumps(bonuses, indent=4, ensure_ascii=False))
+
+    return True

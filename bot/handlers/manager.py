@@ -1,7 +1,6 @@
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
