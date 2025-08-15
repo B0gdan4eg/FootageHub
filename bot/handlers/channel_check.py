@@ -60,21 +60,25 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
             reply_markup=keyboard
         )
     else:
-        
         async for session in get_session():
-            user = await session.scalar(select(User).where(User.tg_id == user_id)) 
+            user = await session.scalar(select(User).where(User.tg_id == user_id))
             if user:
-                if not await give_channel_bonus(user_id, CHANNEL_ID):
-                    user.credits += 2 
+                bonus_given = await give_channel_bonus(user_id, CHANNEL_ID)
+                if bonus_given:
+                    user.credits += 2  # начисляем 2 кредита
                     await session.commit()
-        
-        await callback.message.edit_text(
-            CHANEL_APPLY,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
-        )
+                    text = f"{CHANEL_APPLY}\n💰 Вам начислено 2 кредита за подписку!"
+                else:
+                    text = f"{CHANEL_APPLY}\n❌ Бонус за подписку вы уже получали ранее."
+
+                await callback.message.edit_text(
+                    text,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                )
 
     await callback.answer()  # убирает "часики"
+
     # ------------------------------------------------------------
     
 async def give_channel_bonus(user_id: int, channel_id: str) -> bool:
