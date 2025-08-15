@@ -25,7 +25,8 @@ async def is_manager(user_id: int) -> bool:
 
 @router.message(Command("manager"))
 async def manager_command(message: types.Message, state: FSMContext):
-    if not await is_manager(message.from_user.id) or not await is_admin(message.from_user.id):
+    access = not await is_manager(message.from_user.id) or not await is_admin(message.from_user.id)
+    if access:
         await message.answer("🚫 У вас нет прав для этой команды.")
         return
         

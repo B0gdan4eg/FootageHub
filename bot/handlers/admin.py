@@ -58,7 +58,7 @@ async def show_stats(callback: types.CallbackQuery):
 # ------------------------------------------------------------
 @router.callback_query(F.data == "admin_users")
 async def list_users(callback: types.CallbackQuery):
-    if not is_admin(callback.from_user.id):
+    if not await is_admin(callback.from_user.id):
         await callback.answer("❌ У вас нет доступа.", show_alert=True)
         return
 
@@ -91,7 +91,7 @@ async def list_users(callback: types.CallbackQuery):
 # ------------------------------------------------------------
 @router.message(lambda message: message.text == "admin")
 async def admin_panel(message: types.Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
+    if not await is_admin(message.from_user.id):
         return await message.answer("⛔ У тебя нет доступа")
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
