@@ -23,9 +23,11 @@ async def is_manager(user_id: int) -> bool:
         return user.role == UserRole.MANAGER
 
 
-@router.message(lambda message: message.text == "manager")
+@router.message(Command("manager"))
 async def manager_command(message: types.Message, state: FSMContext):
-    access = await is_manager(message.from_user.id) or await is_admin(message.from_user.id)
+    is_mgr = await is_manager(message.from_user.id)
+    is_adm = await is_admin(message.from_user.id)
+    access = is_mgr or is_adm
     print(access)
     if not access:
         await message.answer("🚫 У вас нет прав для этой команды.")

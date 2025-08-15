@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import openpyxl
 import json
 from pathlib import Path
+from aiogram.filters import Command
 
 router = Router()
 
@@ -89,7 +90,7 @@ async def list_users(callback: types.CallbackQuery):
 
 # Роутер на текст вызов панели админа
 # ------------------------------------------------------------
-@router.message(lambda message: message.text == "admin")
+@router.message(Command("admin"))
 async def admin_panel(message: types.Message, state: FSMContext):
     if not await is_admin(message.from_user.id):
         return await message.answer("⛔ У тебя нет доступа")

@@ -5,7 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.config import BOT_TOKEN
-from bot.handlers import start, download, info, admin, payment, channel_check
+from bot.handlers import start, download, info, admin, payment, channel_check, manager
 from db.base import run_migrations, create_tables
 from bot.schedule_tasks import scheduler_job, weekly_backup_job
 from bot.webhook.server_start import start_server
@@ -24,6 +24,7 @@ dp.include_router(info.router)
 dp.include_router(download.router)
 dp.include_router(payment.router)
 dp.include_router(channel_check.router)
+dp.include_router(manager.router)
 
 async def start_bot():
     """Запуск Telegram-бота."""
