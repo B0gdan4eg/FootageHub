@@ -1,4 +1,4 @@
-from sqlalchemy.future import select
+from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import User, Media, Download
 from datetime import datetime, timedelta
@@ -81,29 +81,28 @@ async def grant_access(user_id: int, type_: str, value: int, session: AsyncSessi
 
 async def has_user_downloaded(session: AsyncSession, user_id: int, url: str) -> bool:
     """
-    Проверяет, скачивал ли пользователь файл по данному URL за последние 24 часа.
+    Проверяет, скачивал ли пользователь файл по данному URL за последние 24 часа,
+    используя created_at из таблицы Media.
     """
-    # Получаем id медиа по url
-    media_id = await session.scalar(
-        select(Media.id).where(Media.url == url)
-    )
+    try:
+        # Получаем id медиа и дату создания по URL
+        media_data = await session.execute(
+            select(Media.id, Media.created_at).where(Media.url == url)
+        )
+        result = media_data.first()
+    except Exception as e:
+        print("Ошибка при запросе Media:", e)
+        return False
 
-    if media_id is None:
+    if not result:
         return False  # Файла с таким URL нет в базе
+
+    media_id, created_at = result
 
     # Граница времени (только последние 24 часа)
     time_limit = datetime.utcnow() - timedelta(hours=24)
-
-    # Проверяем наличие скачивания в последние 24 часа
-    download_id = await session.scalar(
-        select(Download.id).where(
-            Download.user_id == user_id,
-            Download.media_id == media_id,
-            Download.created_at >= time_limit
-        )
-    )
-
-    return download_id is not None
+    
+    return created_at >= time_limit
 
 async def add_daily_credits(session: AsyncSession, bot):
     now = datetime.utcnow()

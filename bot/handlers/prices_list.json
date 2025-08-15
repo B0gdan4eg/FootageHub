@@ -1,46 +1,33 @@
 {
-  "subscription_plans": {
-    "basic": {
-      "name": "Базовая",
-      "price": 3.99,
-      "period": 30
+    "subscription_plans": {
+        "basic": {
+            "name": "Базовая",
+            "price": 3.99,
+            "period": 30
+        },
+        "pro": {
+            "name": "Про",
+            "price": 9.99,
+            "period": 60
+        },
+        "premium": {
+            "name": "Премиум",
+            "price": 16.99,
+            "period": 90
+        }
     },
-    "pro": {
-      "name": "Про",
-      "price": 9.99,
-      "period": 60
-    },
-    "premium": {
-      "name": "Премиум",
-      "price": 16.99,
-      "period": 90
-    },
-    "deluxe": {
-      "name": "Делюкс",
-      "price": 29.99,
-      "period": 120
+    "credits_limit": {
+        "fifteen": {
+            "max_downloads": 15,
+            "price": 4.59
+        },
+        "thirty": {
+            "max_downloads": 30,
+            "price": 7.99
+        },
+        "sixty": {
+            "max_downloads": 60,
+            "price": 14.49
+        }
     }
-  },
-  "credits_limit": {
-    "one": {
-      "max_downloads": 1,
-      "price": 0.39
-    },
-    "five": {
-      "max_downloads": 5,
-      "price": 1.69
-    },
-    "fifteen": {
-      "max_downloads": 15,
-      "price": 4.59
-    },
-    "thirty": {
-      "max_downloads": 30,
-      "price": 7.99
-    },
-    "sixty": {
-      "max_downloads": 60,
-      "price": 14.59
-    }
-  }
 }

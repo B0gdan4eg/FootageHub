@@ -5,84 +5,111 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from services.crypto import create_crypto_invoice
 from services.json_reader import dict_to_namespace
 from pathlib import Path
+from bot.handlers.messages import CR_PAYMENT, SUB_PAYMENT
 
 router = Router()
 
 
 PRICE_LIST = Path(__file__).resolve().parent / "prices_list.json"
-# # Потом убрать
-# PRICE_LIST = "bot\handlers\prices_list.json"
+# Потом убрать
 
-# Коллбек на подписку
-@router.callback_query(lambda c: c.data == "buy_subscription")
-async def choose_subscribe_plan(callback_query: types.CallbackQuery):
+# # Коллбек на подписку
+# @router.callback_query(lambda c: c.data == "buy_subscription")
+# async def choose_subscribe_plan(callback_query: types.CallbackQuery):
     
-    # Загружаем цену из JSON
-    if not os.path.exists(PRICE_LIST):
-        print(f"❌ Файл {PRICE_LIST} не найден.")
-        return None
+#     # Загружаем цену из JSON
+#     if not os.path.exists(PRICE_LIST):
+#         print(f"❌ Файл {PRICE_LIST} не найден.")
+#         return None
 
-    with open(PRICE_LIST, "r", encoding="utf-8") as f:
-        pr = json.load(f)
+#     with open(PRICE_LIST, "r", encoding="utf-8") as f:
+#         pr = json.load(f)
         
-    data = dict_to_namespace(pr) 
-    subscription = data.subscription_plans
+#     data = dict_to_namespace(pr) 
+#     subscription = data.subscription_plans
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(
-                text=f"{plan.name} — {plan.price} USD на {plan.period} дн.",
-                callback_data=f"buy_subscription_{key}"
-            )]
-            for key, plan in subscription.__dict__.items()
-        ]
-    )
+#     keyboard = InlineKeyboardMarkup(
+#         inline_keyboard=[
+#             [InlineKeyboardButton(
+#                 text=f"{plan.name} — {plan.price} USD на {plan.period} дн.",
+#                 callback_data=f"buy_subscription_{key}"
+#             )]
+#             for key, plan in subscription.__dict__.items()
+#         ]
+#     )
     
-    await callback_query.message.answer("💳 Выберите подписку:", reply_markup=keyboard)
-    await callback_query.answer()
+#     await callback_query.message.answer("💳 Выберите подписку:", reply_markup=keyboard)
+#     await callback_query.answer()
    
 # Коллбек на скачивания   
-@router.callback_query(lambda c: c.data == "buy_credits")
-async def choose_credit_plan(callback_query: types.CallbackQuery):
-    
-    # Загружаем цену из JSON
+async def send_price_menu(message_or_callback):
+    """Отправляет меню с кредитами и подписками."""
     if not os.path.exists(PRICE_LIST):
-        print(f"❌ Файл {PRICE_LIST} не найден.")
-        return None
+        await message_or_callback.answer(f"❌ Файл {PRICE_LIST} не найден.")
+        return
 
     with open(PRICE_LIST, "r", encoding="utf-8") as f:
         pr = json.load(f)
-        
-    
+
     data = dict_to_namespace(pr)
-    credits = data.credits_limit
-    
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text=f"{item.max_downloads} кредит(ов) — {item.price} USD",
-            callback_data=f"buy_credits_{key}"
-        )]
-        for key, item in credits.__dict__.items()
-    ])
+    keyboard_buttons = []
 
-    await callback_query.message.answer("💳 Выберите пакет кредитов:", reply_markup=keyboard)
-    await callback_query.answer()
+    # Добавляем кредиты
+    if hasattr(data, "credits_limit"):
+        for key, item in data.credits_limit.__dict__.items():
+            keyboard_buttons.append([
+                InlineKeyboardButton(
+                    text=f"{item.max_downloads} кредит(ов) — {item.price} USD",
+                    callback_data=f"buy_credits_{key}"
+                )
+            ])
 
-# Коллбек на создание инвойсы
+    # Добавляем подписки
+    if hasattr(data, "subscription_plans"):
+        for key, item in data.subscription_plans.__dict__.items():
+            keyboard_buttons.append([
+                InlineKeyboardButton(
+                    text=f"Подписка на {item.period} дн. — {item.price} USD",
+                    callback_data=f"buy_subscription_{key}"
+                )
+            ])
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+
+    # Для CallbackQuery используем edit_text, для Message — answer
+    if isinstance(message_or_callback, types.CallbackQuery):
+        await message_or_callback.message.answer("💳 Выберите пакет:", reply_markup=keyboard)
+        await message_or_callback.answer()
+    else:
+        await message_or_callback.answer("💳 Выберите пакет:", reply_markup=keyboard)
+
+
+# Хендлер для callback
 @router.callback_query(lambda c: c.data == "create_invoice")
-async def choose_product_type(callback_query: types.CallbackQuery):
+async def choose_plan_callback(callback_query: types.CallbackQuery):
+    await send_price_menu(callback_query)
+
+
+# Хендлер для сообщения (например, текст "Купить")
+@router.message((lambda message: message.text == "Оплата 💳"))
+async def choose_plan_message(message: types.Message):
+    await send_price_menu(message)
     
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(text="🔐 Подписка", callback_data="buy_subscription"),
-            InlineKeyboardButton(text="💰 Кредиты", callback_data="buy_credits")
-        ]]
-    )
-    await callback_query.message.answer(
-        "Что вы хотите купить?",
-        reply_markup=keyboard
-    )
-    await callback_query.answer()
+# # Коллбек на создание инвойсы
+# @router.callback_query(lambda c: c.data == "create_invoice")
+# async def choose_product_type(callback_query: types.CallbackQuery):
+    
+#     keyboard = InlineKeyboardMarkup(
+#         inline_keyboard=[[
+#             InlineKeyboardButton(text="🔐 Подписка", callback_data="buy_subscription"),
+#             InlineKeyboardButton(text="💰 Кредиты", callback_data="buy_credits")
+#         ]]
+#     )
+#     await callback_query.message.answer(
+#         "Что вы хотите купить?",
+#         reply_markup=keyboard
+#     )
+#     await callback_query.answer()
     
 @router.callback_query(lambda c: c.data.startswith("buy_"))
 async def process_purchase(callback_query: types.CallbackQuery):
@@ -114,7 +141,7 @@ async def process_purchase(callback_query: types.CallbackQuery):
             return
 
         price = plan.price
-        description = f"{plan.max_downloads} кредит(ов) за {price} USD"
+        description = CR_PAYMENT.format(downloads=plan.max_downloads, _price=price)
 
     elif purchase_type == "subscription":
         plan = getattr(data.subscription_plans, plan_key, None)
@@ -124,7 +151,7 @@ async def process_purchase(callback_query: types.CallbackQuery):
             return
 
         price = plan.price
-        description = f"Подписка «{plan.name}» на {plan.period} дней за {price} USD"
+        description = SUB_PAYMENT.format(name=plan.name, period=plan.period, _price=price)
 
     else:
         await callback_query.message.answer("❌ Неизвестный тип покупки.")
@@ -144,7 +171,7 @@ async def process_purchase(callback_query: types.CallbackQuery):
             inline_keyboard=[[InlineKeyboardButton(text="💳 Оплатить", url=pay_url)]]
         )
         await callback_query.message.answer(
-            f"🔹 Вы выбрали:\n<b>{description}</b>\n\nПерейдите по ссылке для оплаты:",
+            description,
             reply_markup=keyboard,
             parse_mode="HTML"
         )

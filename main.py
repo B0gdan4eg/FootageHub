@@ -5,14 +5,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.config import BOT_TOKEN
-from bot.handlers import start, download, info, admin, payment
+from bot.handlers import start, download, info, admin, payment, channel_check
 from db.base import run_migrations, create_tables
 from bot.schedule_tasks import scheduler_job, weekly_backup_job
 from bot.webhook.server_start import start_server
 
-# Настройка Windows event loop
 if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 # Telegram bot
 bot = Bot(token=BOT_TOKEN)
@@ -24,6 +23,7 @@ dp.include_router(admin.router)
 dp.include_router(info.router)
 dp.include_router(download.router)
 dp.include_router(payment.router)
+dp.include_router(channel_check.router)
 
 async def start_bot():
     """Запуск Telegram-бота."""
@@ -46,7 +46,7 @@ async def main():
 
     # 3. Запуск сервера и бота параллельно
     await asyncio.gather(
-        start_server(),
+        # start_server(),
         start_bot()
     )
 

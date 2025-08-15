@@ -10,9 +10,7 @@ class ManagerFlow(StatesGroup):
     choosing_action = State()     # Выбор действия
     waiting_for_user_id = State() # (если нужно по ID глянуть)
 
-class AdminFlow(StatesGroup):
-    choosing_action = State()
+class AdminStates(StatesGroup):
     waiting_for_user_id = State()
     waiting_for_role = State()
-    waiting_for_credits = State()
-    waiting_for_subscription_days = State()
+    waiting_for_price_json = State()

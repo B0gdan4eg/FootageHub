@@ -2,13 +2,15 @@ from aiogram import Router, types, F
 from db.session import get_session
 from db.user_crud import get_user_by_telegram_id, has_user_downloaded
 from db.downloaded_file_crud import create_media, create_download
-import datetime
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from envato_utils.test_env import test
 import asyncio
 from aiogram import Bot
-from bot.handlers.messages import CANCLE_DOWNLOAD, APPLY_DOWNLOAD, FREEPIK, BAD_URL
+from bot.handlers.messages import CANCLE_DOWNLOAD, APPLY_DOWNLOAD, FREEPIK, BAD_URL, DOWNLOAD_FILE, CHANEL_CHECK
 from aiogram.enums.parse_mode import ParseMode
+from bot.state import DownloadFlow
+from aiogram.fsm.context import FSMContext
+from bot.handlers.channel_check import is_subscribed, CHANNEL_ID
 
 router = Router()
 
@@ -22,7 +24,7 @@ async def animate_thinking(message):
 
 # Кнопка ENVATO
 @router.message(lambda message: message.text == "Скачать Envato")
-async def ask_for_link(message: types.Message):
+async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
     telegram_id = message.from_user.id
 
     async for session in get_session():
@@ -38,6 +40,23 @@ async def ask_for_link(message: types.Message):
         # )
         
         if user.credits <= 0:
+            
+            if not await is_subscribed(bot, telegram_id):
+                
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [InlineKeyboardButton(text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")],
+                        [InlineKeyboardButton(text="Проверить подписку 🔍", callback_data="check_subscription")]
+                    ]
+                )
+                await message.answer(
+                    CHANEL_CHECK,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    reply_markup=keyboard
+                    )
+                return
+                
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
@@ -57,6 +76,9 @@ async def ask_for_link(message: types.Message):
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
+        
+        # Переходим в состояние ожидания ссылки
+        await state.set_state(DownloadFlow.waiting_for_link)
     
 # Кнопка FREEPIK 
 @router.message(lambda message: message.text in ["Скачать Freepik(Скоро...)"])
@@ -74,8 +96,8 @@ async def ask_for_link(message: types.Message):
             )
 
 # Обработка ссылки
-@router.message(F.text)
-async def handle_link(message: types.Message, bot: Bot):
+@router.message(DownloadFlow.waiting_for_link)
+async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
     url = message.text.strip()
     if not url.startswith("https://elements.envato.com/"):
         
@@ -92,9 +114,11 @@ async def handle_link(message: types.Message, bot: Bot):
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
             await message.answer("❌ Пользователь не найден в системе.")
+            await state.clear()
             return
         
         downloaded = await has_user_downloaded(session=session, user_id=user.id, url=url)
+        print(downloaded)
         if downloaded:
             
             await message.answer(
@@ -112,7 +136,7 @@ async def handle_link(message: types.Message, bot: Bot):
                 "Ваша ссылка:",
                 reply_markup=keyboard
             )
-            
+            await state.clear()
             return
         
         if user.credits <= 0:
@@ -127,6 +151,8 @@ async def handle_link(message: types.Message, bot: Bot):
                 disable_web_page_preview=True,
                 reply_markup=keyboard
             )
+            await state.clear()
+            return
         
         await bot.send_chat_action(chat_id=message.chat.id, action="typing")
         
@@ -151,7 +177,9 @@ async def handle_link(message: types.Message, bot: Bot):
             )
             
             await message.answer(
-                "Ваша ссылка:",
+                DOWNLOAD_FILE,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
                 reply_markup=keyboard
             )
 
@@ -159,3 +187,4 @@ async def handle_link(message: types.Message, bot: Bot):
             await session.commit()
         else:
             await thinking_msg.edit_text("❌ Не удалось скачать файл по ссылке.")
+        await state.clear()

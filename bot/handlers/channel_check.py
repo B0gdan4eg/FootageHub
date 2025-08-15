@@ -1,29 +1,58 @@
 # channel_check.py
-from aiogram import Bot
-from aiogram.types import ChatMemberStatus
+from aiogram import Bot, Router, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.exceptions import TelegramForbiddenError
+from aiogram.enums import ChatMemberStatus
+from aiogram import Bot, Router, types
+from bot.handlers.messages import CHANEL_CANCLE, CHANEL_APPLY
+from aiogram.enums.parse_mode import ParseMode
 
 # ID или @username канала
 CHANNEL_ID = "@footageChanel"  # например, "@mycoolchannel"
 
+router = Router()
+
 async def is_subscribed(bot: Bot, tg_user_id: int) -> bool:
-    """
-    Проверяет, подписан ли пользователь на канал.
-    
-    :param bot: Экземпляр бота (aiogram.Bot)
-    :param user_id: ID пользователя
-    :return: True если подписан, иначе False
-    """
     try:
-        member = await bot.get_chat_member(CHANNEL_ID, tg_user_id)
+        member = await bot.get_chat_member(
+            chat_id=CHANNEL_ID,
+            user_id=tg_user_id
+        )
         return member.status in (
             ChatMemberStatus.MEMBER,
-            ChatMemberStatus.ADMINISTRATOR,
-            ChatMemberStatus.OWNER
+            ChatMemberStatus.ADMINISTRATOR
         )
     except TelegramForbiddenError:
-        # Бот не имеет доступа к информации о канале
         return False
     except Exception as e:
         print(f"Ошибка при проверке подписки: {e}")
         return False
+
+
+@router.callback_query(lambda c: c.data == "check_subscription")
+async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
+    user_id = callback.from_user.id
+    subscribed = await is_subscribed(bot, user_id)
+
+    if not subscribed:
+        # Пользователь не подписан — клавиатура для подписки
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")],
+                [InlineKeyboardButton(text="Проверить подписку 🔍", callback_data="check_subscription")]
+            ]
+        )
+        await callback.message.edit_text(
+            CHANEL_CANCLE,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+            reply_markup=keyboard
+        )
+    else:
+        await callback.message.edit_text(
+            CHANEL_APPLY,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+        )
+
+    await callback.answer()  # убирает "часики"
