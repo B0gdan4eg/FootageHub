@@ -22,7 +22,7 @@ async def info(message: types.Message):
             f"<b>👤 Информация о вашем аккаунте:</b>\n\n"
             f"💼 <b>Подписка:</b> {'✅ Активна' if user.is_subscribed else '❌ Неактивна'}\n"
             f"📅 <b>Действует до:</b> {user.subscription_until if user.is_subscribed else '—'}\n"
-            f"💳 <b>Кредиты:</b> {'❗️0' if user.credits == 0 else user.credits}\n"
+            f"💳 <b>Доступные загрузки:</b> {'❗️0' if user.credits == 0 else user.credits}\n"
             f"📥 <b>Скачиваний всего:</b> {downloads_count}"
         )
 

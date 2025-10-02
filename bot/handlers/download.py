@@ -1,8 +1,8 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from db.session import get_session
 from db.user_crud import get_user_by_telegram_id, has_user_downloaded
 from db.downloaded_file_crud import create_media, create_download
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from envato_utils.test_env import test
 import asyncio
 from aiogram import Bot
@@ -172,7 +172,8 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="⬇️ Скачать", url=file_path)]
+                    [InlineKeyboardButton(text="Cкачать файл 📁", url=file_path)]
+                    [InlineKeyboardButton(text="Cкачать ещё", callback_data="download_more")]
                 ]
             )
             
@@ -188,3 +189,37 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         else:
             await thinking_msg.edit_text("❌ Не удалось скачать файл по ссылке.")
         await state.clear()
+
+# Хэндлер на кнопку "Скачать ещё"
+@router.callback_query(F.data == "download_more")
+async def download_more(callback: CallbackQuery, state: FSMContext):
+    telegram_id = callback.from_user.id
+
+    async for session in get_session():
+        user = await get_user_by_telegram_id(session, telegram_id)
+        if not user:
+            await callback.message.answer("❌ Пользователь не найден в системе.")
+            return
+
+        if user.credits <= 0:
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
+                ]
+            )
+            await callback.message.answer(
+                CANCLE_DOWNLOAD,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+                reply_markup=keyboard
+            )
+            return
+
+        # Просим новую ссылку
+        await callback.message.answer(
+            APPLY_DOWNLOAD.format(credit=user.credits),
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+        # Переводим в состояние ожидания ссылки
+        await state.set_state(DownloadFlow.waiting_for_link)
