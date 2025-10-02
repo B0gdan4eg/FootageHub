@@ -22,7 +22,7 @@ dp.include_router(start.router)
 dp.include_router(admin.router)
 dp.include_router(info.router)
 dp.include_router(download.router)
-dp.include_router(payment.router)
+# dp.include_router(payment.router)
 dp.include_router(channel_check.router)
 dp.include_router(manager.router)
 
