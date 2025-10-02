@@ -7,7 +7,7 @@ main_menu_kb = ReplyKeyboardMarkup(
             KeyboardButton(text="Скачать Freepik(Скоро...)"),
         ],
         [
-            KeyboardButton(text="Оплата 💳"),
+            # KeyboardButton(text="Оплата 💳"),
             KeyboardButton(text="Информация"),
         ]
     ],

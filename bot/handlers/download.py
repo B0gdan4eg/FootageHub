@@ -39,8 +39,8 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
         #     and user.subscription_until > datetime.datetime.utcnow()
         # )
         
-        if user.credits <= 0:
-            
+        # if user.credits <= 0:
+        if False:    
             if not await is_subscribed(bot, telegram_id):
                 
                 keyboard = InlineKeyboardMarkup(
@@ -139,7 +139,8 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             await state.clear()
             return
         
-        if user.credits <= 0:
+        # if user.credits <= 0:
+        if False:
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
@@ -201,7 +202,8 @@ async def download_more(callback: CallbackQuery, state: FSMContext):
             await callback.message.answer("❌ Пользователь не найден в системе.")
             return
 
-        if user.credits <= 0:
+        # if user.credits <= 0:
+        if False:
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
