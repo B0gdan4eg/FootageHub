@@ -1,6 +1,6 @@
 from aiogram import Router, types, F
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardButton, KeyboardButton
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.fsm.context import FSMContext
 
@@ -13,11 +13,11 @@ async def main_menu(message: types.Message, state: FSMContext):
     """
     Главное меню с командами бота
     """
-    keyboard = InlineKeyboardMarkup(
+    keyboard = ReplyKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Скачать Envato")],
-            [InlineKeyboardButton(text="Скачать Freepik (Скоро...)")],
-            [InlineKeyboardButton(text="Информация")],
+            [KeyboardButton(text="Скачать Envato")],
+            [KeyboardButton(text="Скачать Freepik (Скоро...)")],
+            [KeyboardButton(text="Информация")],
         ]
     )
 
