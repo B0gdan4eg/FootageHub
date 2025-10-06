@@ -101,7 +101,9 @@ async def admin_panel(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="👤 Назначить роль", callback_data="admin_assign_role")],
         [InlineKeyboardButton(text="💳 Загрузить цены", callback_data="admin_upload_prices")],
         [InlineKeyboardButton(text="🧹 Очистка базы", callback_data="clear_db")],
-        [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")]
+        [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
+        [InlineKeyboardButton(text="🍪 Загрузить cookies", callback_data="admin_upload_cookies")],
+        [InlineKeyboardButton(text="📦 Установить лимит всем", callback_data="admin_set_download_limit")],
         
     ])
     await message.answer("📂 Панель администратора", reply_markup=keyboard)
@@ -246,3 +248,56 @@ async def export_db_callback(callback_query: types.CallbackQuery, bot: Bot):
     async for session in get_session():
         await export_full_db_and_send(session, bot, callback_query.message.chat.id)
     await callback_query.answer("📁 База выгружена!")
+
+
+
+# Загрузка envato_cookies.json
+@router.callback_query(lambda c: c.data == "admin_upload_cookies")
+async def upload_cookies(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(AdminStates.waiting_for_cookies_json)
+    await callback.message.answer("Отправьте JSON с cookies (envato_cookies.json):")
+    await callback.answer()
+
+
+@router.message(AdminStates.waiting_for_cookies_json, F.content_type == "document")
+async def receive_cookies_json(message: types.Message, state: FSMContext, bot: Bot):
+    file = await bot.download(message.document.file_id)
+    content = file.read().decode("utf-8")
+
+    try:
+        cookies_data = json.loads(content)
+    except Exception as e:
+        return await message.answer(f"❌ Ошибка при чтении JSON: {e}")
+
+    # сохраняем рядом с проектом
+    cookies_path = Path(__file__).resolve().parent / "envato_cookies.json"
+    with open(cookies_path, "w", encoding="utf-8") as f:
+        json.dump(cookies_data, f, indent=4, ensure_ascii=False)
+
+    await message.answer("✅ Cookies успешно обновлены.")
+    await state.clear()
+    
+    
+    
+# Начало установки лимита
+@router.callback_query(lambda c: c.data == "admin_set_download_limit")
+async def ask_download_limit(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(AdminStates.waiting_for_limit_value)
+    await callback.message.answer("Введите новое количество доступных скачиваний для всех пользователей:")
+    await callback.answer()
+
+
+# Принятие числа и обновление
+@router.message(AdminStates.waiting_for_limit_value)
+async def set_download_limit(message: types.Message, state: FSMContext):
+    if not message.text.isdigit():
+        return await message.answer("❌ Введите число.")
+
+    limit = int(message.text)
+
+    async for session in get_session():
+        await session.execute(update(User).values(credits=limit))
+        await session.commit()
+
+    await message.answer(f"✅ Всем пользователям установлено {limit} скачиваний.")
+    await state.clear()
