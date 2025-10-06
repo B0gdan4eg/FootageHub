@@ -224,7 +224,9 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
     # Сохраняем в память
     file_stream = BytesIO()
     wb.save(file_stream)
-    file_stream.seek(0)  # обязательно перед чтением
+    file_stream.seek(0)
+
+    # FSInputFile умеет работать с потоками через "file_stream"
     input_file = FSInputFile(file_stream, filename="full_database_export.xlsx")
 
     await bot.send_document(
