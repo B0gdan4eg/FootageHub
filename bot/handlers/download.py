@@ -179,7 +179,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             )
             
             await message.answer(
-                DOWNLOAD_FILE,
+                DOWNLOAD_FILE.format(credit=user.credits),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 reply_markup=keyboard
