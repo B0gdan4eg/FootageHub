@@ -19,3 +19,4 @@ async def main_menu(message: types.Message, state: FSMContext):
         reply_markup=main_menu_kb,
     )
     await state.clear()
+    
