@@ -13,13 +13,15 @@ async def main_menu(message: types.Message, state: FSMContext):
     """
     Главное меню с командами бота
     """
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎨 Скачать Envato", callback_data="envato_start")],
-        [InlineKeyboardButton(text="🖼 Скачать Freepik (Скоро...)", callback_data="freepik_soon")],
-        [InlineKeyboardButton(text="ℹ️ Информация", callback_data="user_info")],
-    ])
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🎨 Скачать Envato", callback_data="envato_start")],
+            [InlineKeyboardButton(text="🖼 Скачать Freepik (Скоро...)", callback_data="freepik_soon")],
+            [InlineKeyboardButton(text="ℹ️ Информация", callback_data="user_info")],
+        ]
+    )
 
-    await message.answer(
+    await message.edit_text(
         "📋 <b>Главное меню</b>\n\nВыберите нужный раздел:",
         parse_mode=ParseMode.HTML,
         reply_markup=keyboard,
