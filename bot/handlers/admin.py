@@ -16,6 +16,7 @@ import openpyxl
 import json
 from pathlib import Path
 from aiogram.filters import Command
+from enum import Enum
 
 router = Router()
 
@@ -210,10 +211,15 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
 
         # Данные
         for row in rows:
-            ws.append([
-                getattr(row, col) if getattr(row, col) is not None else ""
-                for col in columns
-            ])
+            row_data = []
+            for col in columns:
+                value = getattr(row, col)
+                if isinstance(value, Enum):
+                    value = value.value  # Конвертируем enum в его значение
+                elif value is None:
+                    value = ""
+                row_data.append(value)
+            ws.append(row_data)
 
     # Сохраняем в память
     file_stream = BytesIO()
