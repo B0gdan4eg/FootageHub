@@ -178,6 +178,8 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
                 ]
             )
             
+            user.credits -= 1
+            
             await message.answer(
                 DOWNLOAD_FILE.format(credit=user.credits),
                 parse_mode=ParseMode.HTML,
@@ -185,7 +187,6 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
                 reply_markup=keyboard
             )
 
-            user.credits -= 1
             await session.commit()
         else:
             await thinking_msg.edit_text("❌ Не удалось скачать файл по ссылке.")

@@ -3,7 +3,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
+from aiogram.types import BotCommand
 from bot.config import BOT_TOKEN
 from bot.handlers import start, download, info, admin, payment, channel_check, manager
 from db.base import run_migrations, create_tables
@@ -12,6 +12,15 @@ from bot.webhook.server_start import start_server
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    
+async def set_bot_commands(bot: Bot):
+    """Устанавливает список команд бота, чтобы меню отображалось на всех устройствах."""
+    commands = [
+        BotCommand(command="envato", description="Скачать Envato"),
+        BotCommand(command="freepik", description="Скачать Freepik(Скоро...)"),
+        BotCommand(command="info", description="Информация"),
+    ]
+    await bot.set_my_commands(commands)
 
 # Telegram bot
 bot = Bot(token=BOT_TOKEN)
@@ -38,6 +47,8 @@ async def main():
         print(f"[WARN] Миграции не выполнены: {e}")
         print("[INFO] Создаю таблицы напрямую...")
         await create_tables()
+
+    await set_bot_commands(bot)
 
     # 2. Планировщик
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
