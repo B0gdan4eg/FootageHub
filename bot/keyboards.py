@@ -8,6 +8,7 @@ main_menu_kb = ReplyKeyboardMarkup(
         ],
         [
             KeyboardButton(text="Информация"),
+            KeyboardButton(text="Оплата 💳"),
         ]
     ],
     resize_keyboard=True,
