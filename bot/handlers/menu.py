@@ -1,13 +1,15 @@
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.enums.parse_mode import ParseMode
+from aiogram.fsm.context import FSMContext
 
 router = Router()
 
 @router.message(Command("menu"))
 @router.callback_query(lambda c: c.data == "go_back_menu")
 @router.message(lambda message: message.text.lower() in ["меню", "menu", "📋 меню"])
-async def main_menu(message: types.Message):
+async def main_menu(message: types.Message, state: FSMContext):
     """
     Главное меню с командами бота
     """
@@ -19,6 +21,7 @@ async def main_menu(message: types.Message):
 
     await message.answer(
         "📋 <b>Главное меню</b>\n\nВыберите нужный раздел:",
+        parse_mode=ParseMode.HTML,
         reply_markup=keyboard,
-        parse_mode="HTML"
     )
+    await state.clear()
