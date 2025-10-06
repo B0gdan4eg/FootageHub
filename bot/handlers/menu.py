@@ -1,4 +1,4 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums.parse_mode import ParseMode
@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 router = Router()
 
 @router.message(Command("menu"))
-@router.callback_query(lambda c: c.data == "go_back_menu")
+@router.callback_query(F.data == "go_back_menu")
 @router.message(lambda message: message.text.lower() in ["меню", "menu", "📋 меню"])
 async def main_menu(message: types.Message, state: FSMContext):
     """
@@ -22,7 +22,7 @@ async def main_menu(message: types.Message, state: FSMContext):
     )
 
     await message.answer(
-        "📋 <b>Главное меню</b>\n\nВыберите нужный раздел:",
+        """📋 <b>Главное меню</b>\n\nВыберите нужный раздел:""",
         parse_mode=ParseMode.HTML,
         reply_markup=keyboard,
     )

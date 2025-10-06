@@ -24,7 +24,7 @@ async def animate_thinking(message):
 
 # Кнопка ENVATO
 @router.message(Command("envato"))
-@router.callback_query(lambda c: c.data == "envato_start")
+@router.callback_query(F.data == "envato_start")
 @router.message(lambda message: message.text == "Скачать Envato")
 async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
     telegram_id = message.from_user.id
@@ -84,7 +84,7 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
     
 # Кнопка FREEPIK 
 @router.message(Command("freepik"))
-@router.callback_query(lambda c: c.data == "freepik_soon")
+@router.callback_query(F.data == "freepik_soon")
 @router.message(lambda message: message.text in ["Скачать Freepik(Скоро...)"])
 async def ask_for_link(message: types.Message):
     subscribe_keyboard = InlineKeyboardMarkup(
