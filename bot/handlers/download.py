@@ -173,7 +173,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="Cкачать файл 📁", url=file_path)]
+                    [InlineKeyboardButton(text="Cкачать файл 📁", url=file_path)],
                     [InlineKeyboardButton(text="Cкачать ещё", callback_data="download_more")]
                 ]
             )
