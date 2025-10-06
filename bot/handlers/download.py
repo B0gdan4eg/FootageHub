@@ -102,11 +102,18 @@ async def ask_for_link(message: types.Message):
 async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
     url = message.text.strip()
     if not url.startswith("https://elements.envato.com/"):
-        
+    
+        back_keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="go_back_menu")]
+            ]
+        )
+            
         await message.answer(
             BAD_URL,
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=back_keyboard
             )
         return
 

@@ -5,7 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram.types import BotCommand
 from bot.config import BOT_TOKEN
-from bot.handlers import start, download, info, admin, payment, channel_check, manager
+from bot.handlers import start, download, info, admin, payment, channel_check, manager, menu
 from db.base import run_migrations, create_tables
 from bot.schedule_tasks import scheduler_job, weekly_backup_job
 from bot.webhook.server_start import start_server
@@ -19,6 +19,7 @@ async def set_bot_commands(bot: Bot):
         BotCommand(command="envato", description="Скачать Envato"),
         BotCommand(command="freepik", description="Скачать Freepik(Скоро...)"),
         BotCommand(command="info", description="Информация"),
+        BotCommand(command="menu", description="Меню"),
     ]
     await bot.set_my_commands(commands)
 
@@ -34,6 +35,7 @@ dp.include_router(download.router)
 dp.include_router(payment.router)
 dp.include_router(channel_check.router)
 dp.include_router(manager.router)
+dp.include_router(menu.router)
 
 async def start_bot():
     """Запуск Telegram-бота."""
