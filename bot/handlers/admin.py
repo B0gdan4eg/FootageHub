@@ -1,5 +1,5 @@
 from aiogram import Router, types, F
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputFile
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram import Bot
@@ -224,13 +224,12 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
     # Сохраняем в память
     file_stream = BytesIO()
     wb.save(file_stream)
-    file_stream.seek(0)
+    file_stream.seek(0)  # обязательно перед чтением
+    input_file = InputFile(file_stream, filename="full_database_export.xlsx")
 
-    # Отправляем в чат
     await bot.send_document(
         chat_id=chat_id,
-        document=file_stream,
-        filename="full_database_export.xlsx",
+        document=input_file,
         caption="📊 Полный экспорт базы данных"
     )
 
