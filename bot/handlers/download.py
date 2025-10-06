@@ -5,7 +5,7 @@ from db.downloaded_file_crud import create_media, create_download
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from envato_utils.test_env import test
 import asyncio
-from aiogram import Bot
+from aiogram.filters import Command
 from bot.handlers.messages import CANCLE_DOWNLOAD, APPLY_DOWNLOAD, FREEPIK, BAD_URL, DOWNLOAD_FILE, CHANEL_CHECK
 from aiogram.enums.parse_mode import ParseMode
 from bot.state import DownloadFlow
@@ -23,6 +23,7 @@ async def animate_thinking(message):
     return thinking_msg
 
 # Кнопка ENVATO
+@router.message(Command("envato"))
 @router.message(lambda message: message.text == "Скачать Envato")
 async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
     telegram_id = message.from_user.id
@@ -81,6 +82,7 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
         await state.set_state(DownloadFlow.waiting_for_link)
     
 # Кнопка FREEPIK 
+@router.message(Command("freepik"))
 @router.message(lambda message: message.text in ["Скачать Freepik(Скоро...)"])
 async def ask_for_link(message: types.Message):
     subscribe_keyboard = InlineKeyboardMarkup(
