@@ -14,5 +14,5 @@ class AdminStates(StatesGroup):
     waiting_for_user_id = State()
     waiting_for_role = State()
     waiting_for_price_json = State()
-    waiting_for_cookies_json = State()  # 👈 Добавь это
-    waiting_for_limit_value = State()   # 👈 И это, если еще не добавил
+    waiting_for_cookies_json = State()
+    waiting_for_limit_value = State()
