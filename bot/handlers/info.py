@@ -8,6 +8,7 @@ from aiogram.filters import Command
 router = Router()
 
 @router.message(Command("info"))
+@router.callback_query(lambda c: c.data == "user_info")
 @router.message(lambda message: message.text == "Информация")
 async def info(message: types.Message):
     telegram_id = message.from_user.id

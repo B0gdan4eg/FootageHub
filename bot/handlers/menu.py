@@ -5,6 +5,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 router = Router()
 
 @router.message(Command("menu"))
+@router.callback_query(lambda c: c.data == "go_back_menu")
 @router.message(lambda message: message.text.lower() in ["меню", "menu", "📋 меню"])
 async def main_menu(message: types.Message):
     """
