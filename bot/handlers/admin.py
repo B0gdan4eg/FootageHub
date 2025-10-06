@@ -105,6 +105,7 @@ async def admin_panel(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
         [InlineKeyboardButton(text="🍪 Загрузить cookies", callback_data="admin_upload_cookies")],
         [InlineKeyboardButton(text="📦 Установить лимит всем", callback_data="admin_set_download_limit")],
+        [InlineKeyboardButton(text="📢 Оповещение", callback_data="admin_broadcast")],
         
     ])
     await message.answer("📂 Панель администратора", reply_markup=keyboard)
@@ -303,4 +304,36 @@ async def set_download_limit(message: types.Message, state: FSMContext):
         await session.commit()
 
     await message.answer(f"✅ Всем пользователям установлено {limit} скачиваний.")
+    await state.clear()
+    
+@router.callback_query(lambda c: c.data == "admin_broadcast")
+async def start_broadcast(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(AdminStates.waiting_for_broadcast_text)
+    await callback.message.answer("📝 Введите текст оповещения, который нужно отправить всем пользователям:")
+    await callback.answer()
+
+
+@router.message(AdminStates.waiting_for_broadcast_text)
+async def send_broadcast(message: types.Message, state: FSMContext, bot: Bot):
+    text = message.text.strip()
+
+    if text.lower() in {"отмена", "cancel"}:
+        await state.clear()
+        return await message.answer("❌ Рассылка отменена.")
+
+    sent = 0
+    failed = 0
+
+    async for session in get_session():
+        users = await session.execute(select(User.tg_id))
+        tg_ids = [u[0] for u in users.all()]
+
+    for tg_id in tg_ids:
+        try:
+            await bot.send_message(tg_id, text)
+            sent += 1
+        except Exception:
+            failed += 1
+
+    await message.answer(f"✅ Рассылка завершена!\n📬 Отправлено: {sent}\n⚠️ Ошибок: {failed}")
     await state.clear()

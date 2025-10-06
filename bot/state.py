@@ -16,3 +16,4 @@ class AdminStates(StatesGroup):
     waiting_for_price_json = State()
     waiting_for_cookies_json = State()
     waiting_for_limit_value = State()
+    waiting_for_broadcast_text = State()
