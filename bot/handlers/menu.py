@@ -14,7 +14,7 @@ async def main_menu(message: types.Message, state: FSMContext):
     Главное меню с командами бота
     """
     await message.answer(
-        # """📋 <b>Главное меню</b>\n\nВыберите нужный раздел:""",
+        """📋 <b>Главное меню</b>\n\nВыберите нужный раздел:""",
         parse_mode=ParseMode.HTML,
         reply_markup=main_menu_kb,
     )
