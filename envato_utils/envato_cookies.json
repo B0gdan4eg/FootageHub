@@ -1,141 +1,317 @@
 [
     {
-        "domain": ".envato.com",
-        "expiry": 1791406823,
-        "httpOnly": false,
-        "name": "preferredLanguage",
-        "path": "/",
-        "sameSite": "Lax",
-        "secure": false,
-        "value": "ru"
-    },
-    {
-        "domain": "elements.envato.com",
-        "expiry": 1759871722,
-        "httpOnly": false,
-        "name": "_dd_s",
-        "path": "/",
-        "sameSite": "Strict",
-        "secure": false,
-        "value": "rum=0&expire=1759871721491"
-    },
-    {
-        "domain": ".envato.com",
-        "expiry": 1794430822,
-        "httpOnly": false,
-        "name": "_ga",
-        "path": "/",
-        "sameSite": "Lax",
-        "secure": false,
-        "value": "GA1.1.133982061.1759870823"
-    },
-    {
-        "domain": ".envato.com",
-        "httpOnly": true,
-        "name": "_cfuvid",
-        "path": "/",
-        "sameSite": "None",
-        "secure": true,
-        "value": "IgFZvyir2IammaP505azKQWH7DKEMWaS6liTsR93ZGk-1759870821612-0.0.1.1-604800000"
-    },
-    {
-        "domain": ".envato.com",
-        "expiry": 1759872621,
-        "httpOnly": true,
-        "name": "__cf_bm",
-        "path": "/",
-        "sameSite": "None",
-        "secure": true,
-        "value": "e4pDOYeqr1Smcrx_E5UbAttnZVaqyLpmSGXQMnbULuw-1759870821-1.0.1.1-9Ztt8MDQc4RWcOA2N3x0UkIIahiCN_NE734858xHINyLWXJoXLs2qPk1rOovxd93xDUmLmNDCm3zPouN0z4_E1mWrpbUlREn6SAL.flT9bg"
-    },
-    {
-        "domain": ".elements.envato.com",
-        "expiry": 1791406821,
-        "httpOnly": false,
-        "name": "GO_EXP_STOREFRONT",
-        "path": "/",
-        "sameSite": "Lax",
-        "secure": false,
-        "value": "32F8AEE3-37B7-4460-AB04-7C5BA0F1F91F=1&306e2285-134a-4ff7-8393-f2fa71c461ee=1&y8n5u03w-b3c4-5d6e-f7g8-9h0i1j2klmno=1&1c55a499-78e1-4626-9984-e6cebe3bd93b=1&ba74b66a-7129-4d90-ba8f-6b4b0f855104=0&7ab92939-3ca7-4e67-8382-ed5082ee4f15=1&2270703e-1824-49a0-a167-b01349273659=0&dbce80ea-424b-4577-8bee-9f1156698d22=0&6d1013b0-572a-4f83-b55a-f7f6655b8f34=0&a7f3e9c1-4b8d-4e2a-9f6c-3d5e8a1b4c7f=0"
-    },
-    {
-        "domain": ".envato.com",
-        "expiry": 1794430822,
-        "httpOnly": false,
-        "name": "_ga_49PPXBVNM9",
-        "path": "/",
-        "sameSite": "Lax",
-        "secure": false,
-        "value": "GS2.1.s1759870822$o1$g0$t1759870822$j60$l0$h1537347843"
-    },
-    {
-        "domain": "elements.envato.com",
-        "expiry": 1791406821,
-        "httpOnly": false,
         "name": "original_landing_page_url",
-        "path": "/",
-        "sameSite": "Lax",
-        "secure": false,
-        "value": "https://elements.envato.com/ru/sign-in"
-    },
-    {
+        "value": "https://elements.envato.com/ru/europe-map-kit-V2NUMF6",
         "domain": "elements.envato.com",
-        "expiry": 1762549221,
-        "httpOnly": false,
-        "name": "CookieConsent",
         "path": "/",
-        "sameSite": "Lax",
-        "secure": true,
-        "value": "{stamp:%27-1%27%2Cnecessary:true%2Cpreferences:true%2Cstatistics:true%2Cmarketing:true%2Cmethod:%27implied%27%2Cver:1%2Cutc:1759870821248%2Cregion:%27BY%27}"
-    },
-    {
-        "domain": ".envato.com",
-        "expiry": 1794430823,
-        "httpOnly": false,
-        "name": "_ga_SFZC8HJ4D7",
-        "path": "/",
-        "sameSite": "Lax",
+        "expires": 1784478836,
         "secure": false,
-        "value": "GS2.1.s1759870822$o1$g0$t1759870823$j59$l0$h0"
+        "httpOnly": false
     },
     {
-        "domain": ".elements.envato.com",
-        "expiry": 1759872620,
-        "httpOnly": true,
+        "name": "CookieConsent",
+        "value": "{stamp:%27mQXxMWcAPsSoGcAIFMOk+l6PjlMHb6vfCpgasG3K+W7/p2PPDnXnyw==%27%2Cnecessary:true%2Cpreferences:true%2Cstatistics:true%2Cmarketing:true%2Cmethod:%27explicit%27%2Cver:1%2Cutc:1752942868693%2Cregion:%27no%27}",
+        "domain": "elements.envato.com",
+        "path": "/",
+        "expires": 1784478868,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "sa-user-id",
+        "value": "s%253A0-f869d981-450e-5d5e-6d61-36ae670fbaad.bERf3P32anIINWvyor%252F12zc7o3wWHzqFG7nAGm91j5o",
+        "domain": "elements.envato.com",
+        "path": "/",
+        "expires": 1784478870,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "sa-user-id-v2",
+        "value": "s%253A-GnZgUUOXV5tYTauZw-6rbn9YY0.%252Fb1W5%252Fwq77tOdvQz1qdfOtDWpFlFL0jb3yXXRlBiFWA",
+        "domain": "elements.envato.com",
+        "path": "/",
+        "expires": 1784478870,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "sa-user-id-v3",
+        "value": "s%253AAQAKIC6xVsz2ugwxR6tsvh51L_rZPvvpOujvQ0zPMnB8LuUyEHwYBCCWku_DBjABOgQhyhL0QgSfvHer.dDyXhY7lubHouGsSaAH39bpMlXNy382pBX3%252F9A3nl2Q",
+        "domain": "elements.envato.com",
+        "path": "/",
+        "expires": 1784478870,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "psi",
+        "value": "{%22previouslySignedIn%22:true}",
+        "domain": "elements.envato.com",
+        "path": "/",
+        "expires": 1762447218,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_dd_s",
+        "value": "rum=0&expire=1759873070030",
+        "domain": "elements.envato.com",
+        "path": "/",
+        "expires": 1759873073,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "CookieConsent",
+        "value": "{stamp:%27C5+jW5Hm85IxgNTX12kvnSyaC3UVIpLCwjd/7I9rCMIKu/IoEMbyXg==%27%2Cnecessary:true%2Cpreferences:true%2Cstatistics:true%2Cmarketing:true%2Cmethod:%27explicit%27%2Cver:1%2Cutc:1752942874294%2Cregion:%27no%27}",
+        "domain": "account.envato.com",
+        "path": "/",
+        "expires": 1784478874,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "_dd_s",
+        "value": "isExpired=1&aid=00de082a-00f0-43de-8980-041468efd429",
+        "domain": "account.envato.com",
+        "path": "/",
+        "expires": 1784487096,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "btt",
+        "value": "c84f5e0d67a4445d93f89b88f1b18ec0-0jgH2rBcGS",
+        "domain": "account.envato.com",
+        "path": "/",
+        "expires": 1794415216,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "auth_context",
+        "value": "xqWjEU5OGXJJKXw70krC2wQ7k%2Fcpe9RyCGMvH5a1%2BiZHC7o%2FJptnxph5dv0tNVzVnV9ozPY8XZ%2BjH%2FAJ4T5hmTKTH8dtGKatyNLLgTZ5E7cI0NCoRTN9xf6Jq9t7ovOOcoSS8k9%2BOKXhaGoK0Oxis%2BGd9mxUVQ%2FO3%2BETlqub%2FO7AT5qMA0PEOgoB1MArdVkO5eqdxRLdICJlo8jENKA%2FdTdWdkbF77dkcQSI0PKJYXK9eptpvnjJJwstQmX2a91jROLMI44scXgwfv6KCHcuz73UZAmkHpQW2gFsBTR1TYNYmqjvVO%2BfEjFrD9Ppzqp7r%2B8hjaDoOk6xu%2BEuHFVFxpElf1v77OlcjIdsR3EGrJHgSERLBhO76PtzL%2BFF9q7xQvAsXhXOfqzy%2Foaua%2FeZwDp0IJng6g%3D%3D--YmVaz4eW%2FZauZp%2Be--Yq8whoEWZgx76Ycu0ZAOYw%3D%3D",
+        "domain": "account.envato.com",
+        "path": "/",
+        "expires": 1759872606,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "envatosession",
+        "value": "1M23Bb2ujG8zjJOHSgiyV50qx9PXoFrmDbjesQ3N%2B%2F%2BbPln7zGt9Q6Y7LIYBxvqTdV74pEDMFVbIkqjmTZBjT%2BK2BPYW%2BGyoYSd3s9rp%2FKpPSND04KALLgnGFnCxbSdYoV%2FPSYMavsAMUCbQeTrYDSTg2MZ7OpyxwUnVDf48ClANRrQBwHa7BjISNATaPYlbsW3ljbOqYPH9lKY%2Fv%2FcKXCpY%2BZgYcSLo3bVYr1tfLibkvTZWHOBNowL9hXpB5QnC4nPm4TnwfKpbHAf5a1h9u9ys%2BwqTan8f0f1J2hkgnUsez8wBdpXNNsJauuzN75siRDKbZpma8R7tiIT8te1sHOahmrRk%2FaOVbI1fXvgZ2fn50U%2BcsQ3%2BteqKUe4d8ifeW5oKZ9JcJX7yiC4ubuyKk%2BxYWjg2VsMk%2F4%2FDt6%2B%2FmyxGDvc%2F2HezdlUKsjLHy98dy6uuBuzTj8JT5MOtaRpMBBTattIXkxYv4I3%2FSCJWtdBAaRmpPLMDooq1lArxqzZnlFRzaKPctRLfnjMyRDIMOp0ByhbZQNOWWwbC%2FAyEQPRzoeffQ%2BV89bDpeqV2h%2FopN%2Fe3--ql5vcfdlXcObfOJb--T%2FyxpM4%2BTUsITDQYy3yCww%3D%3D",
+        "domain": "account.envato.com",
+        "path": "/",
+        "expires": 1775650518,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "_ga_P25W8FT6F7",
+        "value": "GS2.1.s1752951097$o2$g0$t1752951097$j60$l0$h0",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1787511097,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_ce.clock_data",
+        "value": "437%2C51.158.254.161%2C1%2C9fea701a627a57d0c458db2e1cb60d62%2CChrome%2CFR",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1759941630,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "ajs_anonymous_id",
+        "value": "9e492e6b-a529-48f8-9e5b-c2ba41ee2be5",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1791391270,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "ajs_user_id",
+        "value": "6418fcdb-a0db-421f-b895-6f8ea3c8688a",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1791391270,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
         "name": "__cf_bm",
+        "value": "4gnFH1TKQDuuzt1_Fxxb8E3MmTelOdDDEfXqvYUOZkY-1759871697-1.0.1.1-FVyrtIZprylwsII.HEQZxSw.x4mLkJ0gTBh9v2l_mfMFTBIrVTIGA1B3va6uvm3cc6AJwf660JgiccS681TrAZCXM1kJLYaNxoL72_o0Xig",
+        "domain": ".envato.com",
         "path": "/",
-        "sameSite": "None",
+        "expires": 1759873498,
         "secure": true,
-        "value": "e7uTweKCS_lk69EK0.g.dHew5ZQq0.daywjBz2oYUQk-1759870820-1.0.1.1-bHt2hFgJuXvwEmPr_n60X8y5B7Nyim_1hTypY30so8RBNGlSVVhK1nDOKklPYMoXancLlDkizrBVnVG5n2cLbjHC3YcBrDNHUjjwerh7WFA"
+        "httpOnly": false
     },
     {
+        "name": "_fbp",
+        "value": "fb.1.1759760430498.295819557551481784",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1767647706,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_ga",
+        "value": "GA1.1.1520972978.1752942839",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1794432045,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_gcl_au",
+        "value": "1.1.1967966593.1752942870",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1760718870,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_rdt_uuid",
+        "value": "1752942870228.d39c2009-8e54-4a59-a97b-ca007a25bb94",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1767648050,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "_uetsid",
+        "value": "4b7d7da0a39c11f0982c8b86110b7aa6",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1759958450,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_uetvid",
+        "value": "3e83148064be11f088e03f159c853b2b",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1793568050,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "preferredLanguage",
+        "value": "ru",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1791408041,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_ce.s",
+        "value": "v~661814ebe2e3fdfecf0832ff87ed062c93ef7519~lcw~1759872051363~vir~returning~lva~1759855228213~vpv~6~as~true~v11ls~aef155c0-a3c2-11f0-a0d1-2bb62bf347c6~gtrk.la~mgh2g95p~v11.cs~229985~v11.s~aef155c0-a3c2-11f0-a0d1-2bb62bf347c6~v11.vs~661814ebe2e3fdfecf0832ff87ed062c93ef7519~v11.fsvd~eyJ1cmwiOiJlbGVtZW50cy5lbnZhdG8uY29tL3J1L3NpZ24taW4iLCJyZWYiOiIiLCJ1dG0iOltdfQ%3D%3D~v11.sla~1759871700260~lcw~1759872170077",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1791408170,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_ga_49PPXBVNM9",
+        "value": "GS2.1.s1759871700$o14$g1$t1759872173$j60$l0$h181944633",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1794432173,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_ga_SFZC8HJ4D7",
+        "value": "GS2.1.s1759871697$o14$g1$t1759872174$j60$l0$h0",
+        "domain": ".envato.com",
+        "path": "/",
+        "expires": 1794432174,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "__cf_bm",
+        "value": "_fV8CscnBEYzEdYVSyoUqjuusJYCenR8C1oNiCG6UU8-1759871697-1.0.1.1-nI7yMSLVyErBVhlQuO5cXusDrtb3kqbwOQpxg8urLEHi1mfeV1us1ozakfu1AIUqA8Xrz7PeSiG77ApRA4i_ShxgSa1nPvRLv4fXfro25S8",
         "domain": ".elements.envato.com",
-        "expiry": 1761080419,
-        "httpOnly": true,
+        "path": "/",
+        "expires": 1759873497,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "_derived_epik",
+        "value": "dj0yJnU9YUJmWTA0LXlad2VHX0VGTi1EV2dyZk5CcXZxQ19DaUwmbj0wa2ZnMndiZWUydEhHS1NqSUFIY0xRJm09MSZ0PUFBQUFBR2psZ3RVJnJtPTEmcnQ9QUFBQUFHamxndFUmc3A9NQ",
+        "domain": ".elements.envato.com",
+        "path": "/",
+        "expires": 1791407701,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "_pin_unauth",
+        "value": "dWlkPU16QTFOVEZrT1RRdE56QTFaQzAwWXpObUxXRXpOVFl0TmpjeVpqbGxPVE5pWW1FeQ",
+        "domain": ".elements.envato.com",
+        "path": "/",
+        "expires": 1791407701,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "GO_EXP_STOREFRONT",
+        "value": "32F8AEE3-37B7-4460-AB04-7C5BA0F1F91F=1&306e2285-134a-4ff7-8393-f2fa71c461ee=1&y8n5u03w-b3c4-5d6e-f7g8-9h0i1j2klmno=1&1c55a499-78e1-4626-9984-e6cebe3bd93b=1&ba74b66a-7129-4d90-ba8f-6b4b0f855104=0&7ab92939-3ca7-4e67-8382-ed5082ee4f15=1&2270703e-1824-49a0-a167-b01349273659=0&dbce80ea-424b-4577-8bee-9f1156698d22=1&6d1013b0-572a-4f83-b55a-f7f6655b8f34=0&a7f3e9c1-4b8d-4e2a-9f6c-3d5e8a1b4c7f=0",
+        "domain": ".elements.envato.com",
+        "path": "/",
+        "expires": 1791408041,
+        "secure": false,
+        "httpOnly": false
+    },
+    {
         "name": "_elements_session_4",
+        "value": "bnEwSmQxKzJJTHdiZjBJMXlBSXgvTWs2U3UyQ1g5RXJYUXptd1UxM1cyUm1xVGRaYXNNUlVBc1NYZHJHOWp5SnlLSFVEeUdVRENwTmhkRm1vUVZRd3NlY3hHRGlsTmNVR3BTUnoxTHMrK2lBdjNNYkpnS0dvckxrdVppTndoMEhxK1ZXOHFIbXpmSGkyZzlQb2dEM1o2UFJpckdpUUxDdjJqb0hTZERlN1NwSjQvM0RWbmdsT2YyZzdJQ0tjdEZWY29FS0RnQjd2YlJONlJackxQRERqL2h3VjVKMXR6S3MzNnU5cmRpU05OOVBVaWRMTlpKdkFFVFFHaDluYkhYMHhKMVlXZ0RtQTlBcHRtM2FDbCtlVHE2b2t1N3pXRS9CYkZPb3ZFcktqMWo0bng4MFZiM2I5bkdKUkh1Wkd4bnRPM0tpRzlQcU05WGxRS2pZbmlqMlJkdUtwQWlHZEQvRXFMU1ZkeVVGK0tSZ1BJM0s2cUpWdUdISHpOTWZUaWp2QnNZZVlUTXR1Kzk1eEdhQlg4ZlVRQT09LS1CSmlwWW83R2Zpbi96bE5RaTc5TG13PT0%3D--38bd190a4b35dd99ee8fc11ace1a6c48db42972a",
+        "domain": ".elements.envato.com",
         "path": "/",
-        "sameSite": "Lax",
+        "expires": 1761081639,
         "secure": true,
-        "value": "dFY0UnpUS25SZ1cyMXNib0xKbmN3bzlxWThRbkZUeVd5d1oxS0ZYQ2JzUk1KSURrQWxEWXl5UTNMbDcwV3Y4bDBieFVVOGM3U0FRSmZ2VEFQejl5em5aWnBrM3FKbEpIOVZ1aUVRbVJCZVQzZGthbWg3Qm5BSTMxd3ZlVUNQMm1CTXl5dEhHUHV5TjFZME8yN0tsUHk1QkM5OVlLOFlTOTh1T1NRWWFYTWVmWERaWXo2eUdOTVZmd3J1V2RPaWJOdm9qbElXRmRxUFBHM2hybFNHbFNnTUhOdjlpUDNDamxOYmlRZVNyRTJZZFFMR3NDRWxYK1MyTnZYUlUwTGNNTlBXTGc3ZjZ0WjZIVHplY3I4TkhTQ1ZSZlhqbnI2L0FQQWFIUUx3S3hQYlRHenNONEVQSHVLUllQR2UwZlhWK1ZieHdORjhxazFVRm5NWlZFNTRKd0g3QjhweGJNRSszaHBma2h2Z0NrVUdvYnMvQUlLZkowWGlHMlJFdW9UNFNYd1NySmh3cHdDTFJEUW1NbkhPdVBIZz09LS1qdExYTFZjdWJSN0cwMXNjR3FtbkJRPT0%3D--77cec73894478c77c44ff18c74ff65fe9a8de8e7"
+        "httpOnly": false
     },
     {
-        "domain": ".elements.envato.com",
-        "expiry": 1791406820,
-        "httpOnly": true,
-        "name": "envato_client_id",
-        "path": "/",
-        "sameSite": "Lax",
-        "secure": true,
-        "value": "b765c80d-ac4a-4612-a6c6-8b282cf18aa6"
-    },
-    {
-        "domain": ".elements.envato.com",
-        "expiry": 1761080420,
-        "httpOnly": true,
         "name": "elements.session.5",
+        "value": "Fe26.2*0*beab9c26fcae2c5de36d7a950f0ac5858b155b2a5bad71e09551b9f9fae55c98*imVs5_QJJQ3Bo2CrbquUvA*Ndg0ioZHv00I6xmoGJsS9mmdRD7Ly9z6Uvh_HnoboqrMuoicMrW9hyn9vXxpRcK1q9bU-AdXubmhpysFGieMP3dFmYGkYzIS2yXFVlXLqa-UolLAx0EF6_nQ6ZW2yYQoN0pYdajOxDp3VCl9qX91eD22OgN1xT9wVwZkPHhGs6M*1761081642783*8f51b14290afed4958b209c51024d5af9feaa195cb32a762e5170dc97f2066a7*GS8Coqn-rVdRPOWeUrPlilyIWzDcmgnvoYcQy_khFxs~2",
+        "domain": ".elements.envato.com",
         "path": "/",
-        "sameSite": "Lax",
+        "expires": 1761081643,
         "secure": true,
-        "value": "Fe26.2*0*eaeea6c9f14a3716f24539ea673e6453ddd36cf11be9c24ee54ee9785ff73546*gTa7j-XY_S9brpdgufgAVA*a-5kzmixJmLP8FzVuu1VgWJ5opoKljb9W8C8Ny8N_FmXplT_NkrtEZlPcjcjYe297yiMwNjpHmEpyz-bumjF6VRRzhhnPhYWoRA7sZ1aFku2OwVm_Z9sa49zAob5nnev70wTaojOKH5wERwOdcppAkqKSsFdOQPqDOrpyRwGF1I*1761080419937*26677b1670ecaafed8264e6b5474b3226a0aa08106f99afa32d78f4e25252d53*DzBoGmjMU4vLAqSdmYd4qi2lfBXeE9BcmheWO9OWReU~2"
+        "httpOnly": false
+    },
+    {
+        "name": "envato_client_id",
+        "value": "eec940b9-ed94-4836-bae1-0fe399e05673",
+        "domain": ".elements.envato.com",
+        "path": "/",
+        "expires": 1791408043,
+        "secure": true,
+        "httpOnly": false
+    },
+    {
+        "name": "dpuid",
+        "value": "eyJhbGciOiJFUzI1NiJ9.eyJ1c2VyX2lkIjpudWxsLCJhbm9ueW1vdXNfaWQiOiJlMWEwMmUyNS1kNTNhLTQxMTMtOWNkNC0wZWE4YWQwMTU4ZTgiLCJzdWJzY3JpcHRpb25fc3RhdHVzIjoiRnJlZSIsImlzcyI6ImVsZW1lbnRzLWJhY2tlbmQtY29va2llIiwiZXhwIjoxNzU5ODc5MjM2fQ.L3M6V9rT4thWLqSsQCWpAz01Ep3Ui2xJtzRyQP-flw1FjywCSI7FemhE362aaLjJybI7gH01pWXkEMa7ii3E1w",
+        "domain": ".elements.envato.com",
+        "path": "/search-events-api/",
+        "expires": 1761081639,
+        "secure": true,
+        "httpOnly": false
     }
 ]
