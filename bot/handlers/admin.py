@@ -274,7 +274,7 @@ async def receive_cookies_json(message: types.Message, state: FSMContext, bot: B
         return await message.answer(f"❌ Ошибка при чтении JSON: {e}")
 
     # сохраняем рядом с проектом
-    cookies_path = Path(__file__).resolve().parent[2] / "envato_utils" / "envato_cookies.json"
+    cookies_path = Path(__file__).resolve().parents[2] / "envato_utils" / "envato_cookies.json"
     with open(cookies_path, "w", encoding="utf-8") as f:
         json.dump(cookies_data, f, indent=4, ensure_ascii=False)
 
