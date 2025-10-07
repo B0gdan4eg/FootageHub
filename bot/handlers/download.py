@@ -6,7 +6,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQu
 from envato_utils.test_env import test
 import asyncio
 from aiogram.filters import Command
-from bot.handlers.messages import CANCLE_DOWNLOAD, APPLY_DOWNLOAD, FREEPIK, BAD_URL, DOWNLOAD_FILE, CHANEL_CHECK
+from bot.handlers.messages import CANCLE_DOWNLOAD, APPLY_DOWNLOAD, FREEPIK, BAD_URL, DOWNLOAD_FILE, CHANEL_CHECK, CANCLE_DOWNLOAD_PAYMENT_OFF
 from aiogram.enums.parse_mode import ParseMode
 from bot.state import DownloadFlow
 from aiogram.fsm.context import FSMContext
@@ -41,8 +41,8 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
         #     and user.subscription_until > datetime.datetime.utcnow()
         # )
         
-        # if user.credits <= 0:
-        if False:    
+        if user.credits <= 0:
+        # if False:    
             if not await is_subscribed(bot, telegram_id):
                 
                 keyboard = InlineKeyboardMarkup(
@@ -59,16 +59,16 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
                     )
                 return
                 
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
-                ]
-            )
+            # keyboard = InlineKeyboardMarkup(
+            #     inline_keyboard=[
+            #         [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
+            #     ]
+            # )
             await message.answer(
-                CANCLE_DOWNLOAD,
+                CANCLE_DOWNLOAD_PAYMENT_OFF,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                reply_markup=keyboard
+                # reply_markup=keyboard
             )
             return
 
@@ -150,18 +150,20 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             await state.clear()
             return
         
-        # if user.credits <= 0:
-        if False:
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
-                ]
-            )
+        # Условие оплаты
+        if user.credits <= 0:
+            # тут была подписка
+            # if True:
+            # keyboard = InlineKeyboardMarkup(
+            #     inline_keyboard=[
+            #         [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
+            #     ]
+            # )
             await message.answer(
-                CANCLE_DOWNLOAD,
+                CANCLE_DOWNLOAD_PAYMENT_OFF,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                reply_markup=keyboard
+                # reply_markup=keyboard
             )
             await state.clear()
             return
@@ -214,18 +216,18 @@ async def download_more(callback: CallbackQuery, state: FSMContext):
             await callback.message.answer("❌ Пользователь не найден в системе.")
             return
 
-        # if user.credits <= 0:
-        if False:
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
-                ]
-            )
+        if user.credits <= 0:
+        # if False:
+            # keyboard = InlineKeyboardMarkup(
+            #     inline_keyboard=[
+            #         [InlineKeyboardButton(text="Оплата 💳", callback_data="create_invoice")]
+            #     ]
+            # )
             await callback.message.answer(
-                CANCLE_DOWNLOAD,
+                CANCLE_DOWNLOAD_PAYMENT_OFF,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                reply_markup=keyboard
+                # reply_markup=keyboard
             )
             return
 
