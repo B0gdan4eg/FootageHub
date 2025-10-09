@@ -33,9 +33,11 @@ async def manager_command(message: types.Message, state: FSMContext):
         return
         
     manager_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="➕ Создать реферальную ссылку", callback_data="manager_create_referral")],
-    [InlineKeyboardButton(text="👥 Просмотреть всех рефералов", callback_data="manager_view_referrals")]
-])
+        [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
+        [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
+        [InlineKeyboardButton(text="➕ Создать реферальную ссылку", callback_data="manager_create_referral")],
+        [InlineKeyboardButton(text="👥 Просмотреть всех рефералов", callback_data="manager_view_referrals")]
+    ])
     # Если роль менеджера подтверждена
     await message.answer(
         "✅ Привет, менеджер! Что будем делать?",
