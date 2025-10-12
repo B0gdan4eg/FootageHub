@@ -47,30 +47,21 @@ async def get_envato_direct_download_url(asset_url: str) -> str | None:
         await page.goto(asset_url, wait_until='domcontentloaded', timeout=10000)
 
         try:
-            # 1️⃣ Ждём появления кнопки Download, но не тормозим весь поток
+            
             print("⚡ Ждём кнопку Download...")
-            await page.wait_for_selector("button[data-testid='button-download']", timeout=10000)
-            await page.click("button[data-testid='button-download']")
-            print("✅ Нажали Download")
+            # Параллельно ждем обе кнопки сразу
+            download_button = page.locator("button[data-testid='button-download']").first
+            await download_button.wait_for(state='visible', timeout=10000)
+            await download_button.click()
 
-            # 2️⃣ Параллельно ждём кнопку "Без лицензии" и кликаем сразу при появлении
-            print("⚡ Ждём 'Скачать без лицензии'...")
-
-            async def wait_for_download_button():
-                for _ in range(12):  # максимум 12×0.5 = 6 сек ожидания
-                    btn = await page.query_selector("button[data-testid='download-without-license-button']")
-                    if btn:
-                        return btn
-                    await asyncio.sleep(0.5)
-                return None
-
-            btn = await wait_for_download_button()
-            if not btn:
-                raise TimeoutError("Кнопка 'Скачать без лицензии' не появилась.")
-
-            async with page.expect_download() as download_info:
-                await btn.click()
-                print("📦 Клик по 'Без лицензии' выполнен...")
+            print("Ожидаем кнопку 'Скачать без лицензии'...")
+            
+            license_button = page.locator("button[data-testid='download-without-license-button']")
+            
+            # Перехватываем запрос на скачивание ДО клика
+            async with page.expect_download(timeout=10000) as download_info:
+                await license_button.wait_for(state='visible', timeout=10000)
+                await license_button.click()
 
             download = await download_info.value
             print("✅ Прямая ссылка:", download.url)
