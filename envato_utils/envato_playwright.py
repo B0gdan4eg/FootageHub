@@ -182,14 +182,13 @@ async def get_envato_direct_download_url(asset_url: str):
     print(f"🕐 Начало: {datetime.now().strftime('%H:%M:%S')}\n")
     
     async with EnvatoDownloader() as downloader:
-        for i, url in enumerate(asset_url, 1):
-            print(f"[{i}/{len(urls)}] {url}")
-            link = await downloader.get_download_url(url)
-            
-            if link:
-                print(f"   ✅ {link[:80]}...\n")
-            else:
-                print()
+        print(f"🚀 Загружаем: {asset_url}")
+        link = await downloader.get_download_url(asset_url)
+
+        if link:
+            print(f"✅ Прямая ссылка: {link}")
+        else:
+            print("❌ Не удалось получить ссылку")
 
 
 
