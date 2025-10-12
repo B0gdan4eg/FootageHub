@@ -49,7 +49,7 @@ async def get_envato_direct_download_url(asset_url: str) -> str | None:
             print("Ожидаем кнопку загрузки...")
             
             # Параллельно ждем обе кнопки сразу
-            download_button = page.locator("[data-testid='sidebar-container'] button[data-testid='button-download']").first
+            download_button = page.locator("button[data-testid='button-download']").first
             await download_button.wait_for(state='visible', timeout=10000)
             await download_button.click()
 
