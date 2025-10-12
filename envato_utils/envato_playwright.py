@@ -187,12 +187,10 @@ async def get_envato_direct_download_url(asset_url: str):
 
         if link:
             print(f"✅ Прямая ссылка: {link}")
+            return(link)  
         else:
             print("❌ Не удалось получить ссылку")
 
-
-
-
-# if __name__ == "__main__":
+if __name__ == "__main__":
     
-#     asyncio.run(main_sequential())     # СТАРОЕ: Последовательно
+     asyncio.run(get_envato_direct_download_url("https://elements.envato.com/ru/simple-minimal-logo-reveal-SEPFCPQ"))     # СТАРОЕ: Последовательно
