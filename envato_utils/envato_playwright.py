@@ -48,18 +48,14 @@ async def get_envato_direct_download_url(asset_url: str) -> str | None:
         try:
             print("Ожидаем кнопку загрузки...")
             
-            # Параллельно ждем обе кнопки сразу
-            download_button = page.locator("button[data-testid='button-download']").first
-            await download_button.wait_for(state='visible', timeout=10000)
-            await download_button.click()
+            await page.wait_for_selector("button[data-testid='button-download']", timeout=15000)
+            await page.click("button[data-testid='button-download']")
 
             print("Ожидаем кнопку 'Скачать без лицензии'...")
-            license_button = page.locator("button[data-testid='download-without-license-button']")
-            
-            # Перехватываем запрос на скачивание ДО клика
-            async with page.expect_download(timeout=10000) as download_info:
-                await license_button.wait_for(state='visible', timeout=10000)
-                await license_button.click()
+            await page.wait_for_selector("button[data-testid='download-without-license-button']", timeout=15000)
+
+            async with page.expect_download() as download_info:
+                await page.click("button[data-testid='download-without-license-button']")
 
             download = await download_info.value
             print("✅ Прямая ссылка получена:", download.url)
