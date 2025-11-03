@@ -163,18 +163,31 @@ async def upload_prices(callback: types.CallbackQuery, state: FSMContext):
 # ------------------------------------------------------------
 @router.message(AdminStates.waiting_for_price_json, F.content_type == "document")
 async def receive_price_json(message: types.Message, state: FSMContext, bot: Bot):
-    file = await bot.download(message.document.file_id)
-    content = file.read().decode("utf-8")
+    try:
+        # Правильный способ скачивания файла в aiogram 3.x
+        file = await bot.get_file(message.document.file_id)
+        file_path = file.file_path
+
+        # Скачиваем в BytesIO
+        file_content = BytesIO()
+        await bot.download_file(file_path, file_content)
+
+        # Декодируем содержимое
+        content = file_content.getvalue().decode("utf-8")
+        data = json.loads(content)
+
+    except json.JSONDecodeError as e:
+        return await message.answer(f"❌ Ошибка при чтении JSON: {e}")
+    except Exception as e:
+        return await message.answer(f"❌ Ошибка при скачивании файла: {e}")
 
     try:
-        data = json.loads(content)
+        with open(PRICE_LIST, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        await message.answer(f"✅ Цены успешно обновлены!\n📁 Путь: {PRICE_LIST}")
     except Exception as e:
-        return await message.answer(f"❌ Ошибка при чтении JSON: {e}")
+        return await message.answer(f"❌ Ошибка при сохранении файла: {e}")
 
-    with open(PRICE_LIST, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-
-    await message.answer("✅ Цены успешно обновлены.")
     await state.clear()
 # ------------------------------------------------------------    
 
@@ -265,20 +278,34 @@ async def upload_cookies(callback: types.CallbackQuery, state: FSMContext):
 
 @router.message(AdminStates.waiting_for_cookies_json, F.content_type == "document")
 async def receive_cookies_json(message: types.Message, state: FSMContext, bot: Bot):
-    file = await bot.download(message.document.file_id)
-    content = file.read().decode("utf-8")
+    try:
+        # Правильный способ скачивания файла в aiogram 3.x
+        file = await bot.get_file(message.document.file_id)
+        file_path = file.file_path
+
+        # Скачиваем в BytesIO
+        file_content = BytesIO()
+        await bot.download_file(file_path, file_content)
+
+        # Декодируем содержимое
+        content = file_content.getvalue().decode("utf-8")
+        cookies_data = json.loads(content)
+
+    except json.JSONDecodeError as e:
+        return await message.answer(f"❌ Ошибка при чтении JSON: {e}")
+    except Exception as e:
+        return await message.answer(f"❌ Ошибка при скачивании файла: {e}")
+
+    # Сохраняем рядом с проектом
+    cookies_path = Path(__file__).resolve().parents[2] / "envato_utils" / "envato_cookies.json"
 
     try:
-        cookies_data = json.loads(content)
+        with open(cookies_path, "w", encoding="utf-8") as f:
+            json.dump(cookies_data, f, indent=4, ensure_ascii=False)
+        await message.answer(f"✅ Cookies успешно обновлены!\n📁 Путь: {cookies_path}")
     except Exception as e:
-        return await message.answer(f"❌ Ошибка при чтении JSON: {e}")
+        return await message.answer(f"❌ Ошибка при сохранении файла: {e}")
 
-    # сохраняем рядом с проектом
-    cookies_path = Path(__file__).resolve().parents[2] / "envato_utils" / "envato_cookies.json"
-    with open(cookies_path, "w", encoding="utf-8") as f:
-        json.dump(cookies_data, f, indent=4, ensure_ascii=False)
-
-    await message.answer("✅ Cookies успешно обновлены.")
     await state.clear()
     
     
