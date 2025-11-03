@@ -3,7 +3,6 @@ from db.session import get_session
 from db.user_crud import get_user_by_telegram_id, has_user_downloaded
 from db.downloaded_file_crud import create_media, create_download
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
-from envato_utils.test_env import test
 import asyncio
 from aiogram.filters import Command
 from bot.handlers.messages import CANCLE_DOWNLOAD, APPLY_DOWNLOAD, FREEPIK, BAD_URL, DOWNLOAD_FILE, CHANEL_CHECK, CANCLE_DOWNLOAD_PAYMENT_OFF
@@ -16,10 +15,15 @@ router = Router()
 
 
 async def animate_thinking(message):
+    """Анимация загрузки с возможностью отмены"""
     thinking_msg = await message.answer("⏳")
-    for emoji in ["🤔", "💭", "🔎", "⏳", "🚀", "⚙️"]:
-        await asyncio.sleep(3)
-        await thinking_msg.edit_text(emoji)
+    try:
+        for emoji in ["🤔", "💭", "🔎", "⏳", "🚀", "⚙️"]:
+            await asyncio.sleep(3)
+            await thinking_msg.edit_text(emoji)
+    except asyncio.CancelledError:
+        # Анимация отменена - это нормально
+        pass
     return thinking_msg
 
 # Кнопка ENVATO
@@ -32,7 +36,11 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
     async for session in get_session():
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
-            await message.answer("Похоже, вы не зарегистрированы. Пожалуйста, начните с /start.")
+            await message.answer(
+                "Похоже, вы не зарегистрированы. Пожалуйста, начните с /start.\n\n"
+                "💬 Проблемы? Обратись в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                parse_mode=ParseMode.HTML
+            )
             return
 
         # has_active_sub = (
@@ -124,19 +132,30 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
     async for session in get_session():
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
-            await message.answer("❌ Пользователь не найден в системе.")
+            await message.answer(
+                "❌ Пользователь не найден в системе.\n\n"
+                "💬 Нужна помощь? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                parse_mode=ParseMode.HTML
+            )
             await state.clear()
             return
         
         downloaded = await has_user_downloaded(session=session, user_id=user.id, url=url)
         print(downloaded)
         if downloaded:
-            
+
             await message.answer(
                 "Мы видим что вы ранее пытались скачать этот файл, ожидайте вышлем вам новую ссылку",
             )
-            
-            file_path = await test(url)
+
+            # Get link_processor from BotServices (no circular import)
+            print(f"[DOWNLOAD] Получаем ссылку через LinkProcessor для: {url[:50]}...")
+            from bot.services import BotServices
+            print(f"[DOWNLOAD] BotServices импортирован")
+            link_processor = BotServices.link_processor
+            print(f"[DOWNLOAD] link_processor получен: {link_processor}")
+            file_path = await link_processor.submit(url)
+            print(f"[DOWNLOAD] Результат: {file_path[:50] if file_path else 'None'}...")
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="⬇️ Скачать", url=file_path)]
@@ -169,14 +188,18 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             return
         
         await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-        
-        # Запускаем анимацию в таске (чтобы не блокировать основной поток)
-        thinking_task = asyncio.create_task(animate_thinking(message))
-        
-        file_path = await test(url)
-        
-        # Ждём завершения анимации (если она ещё не закончилась) и получаем сообщение
-        thinking_msg = await thinking_task
+
+        # Отправляем сообщение о загрузке
+        thinking_msg = await message.answer("⏳ Обрабатываю ссылку...")
+
+        # Get link_processor from BotServices (no circular import)
+        print(f"[DOWNLOAD] Получаем ссылку через LinkProcessor для: {url[:50]}...")
+        from bot.services import BotServices
+        print(f"[DOWNLOAD] BotServices импортирован")
+        link_processor = BotServices.link_processor
+        print(f"[DOWNLOAD] link_processor получен: {link_processor}")
+        file_path = await link_processor.submit(url)
+        print(f"[DOWNLOAD] Результат: {file_path[:50] if file_path else 'None'}...")
         
         if file_path:
             media = await create_media(session, url=url, file_type="image")
@@ -202,7 +225,14 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
 
             await session.commit()
         else:
-            await thinking_msg.edit_text("❌ Не удалось скачать файл по ссылке.")
+            await thinking_msg.edit_text(
+                "❌ Не удалось скачать файл по ссылке.\n\n"
+                "💬 Проблемы? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>"
+            )
+            await message.answer(
+                "Попробуйте еще раз или обратитесь в поддержку.",
+                parse_mode=ParseMode.HTML
+            )
         await state.clear()
 
 # Хэндлер на кнопку "Скачать ещё"
@@ -213,7 +243,11 @@ async def download_more(callback: CallbackQuery, state: FSMContext):
     async for session in get_session():
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
-            await callback.message.answer("❌ Пользователь не найден в системе.")
+            await callback.message.answer(
+                "❌ Пользователь не найден в системе.\n\n"
+                "💬 Нужна помощь? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                parse_mode=ParseMode.HTML
+            )
             return
 
         if user.credits <= 0:

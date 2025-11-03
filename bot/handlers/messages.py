@@ -11,6 +11,8 @@ Envato" и следуй инструкциям!
 📢 Не пропусти обновления и бонусы — <a href="https://t.me/+HVUoctN58uc3ZDYy">подпишись на канал</a>
 
 🧭 <a href="https://t.me/+HVUoctN58uc3ZDYy">Инструкция</a> как пользоваться ботом
+
+💬 Возникли вопросы? Обратись в <a href="https://t.me/footage_hub_support">поддержку</a>
 """
 
 APPLY_DOWNLOAD = """
@@ -39,6 +41,8 @@ CANCLE_DOWNLOAD = """
 подписку - для этого нажми на
 "Оплата 💳" и выбери нужный
 тебе сервис
+
+💬 Вопросы по оплате? Обратись в <a href="https://t.me/footage_hub_support">поддержку</a>
 """
 
 CANCLE_DOWNLOAD_PAYMENT_OFF = """
@@ -61,7 +65,9 @@ breathtaking-valley-nature-
 landscape-YFR4FBV
 
 Либо нажми на кнопку
-“Посмотреть инструкцию”
+"Посмотреть инструкцию"
+
+💬 Нужна помощь? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
 """
 
 DOWNLOAD_FILE = """
@@ -125,31 +131,35 @@ FREEPIK = """
 """
 
 SUB_PAYMENT = """
-🔹 <b>Вы выбрали: тариф “{name} {period}
-Деней”</b>
+🔹 <b>Вы выбрали: тариф "{name} {period}
+Деней"</b>
 
 По этому тарифу вам будет
 доступно 30 скачиваний с
 Envato Elements в течении 24
 часов каждый день
 
-Cтоимость тарифа “{name} 
-{period} Дней”: {_price} USD
+Cтоимость тарифа "{name}
+{period} Дней": {_price} USD
 
 Перейдите по ссылке для оплаты:
+
+💬 Проблемы с оплатой? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
 """
 
 CR_PAYMENT = """
-🔹 <b>Вы выбрали: тариф “{downloads}
-Скачиваний”</b>
+🔹 <b>Вы выбрали: тариф "{downloads}
+Скачиваний"</b>
 
 По этому тарифу вам будет
 доступно {downloads} скачиваний с
 Envato Elements с момента
 оплаты
 
-Cтоимость тарифа “{downloads}
-Скачиваний”: {_price} USD
+Cтоимость тарифа "{downloads}
+Скачиваний": {_price} USD
 
 Перейдите по ссылке для оплаты:
+
+💬 Проблемы с оплатой? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
 """

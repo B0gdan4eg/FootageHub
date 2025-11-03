@@ -15,3 +15,6 @@ github-actions-key
 github-actions-key.pub
 key.pem
 cert.pem
+test_link_processor.py
+services/st.py
+bot/handlers/group_st.py
