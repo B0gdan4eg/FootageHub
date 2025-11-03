@@ -8,6 +8,7 @@
         "httpOnly": true,
         "secure": true,
         "sameSite": "Lax"
+        "sameSite": "Lax"
     },
     {
         "name": "envato_client_id",
@@ -28,8 +29,11 @@
         "httpOnly": true,
         "secure": true,
         "sameSite": "None"
+        "sameSite": "None"
     },
     {
+        "name": "original_landing_page_url",
+        "value": "https://elements.envato.com/ru/sign-in",
         "name": "original_landing_page_url",
         "value": "https://elements.envato.com/ru/sign-in",
         "domain": "elements.envato.com",
@@ -78,15 +82,21 @@
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
+        "sameSite": "Lax"
     },
     {
+        "name": "referring_client",
+        "value": "elements",
         "name": "referring_client",
         "value": "elements",
         "domain": "account.envato.com",
         "path": "/",
         "expires": -1,
         "httpOnly": false,
+        "expires": -1,
+        "httpOnly": false,
         "secure": true,
+        "sameSite": "None"
         "sameSite": "None"
     },
     {
@@ -98,12 +108,17 @@
         "httpOnly": true,
         "secure": true,
         "sameSite": "None"
+        "sameSite": "None"
     },
     {
         "name": "_cfuvid",
         "value": "IN92vM_mJ8nIVimeJtK0DFUlqio9lFyPFQP88RnQ2So-1762202687501-0.0.1.1-604800000",
         "domain": ".envato.com",
         "path": "/",
+        "expires": -1,
+        "httpOnly": true,
+        "secure": true,
+        "sameSite": "None"
         "expires": -1,
         "httpOnly": true,
         "secure": true,
@@ -118,6 +133,7 @@
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
+        "sameSite": "Lax"
     },
     {
         "name": "preferredLanguage",
@@ -127,6 +143,7 @@
         "expires": 1793738688,
         "httpOnly": false,
         "secure": false,
+        "sameSite": "Lax"
         "sameSite": "Lax"
     },
     {
@@ -338,6 +355,7 @@
         "httpOnly": true,
         "secure": true,
         "sameSite": "None"
+        "sameSite": "None"
     },
     {
         "name": "envatosession",
@@ -348,6 +366,7 @@
         "httpOnly": true,
         "secure": true,
         "sameSite": "None"
+        "sameSite": "None"
     },
     {
         "name": "elements.session.5",
@@ -357,6 +376,7 @@
         "expires": 1763412311.861757,
         "httpOnly": true,
         "secure": true,
+        "sameSite": "Lax"
         "sameSite": "Lax"
     },
     {
