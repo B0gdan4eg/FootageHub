@@ -39,7 +39,8 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
             await message.answer(
                 "Похоже, вы не зарегистрированы. Пожалуйста, начните с /start.\n\n"
                 "💬 Проблемы? Обратись в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
-                parse_mode=ParseMode.HTML
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
             )
             return
 
@@ -135,7 +136,8 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             await message.answer(
                 "❌ Пользователь не найден в системе.\n\n"
                 "💬 Нужна помощь? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
-                parse_mode=ParseMode.HTML
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
             )
             await state.clear()
             return
@@ -156,16 +158,27 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             print(f"[DOWNLOAD] link_processor получен: {link_processor}")
             file_path = await link_processor.submit(url)
             print(f"[DOWNLOAD] Результат: {file_path[:50] if file_path else 'None'}...")
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="⬇️ Скачать", url=file_path)]
-                ]
-            )
             
-            await message.answer(
-                "Ваша ссылка:",
-                reply_markup=keyboard
-            )
+            # ✅ ДОБАВЛЯЕМ ПРОВЕРКУ
+            if file_path:
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [InlineKeyboardButton(text="⬇️ Скачать", url=file_path)]
+                    ]
+                )
+                
+                await message.answer(
+                    "✅ Ваша ссылка готова:",
+                    reply_markup=keyboard
+                )
+            else:
+                await message.answer(
+                    "❌ Не удалось получить ссылку на файл.\n\n"
+                    "💬 Попробуйте позже или обратитесь в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+            
             await state.clear()
             return
         
@@ -227,7 +240,8 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         else:
             await thinking_msg.edit_text(
                 "❌ Не удалось скачать файл по ссылке.\n\n"
-                "💬 Проблемы? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>"
+                "💬 Проблемы? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                disable_web_page_preview=True
             )
             await message.answer(
                 "Попробуйте еще раз или обратитесь в поддержку.",
