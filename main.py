@@ -41,7 +41,7 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 # Initialize link processor for Envato downloads
-BotServices.link_processor = LinkProcessor(max_workers=10)
+BotServices.link_processor = LinkProcessor(max_workers=3)
 
 # Роутеры бота
 dp.include_router(start.router)
