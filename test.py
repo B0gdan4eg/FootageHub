@@ -29,3 +29,4 @@ def count_lines_in_project(path="."):
 
 if __name__ == "__main__":
     count_lines_in_project(".")
+
