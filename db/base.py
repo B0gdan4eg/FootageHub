@@ -60,4 +60,3 @@ async def create_tables():
     """Создаёт все таблицы, если их нет."""
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
