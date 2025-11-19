@@ -18,11 +18,19 @@ class LinkProcessor:
     Uses a pool of workers to process URLs concurrently while reusing a single browser instance.
     """
 
-    def __init__(self, max_workers=10):
+    def __init__(self, max_workers=3, restart_after=50):
+        """
+        Args:
+            max_workers: Number of concurrent workers (default: 3, reduced from 10 to prevent resource exhaustion)
+            restart_after: Restart browser context after N requests to prevent memory leaks (default: 50)
+        """
         self.queue = asyncio.Queue()
         self.max_workers = max_workers
+        self.restart_after = restart_after
+        self.request_count = 0
         self.downloader = None
         self.workers = []
+        self._restart_lock = asyncio.Lock()
 
     async def start(self):
         """Initialize browser and start worker pool"""
@@ -48,6 +56,24 @@ class LinkProcessor:
         await asyncio.gather(*self.workers, return_exceptions=True)
         logger.info("LinkProcessor stopped")
 
+    async def _restart_browser_if_needed(self):
+        """Restart browser context if request limit reached to prevent memory leaks"""
+        async with self._restart_lock:
+            if self.request_count >= self.restart_after:
+                print(f"[LinkProcessor] Restarting browser after {self.request_count} requests...")
+                logger.info(f"Restarting browser context after {self.request_count} requests")
+
+                # Close old downloader
+                if self.downloader:
+                    await self.downloader.__aexit__(None, None, None)
+
+                # Create new downloader
+                self.downloader = await EnvatoDownloader().__aenter__()
+                self.request_count = 0
+
+                print(f"[LinkProcessor] Browser restarted successfully")
+                logger.info("Browser context restarted successfully")
+
     async def worker(self, idx):
         """Worker coroutine that processes tasks from queue"""
         print(f"[Worker {idx}] Started")
@@ -58,7 +84,12 @@ class LinkProcessor:
                 print(f"[Worker {idx}] Processing: {task.url[:50]}...")
                 logger.info(f"Worker {idx} processing: {task.url}")
                 try:
+                    # Check if browser needs restart
+                    await self._restart_browser_if_needed()
+
                     result = await self.downloader.get_download_url(task.url)
+                    self.request_count += 1
+
                     if result:
                         print(f"[Worker {idx}] ✅ Success!")
                         logger.info(f"Worker {idx} success: {task.url[:50]}... -> {result[:50]}...")

@@ -8,7 +8,7 @@ from aiogram.types import BotCommand
 from bot.config import BOT_TOKEN
 from bot.handlers import start, download, info, admin, payment, channel_check, manager, menu #group_st
 from db.base import run_migrations, create_tables
-from bot.schedule_tasks import scheduler_job, weekly_backup_job
+from bot.schedule_tasks import scheduler_job, daily_backup_job, cleanup_playwright_cache
 from bot.webhook.server_start import start_server
 from envato_utils.test_env import LinkProcessor
 from bot.services import BotServices
@@ -75,9 +75,14 @@ async def main():
 
     # 3. Планировщик
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+    # Ежедневное начисление кредитов в 03:00
     scheduler.add_job(scheduler_job, "cron", hour=3, minute=0, args=[bot])
-    scheduler.add_job(weekly_backup_job, "cron", day_of_week="sun", hour=4, minute=0)
+    # Ежедневный бэкап БД в 04:00
+    scheduler.add_job(daily_backup_job, "cron", hour=4, minute=0)
+    # Очистка Playwright кэша каждые 6 часов
+    scheduler.add_job(cleanup_playwright_cache, "interval", hours=6)
     scheduler.start()
+    print("[INFO] ✅ Scheduler started: daily credits at 03:00, daily backup at 04:00, playwright cleanup every 6 hours")
 
     try:
         # 4. Запуск сервера и бота параллельно

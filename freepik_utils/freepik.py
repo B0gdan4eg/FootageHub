@@ -4,12 +4,12 @@ import os
 import time
 from playwright.async_api import async_playwright
 
-COOKIE_FILE = os.path.join(os.path.dirname(__file__), "envato_cookies.json")
+COOKIE_FILE = os.path.join(os.path.dirname(__file__), "freepik_cookies.json")
 
 
-class EnvatoDownloader:
+class FreepikDownloader:
     """
-    Advanced Envato Elements downloader using CDP (Chrome DevTools Protocol).
+    Advanced Freepik downloader using CDP (Chrome DevTools Protocol).
     Supports both single and batch processing with URL interception.
     """
 
@@ -23,7 +23,7 @@ class EnvatoDownloader:
 
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=True)
+        self.browser = await self.playwright.chromium.launch(headless=False)
         self.context = await self.browser.new_context()
 
         if not os.path.exists(COOKIE_FILE):
@@ -57,7 +57,7 @@ class EnvatoDownloader:
         Faster and more reliable than waiting for downloads.
 
         Args:
-            asset_url: URL of the Envato Elements asset page
+            asset_url: URL of the Freepik asset page
 
         Returns:
             Direct download URL or None if failed
@@ -78,7 +78,7 @@ class EnvatoDownloader:
 
             def on_response(event):
                 url = event.get("response", {}).get("url", "")
-                if "download_and_license" in url:
+                if "/api/regular/download" in url:
                     captured_responses.append(event)
 
             client.on("Network.responseReceived", on_response)
@@ -87,10 +87,7 @@ class EnvatoDownloader:
             await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
 
             # Click download button
-            await page.click("button[data-testid='button-download']", timeout=15000)
-
-            # Click download without license
-            await page.click("button[data-testid='download-without-license-button']", timeout=15000)
+            await page.click("button[data-cy='download-button']", timeout=15000)
 
             # Wait for download URL from intercepted network responses
             download_url = await self._wait_for_download_url(client, captured_responses, timeout=10)
@@ -115,6 +112,20 @@ class EnvatoDownloader:
             print(f"   ⏱️  {elapsed:.2f} сек")
             return None
 
+        finally:
+            # IMPORTANT: Close CDP session first to prevent resource leaks
+            if client:
+                try:
+                    await client.detach()
+                except Exception:
+                    pass
+
+            # Then close the page
+            if page:
+                try:
+                    await page.close()
+                except Exception:
+                    pass
 
     async def _wait_for_download_url(self, client, captured_responses, timeout=10) -> str | None:
         """
@@ -135,7 +146,7 @@ class EnvatoDownloader:
                 try:
                     body = await client.send("Network.getResponseBody", {"requestId": resp["requestId"]})
                     data = json.loads(body["body"])
-                    url = data.get("data", {}).get("attributes", {}).get("downloadUrl")
+                    url = data.get("url")
                     if url:
                         return url
                 except:
@@ -145,19 +156,19 @@ class EnvatoDownloader:
 
 
 # Main API function for bot integration
-async def get_envato_direct_download_url(asset_url: str) -> str | None:
+async def get_freepik_direct_download_url(asset_url: str) -> str | None:
     """
-    Get direct download URL for a single Envato Elements asset.
+    Get direct download URL for a single Freepik asset.
     This is the main function used by the bot.
 
     Args:
-        asset_url: URL of the Envato Elements asset page
+        asset_url: URL of the Freepik asset page
 
     Returns:
         Direct download URL or None if failed
 
     Example:
-        url = await get_envato_direct_download_url("https://elements.envato.com/ru/...")
+        url = await get_freepik_direct_download_url("https://www.freepik.com/...")
     """
     if not os.path.exists(COOKIE_FILE):
         print(f"❌ Cookies file not found: {COOKIE_FILE}")
@@ -165,7 +176,7 @@ async def get_envato_direct_download_url(asset_url: str) -> str | None:
 
     print(f"🚀 Загружаем: {asset_url}")
 
-    async with EnvatoDownloader() as downloader:
+    async with FreepikDownloader() as downloader:
         link = await downloader.get_download_url(asset_url)
 
         if link:
@@ -179,13 +190,13 @@ async def get_envato_direct_download_url(asset_url: str) -> str | None:
 # Test/debug functions
 async def test_single_url():
     """Test single URL download"""
-    test_url = "https://elements.envato.com/ru/light-transitions-for-fcpx-HHM2A5B"
+    test_url = "https://www.freepik.com/free-photo/young-student-learning-library_21138972.htm"
     print("="*70)
     print("🚀 Получение прямой ссылки на скачивание")
     print("="*70)
     print(f"🔗 URL: {test_url}\n")
 
-    result = await get_envato_direct_download_url(test_url)
+    result = await get_freepik_direct_download_url(test_url)
 
     if result:
         print(f"\n✅ Прямая ссылка получена!")

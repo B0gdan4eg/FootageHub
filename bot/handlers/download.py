@@ -91,22 +91,57 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
         # Переходим в состояние ожидания ссылки
         await state.set_state(DownloadFlow.waiting_for_link)
     
-# Кнопка FREEPIK 
+# Кнопка FREEPIK
 @router.message(Command("freepik"))
-@router.callback_query(F.data == "freepik_soon")
-@router.message(lambda message: message.text in ["Скачать Freepik(Скоро...)"])
-async def ask_for_link(message: types.Message):
-    subscribe_keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-        [InlineKeyboardButton(text="Канал с новостями📢", url="https://t.me/+HVUoctN58uc3ZDYy")]
-            ]
-        )
-    await message.answer(
-                FREEPIK,
+@router.callback_query(F.data == "freepik_start")
+@router.message(lambda message: message.text == "Скачать Freepik")
+async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: Bot):
+    telegram_id = message.from_user.id
+
+    async for session in get_session():
+        user = await get_user_by_telegram_id(session, telegram_id)
+        if not user:
+            await message.answer(
+                "Похоже, вы не зарегистрированы. Пожалуйста, начните с /start.\n\n"
+                "💬 Проблемы? Обратись в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            return
+
+        if user.credits <= 0:
+            if not await is_subscribed(bot, telegram_id):
+
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [InlineKeyboardButton(text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")],
+                        [InlineKeyboardButton(text="Проверить подписку 🔍", callback_data="check_subscription")]
+                    ]
+                )
+                await message.answer(
+                    CHANEL_CHECK,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    reply_markup=keyboard
+                    )
+                return
+
+            await message.answer(
+                CANCLE_DOWNLOAD_PAYMENT_OFF,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                reply_markup=subscribe_keyboard
             )
+            return
+
+        # Если подписка есть или кредиты больше 0 — просим ссылку
+        await message.answer(
+                APPLY_DOWNLOAD.format(credit=user.credits),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+
+        # Переходим в состояние ожидания ссылки Freepik
+        await state.set_state(DownloadFlow.waiting_for_freepik_link)
 
 # Обработка ссылки
 @router.message(DownloadFlow.waiting_for_link)
@@ -249,6 +284,127 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             )
         await state.clear()
 
+# Обработка ссылки Freepik
+@router.message(DownloadFlow.waiting_for_freepik_link)
+async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bot):
+    url = message.text.strip()
+    if not url.startswith("https://www.freepik.com/"):
+
+        await message.answer(
+            BAD_URL,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+            )
+        return
+
+    telegram_id = message.from_user.id
+
+    async for session in get_session():
+        user = await get_user_by_telegram_id(session, telegram_id)
+        if not user:
+            await message.answer(
+                "❌ Пользователь не найден в системе.\n\n"
+                "💬 Нужна помощь? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            await state.clear()
+            return
+
+        downloaded = await has_user_downloaded(session=session, user_id=user.id, url=url)
+        print(downloaded)
+        if downloaded:
+
+            await message.answer(
+                "Мы видим что вы ранее пытались скачать этот файл, ожидайте вышлем вам новую ссылку",
+            )
+
+            # Get Freepik downloader
+            print(f"[DOWNLOAD] Получаем ссылку Freepik для: {url[:50]}...")
+            from freepik_utils.freepik import get_freepik_direct_download_url
+            print(f"[DOWNLOAD] Freepik импортирован")
+            file_path = await get_freepik_direct_download_url(url)
+            print(f"[DOWNLOAD] Результат: {file_path[:50] if file_path else 'None'}...")
+
+            if file_path:
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [InlineKeyboardButton(text="⬇️ Скачать", url=file_path)]
+                    ]
+                )
+
+                await message.answer(
+                    "✅ Ваша ссылка готова:",
+                    reply_markup=keyboard
+                )
+            else:
+                await message.answer(
+                    "❌ Не удалось получить ссылку на файл.\n\n"
+                    "💬 Попробуйте позже или обратитесь в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+
+            await state.clear()
+            return
+
+        # Условие оплаты
+        if user.credits <= 0:
+            await message.answer(
+                CANCLE_DOWNLOAD_PAYMENT_OFF,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+            await state.clear()
+            return
+
+        await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+
+        # Отправляем сообщение о загрузке
+        thinking_msg = await message.answer("⏳ Обрабатываю ссылку...")
+
+        # Get Freepik downloader
+        print(f"[DOWNLOAD] Получаем ссылку Freepik для: {url[:50]}...")
+        from freepik_utils.freepik import get_freepik_direct_download_url
+        print(f"[DOWNLOAD] Freepik импортирован")
+        file_path = await get_freepik_direct_download_url(url)
+        print(f"[DOWNLOAD] Результат: {file_path[:50] if file_path else 'None'}...")
+
+        if file_path:
+            media = await create_media(session, url=url, file_type="image")
+            await create_download(session, user.id, media.id)
+
+            await thinking_msg.edit_text("✅ Готово!")
+
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text="Cкачать файл 📁", url=file_path)],
+                    [InlineKeyboardButton(text="Cкачать ещё", callback_data="download_more_freepik")]
+                ]
+            )
+
+            user.credits -= 1
+
+            await message.answer(
+                DOWNLOAD_FILE.format(credit=user.credits),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+                reply_markup=keyboard
+            )
+
+            await session.commit()
+        else:
+            await thinking_msg.edit_text(
+                "❌ Не удалось скачать файл по ссылке.\n\n"
+                "💬 Проблемы? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                disable_web_page_preview=True
+            )
+            await message.answer(
+                "Попробуйте еще раз или обратитесь в поддержку.",
+                parse_mode=ParseMode.HTML
+            )
+        await state.clear()
+
 # Хэндлер на кнопку "Скачать ещё"
 @router.callback_query(F.data == "download_more")
 async def download_more(callback: CallbackQuery, state: FSMContext):
@@ -287,3 +443,35 @@ async def download_more(callback: CallbackQuery, state: FSMContext):
         )
         # Переводим в состояние ожидания ссылки
         await state.set_state(DownloadFlow.waiting_for_link)
+
+# Хэндлер на кнопку "Скачать ещё" для Freepik
+@router.callback_query(F.data == "download_more_freepik")
+async def download_more_freepik(callback: CallbackQuery, state: FSMContext):
+    telegram_id = callback.from_user.id
+
+    async for session in get_session():
+        user = await get_user_by_telegram_id(session, telegram_id)
+        if not user:
+            await callback.message.answer(
+                "❌ Пользователь не найден в системе.\n\n"
+                "💬 Нужна помощь? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                parse_mode=ParseMode.HTML
+            )
+            return
+
+        if user.credits <= 0:
+            await callback.message.answer(
+                CANCLE_DOWNLOAD_PAYMENT_OFF,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+            return
+
+        # Просим новую ссылку
+        await callback.message.answer(
+            APPLY_DOWNLOAD.format(credit=user.credits),
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+        # Переводим в состояние ожидания ссылки Freepik
+        await state.set_state(DownloadFlow.waiting_for_freepik_link)

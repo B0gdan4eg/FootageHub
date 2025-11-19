@@ -16,6 +16,8 @@ services:
     volumes:
     - /etc/letsencrypt/live/footage.com.by/fullchain.pem:/app/ssl/cert.pem:ro
     - /etc/letsencrypt/live/footage.com.by/privkey.pem:/app/ssl/key.pem:ro
+    # Mount backups directory to host server (outside container)
+    - ./backups:/app/backups
 
   db:
     image: postgres:15

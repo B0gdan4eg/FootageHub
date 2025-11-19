@@ -4,18 +4,35 @@ from datetime import datetime
 from alembic import command
 from alembic.config import Config
 import asyncio
+from urllib.parse import urlparse
 from db.session import async_engine
 from db.models import Base
 
-BACKUP_DIR = os.path.join(os.getcwd(), "backups")  # папка backups в текущей директории
+# Use /app/backups for Docker container (mounted to host ./backups)
+BACKUP_DIR = os.getenv("BACKUP_DIR", "/app/backups")
 
 def _backup_database_sync():
-    # Настройки подключения — замени на свои реальные данные
-    db_user = "botuser"
-    db_password = "Marli5450005"
-    db_host = "db"
-    db_port = "5432"
-    db_name = "botdb"
+    """
+    Create PostgreSQL backup using pg_dump.
+    Credentials are loaded from DATABASE_URL environment variable.
+    Backups are saved to BACKUP_DIR (mounted volume outside container).
+    """
+    # Parse DATABASE_URL to extract connection parameters
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable not set")
+
+    # Parse URL: postgresql+asyncpg://user:password@host:port/dbname
+    parsed = urlparse(database_url.replace("postgresql+asyncpg://", "postgresql://"))
+
+    db_user = parsed.username or os.getenv("POSTGRES_USER", "postgres")
+    db_password = parsed.password or os.getenv("POSTGRES_PASSWORD")
+    db_host = parsed.hostname or "db"
+    db_port = parsed.port or 5432
+    db_name = parsed.path.lstrip("/") or os.getenv("POSTGRES_DB", "botdb")
+
+    if not db_password:
+        raise ValueError("Database password not found in DATABASE_URL or POSTGRES_PASSWORD")
 
     os.makedirs(BACKUP_DIR, exist_ok=True)
 
@@ -25,15 +42,18 @@ def _backup_database_sync():
     env = os.environ.copy()
     env["PGPASSWORD"] = db_password
 
-    # Запускаем pg_dump
+    print(f"🔄 Creating database backup: {filename}")
+    print(f"📁 Backup location: {filepath}")
+
+    # Run pg_dump
     subprocess.run(
         [
             "pg_dump",
             "-h", db_host,
-            "-p", db_port,
+            "-p", str(db_port),
             "-U", db_user,
-            "-F", "c",  # custom format (сжатый)
-            "-b",       # большие объекты
+            "-F", "c",  # custom format (compressed)
+            "-b",       # include large objects
             "-f", filepath,
             db_name
         ],
@@ -41,7 +61,11 @@ def _backup_database_sync():
         check=True
     )
 
-    print(f"✅ Резервная копия базы создана: {filepath}")
+    # Get file size
+    file_size = os.path.getsize(filepath) / (1024 * 1024)  # MB
+    print(f"✅ Backup created successfully: {filepath} ({file_size:.2f} MB)")
+
+    return filepath
 
 async def backup_database():
     loop = asyncio.get_running_loop()
