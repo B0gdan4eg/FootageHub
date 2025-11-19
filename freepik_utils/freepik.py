@@ -174,17 +174,37 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
         print(f"❌ Cookies file not found: {COOKIE_FILE}")
         return None
 
+    # Используем семафор для ограничения параллельных скачиваний
+    try:
+        from bot.services import BotServices
+        semaphore = BotServices.download_semaphore
+    except:
+        # Если запускается не из бота (тесты), семафор не нужен
+        semaphore = None
+
     print(f"🚀 Загружаем: {asset_url}")
 
-    async with FreepikDownloader() as downloader:
-        link = await downloader.get_download_url(asset_url)
+    if semaphore:
+        async with semaphore:
+            async with FreepikDownloader() as downloader:
+                link = await downloader.get_download_url(asset_url)
 
-        if link:
-            print(f"✅ Прямая ссылка получена")
-            return link
-        else:
-            print("❌ Не удалось получить ссылку")
-            return None
+                if link:
+                    print(f"✅ Прямая ссылка получена")
+                    return link
+                else:
+                    print("❌ Не удалось получить ссылку")
+                    return None
+    else:
+        async with FreepikDownloader() as downloader:
+            link = await downloader.get_download_url(asset_url)
+
+            if link:
+                print(f"✅ Прямая ссылка получена")
+                return link
+            else:
+                print("❌ Не удалось получить ссылку")
+                return None
 
 
 # Test/debug functions
