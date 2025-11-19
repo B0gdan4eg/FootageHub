@@ -35,10 +35,24 @@ class EnvatoDownloader:
         return self
 
     async def __aexit__(self, *args):
+        # Закрываем контекст перед браузером для корректной очистки
+        if self.context:
+            try:
+                await self.context.close()
+            except Exception as e:
+                print(f"⚠️ Ошибка при закрытии контекста: {e}")
+
         if self.browser:
-            await self.browser.close()
+            try:
+                await self.browser.close()
+            except Exception as e:
+                print(f"⚠️ Ошибка при закрытии браузера: {e}")
+
         if self.playwright:
-            await self.playwright.stop()
+            try:
+                await self.playwright.stop()
+            except Exception as e:
+                print(f"⚠️ Ошибка при остановке playwright: {e}")
 
         total = self.success_count + self.fail_count
         if total > 0:
@@ -115,6 +129,21 @@ class EnvatoDownloader:
             print(f"   ⏱️  {elapsed:.2f} сек")
             return None
 
+        finally:
+            # IMPORTANT: Close CDP session first to prevent resource leaks
+            if client:
+                try:
+                    await client.detach()
+                except Exception:
+                    pass
+
+            # Then close the page
+            if page:
+                try:
+                    await page.close()
+                except Exception:
+                    pass
+
 
     async def _wait_for_download_url(self, client, captured_responses, timeout=10) -> str | None:
         """
@@ -163,17 +192,37 @@ async def get_envato_direct_download_url(asset_url: str) -> str | None:
         print(f"❌ Cookies file not found: {COOKIE_FILE}")
         return None
 
+    # Используем семафор для ограничения параллельных скачиваний
+    try:
+        from bot.services import BotServices
+        semaphore = BotServices.download_semaphore
+    except:
+        # Если запускается не из бота (тесты), семафор не нужен
+        semaphore = None
+
     print(f"🚀 Загружаем: {asset_url}")
 
-    async with EnvatoDownloader() as downloader:
-        link = await downloader.get_download_url(asset_url)
+    if semaphore:
+        async with semaphore:
+            async with EnvatoDownloader() as downloader:
+                link = await downloader.get_download_url(asset_url)
 
-        if link:
-            print(f"✅ Прямая ссылка получена")
-            return link
-        else:
-            print("❌ Не удалось получить ссылку")
-            return None
+                if link:
+                    print(f"✅ Прямая ссылка получена")
+                    return link
+                else:
+                    print("❌ Не удалось получить ссылку")
+                    return None
+    else:
+        async with EnvatoDownloader() as downloader:
+            link = await downloader.get_download_url(asset_url)
+
+            if link:
+                print(f"✅ Прямая ссылка получена")
+                return link
+            else:
+                print("❌ Не удалось получить ссылку")
+                return None
 
 
 # Test/debug functions
