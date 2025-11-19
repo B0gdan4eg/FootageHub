@@ -25,3 +25,4 @@ backups/
 *.sql.gz
 *.dump
 *.md
+*.sh
