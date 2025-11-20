@@ -4,7 +4,7 @@ main_menu_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
             KeyboardButton(text="Скачать Envato"),
-            KeyboardButton(text="Скачать Freepik(Скоро...)"),
+            KeyboardButton(text="Скачать Freepik"),
         ],
         [
             KeyboardButton(text="Информация"),

@@ -27,7 +27,23 @@ elements\u200b.\u200benvato\u200b.\u200bcom/ru/
 breathtaking-valley-nature-
 landscape-YFR4FBV
 
-У тебя осталось {credit} бесплатные 
+У тебя осталось {credit} бесплатные
+загрузки
+"""
+
+APPLY_DOWNLOAD_FREEPIK = """
+✅ <b>Отлично, ты выбрал Freepik.</b>
+
+Теперь отправь мне сообщение
+со ссылкой на нужный тебе
+файл
+
+Пример ссылки: https://
+www\u200b.\u200bfreepik\u200b.\u200bcom/free-photo/
+young-student-learning-
+library_21138972.htm
+
+У тебя осталось {credit} бесплатные
 загрузки
 """
 
@@ -63,6 +79,25 @@ BAD_URL = """
 https://\u200belements\u200b.\u200benvato\u200b.\u200bcom/ru/
 breathtaking-valley-nature-
 landscape-YFR4FBV
+
+Либо нажми на кнопку
+"Посмотреть инструкцию"
+
+💬 Нужна помощь? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+"""
+
+BAD_URL_FREEPIK = """
+❌<b>Некорректная ссылка!</b>
+
+Проверь, чтобы ссылка из
+браузера была полностью
+скопирована, а затем вновь
+отправь её мне.
+
+вот пример правильной ссылки:
+https://\u200bwww\u200b.\u200bfreepik\u200b.\u200bcom/free-photo/
+young-student-learning-
+library_21138972.htm
 
 Либо нажми на кнопку
 "Посмотреть инструкцию"
@@ -162,4 +197,49 @@ Cтоимость тарифа "{downloads}
 Перейдите по ссылке для оплаты:
 
 💬 Проблемы с оплатой? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+"""
+
+# Сообщения об ошибках и статусах
+USER_NOT_REGISTERED = """
+Похоже, вы не зарегистрированы. Пожалуйста, начните с /start.
+
+💬 Проблемы? Обратись в <a href="https://t.me/footage_hub_support">поддержку</a>
+"""
+
+USER_NOT_FOUND = """
+❌ Пользователь не найден в системе.
+
+💬 Нужна помощь? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+"""
+
+DOWNLOAD_FAILED = """
+❌ Не удалось скачать файл по ссылке.
+
+💬 Проблемы? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+"""
+
+DOWNLOAD_RETRY = """
+Попробуйте еще раз или обратитесь в поддержку.
+"""
+
+LINK_NOT_FOUND = """
+❌ Не удалось получить ссылку на файл.
+
+💬 Попробуйте позже или обратитесь в <a href="https://t.me/footage_hub_support">поддержку</a>
+"""
+
+LINK_READY = """
+✅ Ваша ссылка готова:
+"""
+
+PROCESSING_LINK = """
+⏳ Обрабатываю ссылку...
+"""
+
+PROCESSING_COMPLETE = """
+✅ Готово!
+"""
+
+ALREADY_DOWNLOADED = """
+Мы видим что вы ранее пытались скачать этот файл, ожидайте вышлем вам новую ссылку
 """

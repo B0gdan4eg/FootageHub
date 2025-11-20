@@ -5,7 +5,13 @@ from db.downloaded_file_crud import create_media, create_download
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 import asyncio
 from aiogram.filters import Command
-from bot.handlers.messages import CANCLE_DOWNLOAD, APPLY_DOWNLOAD, FREEPIK, BAD_URL, DOWNLOAD_FILE, CHANEL_CHECK, CANCLE_DOWNLOAD_PAYMENT_OFF
+from bot.handlers.messages import (
+    CANCLE_DOWNLOAD, APPLY_DOWNLOAD, FREEPIK, BAD_URL, DOWNLOAD_FILE,
+    CHANEL_CHECK, CANCLE_DOWNLOAD_PAYMENT_OFF, APPLY_DOWNLOAD_FREEPIK,
+    BAD_URL_FREEPIK, USER_NOT_REGISTERED, USER_NOT_FOUND, DOWNLOAD_FAILED,
+    DOWNLOAD_RETRY, LINK_NOT_FOUND, LINK_READY, PROCESSING_LINK,
+    PROCESSING_COMPLETE, ALREADY_DOWNLOADED
+)
 from aiogram.enums.parse_mode import ParseMode
 from bot.state import DownloadFlow
 from aiogram.fsm.context import FSMContext
@@ -37,8 +43,7 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
             await message.answer(
-                "Похоже, вы не зарегистрированы. Пожалуйста, начните с /start.\n\n"
-                "💬 Проблемы? Обратись в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                USER_NOT_REGISTERED,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
@@ -102,8 +107,7 @@ async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: B
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
             await message.answer(
-                "Похоже, вы не зарегистрированы. Пожалуйста, начните с /start.\n\n"
-                "💬 Проблемы? Обратись в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                USER_NOT_REGISTERED,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
@@ -135,7 +139,7 @@ async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: B
 
         # Если подписка есть или кредиты больше 0 — просим ссылку
         await message.answer(
-                APPLY_DOWNLOAD.format(credit=user.credits),
+                APPLY_DOWNLOAD_FREEPIK.format(credit=user.credits),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
@@ -169,8 +173,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
             await message.answer(
-                "❌ Пользователь не найден в системе.\n\n"
-                "💬 Нужна помощь? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                USER_NOT_FOUND,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
@@ -181,9 +184,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         print(downloaded)
         if downloaded:
 
-            await message.answer(
-                "Мы видим что вы ранее пытались скачать этот файл, ожидайте вышлем вам новую ссылку",
-            )
+            await message.answer(ALREADY_DOWNLOADED)
 
             # Get link_processor from BotServices (no circular import)
             print(f"[DOWNLOAD] Получаем ссылку через LinkProcessor для: {url[:50]}...")
@@ -203,13 +204,12 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
                 )
                 
                 await message.answer(
-                    "✅ Ваша ссылка готова:",
+                    LINK_READY,
                     reply_markup=keyboard
                 )
             else:
                 await message.answer(
-                    "❌ Не удалось получить ссылку на файл.\n\n"
-                    "💬 Попробуйте позже или обратитесь в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                    LINK_NOT_FOUND,
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True
                 )
@@ -238,7 +238,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         await bot.send_chat_action(chat_id=message.chat.id, action="typing")
 
         # Отправляем сообщение о загрузке
-        thinking_msg = await message.answer("⏳ Обрабатываю ссылку...")
+        thinking_msg = await message.answer(PROCESSING_LINK)
 
         # Get link_processor from BotServices (no circular import)
         print(f"[DOWNLOAD] Получаем ссылку через LinkProcessor для: {url[:50]}...")
@@ -253,7 +253,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             media = await create_media(session, url=url, file_type="image")
             await create_download(session, user.id, media.id)
             
-            await thinking_msg.edit_text("✅ Готово!")
+            await thinking_msg.edit_text(PROCESSING_COMPLETE)
             
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
@@ -274,12 +274,12 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             await session.commit()
         else:
             await thinking_msg.edit_text(
-                "❌ Не удалось скачать файл по ссылке.\n\n"
-                "💬 Проблемы? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                DOWNLOAD_FAILED,
+                parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
             await message.answer(
-                "Попробуйте еще раз или обратитесь в поддержку.",
+                DOWNLOAD_RETRY,
                 parse_mode=ParseMode.HTML
             )
         await state.clear()
@@ -291,7 +291,7 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
     if not url.startswith("https://www.freepik.com/"):
 
         await message.answer(
-            BAD_URL,
+            BAD_URL_FREEPIK,
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             )
@@ -303,8 +303,7 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
             await message.answer(
-                "❌ Пользователь не найден в системе.\n\n"
-                "💬 Нужна помощь? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                USER_NOT_FOUND,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
@@ -315,9 +314,7 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
         print(downloaded)
         if downloaded:
 
-            await message.answer(
-                "Мы видим что вы ранее пытались скачать этот файл, ожидайте вышлем вам новую ссылку",
-            )
+            await message.answer(ALREADY_DOWNLOADED)
 
             # Get Freepik downloader
             print(f"[DOWNLOAD] Получаем ссылку Freepik для: {url[:50]}...")
@@ -334,13 +331,12 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
                 )
 
                 await message.answer(
-                    "✅ Ваша ссылка готова:",
+                    LINK_READY,
                     reply_markup=keyboard
                 )
             else:
                 await message.answer(
-                    "❌ Не удалось получить ссылку на файл.\n\n"
-                    "💬 Попробуйте позже или обратитесь в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                    LINK_NOT_FOUND,
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True
                 )
@@ -361,7 +357,7 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
         await bot.send_chat_action(chat_id=message.chat.id, action="typing")
 
         # Отправляем сообщение о загрузке
-        thinking_msg = await message.answer("⏳ Обрабатываю ссылку...")
+        thinking_msg = await message.answer(PROCESSING_LINK)
 
         # Get Freepik downloader
         print(f"[DOWNLOAD] Получаем ссылку Freepik для: {url[:50]}...")
@@ -374,7 +370,7 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
             media = await create_media(session, url=url, file_type="image")
             await create_download(session, user.id, media.id)
 
-            await thinking_msg.edit_text("✅ Готово!")
+            await thinking_msg.edit_text(PROCESSING_COMPLETE)
 
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
@@ -395,12 +391,12 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
             await session.commit()
         else:
             await thinking_msg.edit_text(
-                "❌ Не удалось скачать файл по ссылке.\n\n"
-                "💬 Проблемы? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
+                DOWNLOAD_FAILED,
+                parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
             await message.answer(
-                "Попробуйте еще раз или обратитесь в поддержку.",
+                DOWNLOAD_RETRY,
                 parse_mode=ParseMode.HTML
             )
         await state.clear()
@@ -414,9 +410,9 @@ async def download_more(callback: CallbackQuery, state: FSMContext):
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
             await callback.message.answer(
-                "❌ Пользователь не найден в системе.\n\n"
-                "💬 Нужна помощь? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
-                parse_mode=ParseMode.HTML
+                USER_NOT_FOUND,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
             )
             return
 
@@ -453,9 +449,9 @@ async def download_more_freepik(callback: CallbackQuery, state: FSMContext):
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
             await callback.message.answer(
-                "❌ Пользователь не найден в системе.\n\n"
-                "💬 Нужна помощь? Пиши в <a href=\"https://t.me/footage_hub_support\">поддержку</a>",
-                parse_mode=ParseMode.HTML
+                USER_NOT_FOUND,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
             )
             return
 
@@ -469,7 +465,7 @@ async def download_more_freepik(callback: CallbackQuery, state: FSMContext):
 
         # Просим новую ссылку
         await callback.message.answer(
-            APPLY_DOWNLOAD.format(credit=user.credits),
+            APPLY_DOWNLOAD_FREEPIK.format(credit=user.credits),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
