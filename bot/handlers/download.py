@@ -288,7 +288,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
 @router.message(DownloadFlow.waiting_for_freepik_link)
 async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bot):
     url = message.text.strip()
-    if not url.startswith("https://www.freepik.com/"):
+    if not "freepik.com" not in url.lower():
 
         await message.answer(
             BAD_URL_FREEPIK,
