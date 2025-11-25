@@ -6,7 +6,7 @@
             "period_days": 30,
             "total_limit": 150,
             "daily_limit": null,
-            "subscription_type": "MONTHLY_100"
+            "subscription_type": "MONTHLY_150"
         },
         "daily_30": {
             "name": "Дневная подписка",
@@ -14,7 +14,7 @@
             "period_days": 30,
             "total_limit": null,
             "daily_limit": 30,
-            "subscription_type": "DAILY_20"
+            "subscription_type": "DAILY_30"
         }
     }
 }
