@@ -40,7 +40,7 @@ async def info(message: types.Message):
 
         INFO_MASSEGE = (
             f"<b>👤 Информация о вашем аккаунте:</b>\n\n"
-            f"🎁 <b>Бесплатные кредиты:</b> {'❗️0' if user.credits == 0 else user.credits}\n"
+            f"🎁 <b>Бесплатные загрузки:</b> {'❗️0' if user.credits == 0 else user.credits}\n"
             f"💼 <b>Подписка:</b> {sub_status}\n"
             f"📅 <b>Действует до:</b> {sub_until}\n"
             f"📊 <b>Лимиты подписки:</b> {sub_limits}\n"

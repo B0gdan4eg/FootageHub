@@ -5,7 +5,11 @@ from db.user_crud import get_user_by_telegram_id
 from db.payment_crud import get_payment_by_invoice_id, mark_payment_success
 from db.subscription_crud import create_subscription
 from db.models import SubscriptionType, ServiceType
+from bot.handlers.messages import SUBSCRIPTION_ACTIVATED
+from bot.services import BotServices
+from aiogram.enums.parse_mode import ParseMode
 from pathlib import Path
+from datetime import datetime
 import json
 import os
 
@@ -79,7 +83,7 @@ async def webhook(request: Request):
             total_limit = plan_data.get("total_limit")
             daily_limit = plan_data.get("daily_limit")
 
-            await create_subscription(
+            subscription = await create_subscription(
                 session=session,
                 user_id=user.id,
                 subscription_type=subscription_type,
@@ -94,6 +98,36 @@ async def webhook(request: Request):
             await mark_payment_success(session, str(invoice_id))
 
             print(f"✅ Подписка {plan_key} создана: user={user_id}, period={period_days}д, limits=(total={total_limit}, daily={daily_limit})")
+
+            # Отправляем уведомление пользователю
+            if BotServices.bot:
+                try:
+                    # Обновляем данные пользователя из сессии
+                    await session.refresh(user)
+
+                    # Форматируем дату окончания подписки
+                    end_date = subscription.end_date.strftime("%d.%m.%Y %H:%M")
+
+                    # Формируем сообщение
+                    message = SUBSCRIPTION_ACTIVATED.format(
+                        subscription_type=plan_data["name"],
+                        period_days=period_days,
+                        credits=user.credits,
+                        end_date=end_date
+                    )
+
+                    # Отправляем сообщение пользователю
+                    await BotServices.bot.send_message(
+                        chat_id=user_id,
+                        text=message,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                    print(f"✅ Уведомление отправлено пользователю {user_id}")
+                except Exception as e:
+                    print(f"⚠️ Не удалось отправить уведомление пользователю {user_id}: {e}")
+            else:
+                print(f"⚠️ BotServices.bot не инициализирован, уведомление не отправлено")
 
     except Exception as e:
         print(f"❌ Ошибка при обработке платежа {invoice_id}: {e}")

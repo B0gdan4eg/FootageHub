@@ -239,3 +239,24 @@ async def extend_subscription(
         await session.refresh(subscription)
 
     return subscription
+
+
+async def delete_all_subscriptions(session: AsyncSession) -> int:
+    """
+    Удаляет все подписки из базы данных
+
+    Args:
+        session: Сессия БД
+
+    Returns:
+        Количество удалённых подписок
+    """
+    from sqlalchemy import delete as sql_delete
+
+    result = await session.execute(select(Subscription))
+    count = len(result.scalars().all())
+
+    await session.execute(sql_delete(Subscription))
+    await session.commit()
+
+    return count

@@ -7,7 +7,7 @@ from db.models import User, Download, Media, Payment, UserRole, SubscriptionType
 from db.session import get_session
 from db.user_crud import get_all_users, count_active_subs, get_user_by_telegram_id
 from db.downloaded_file_crud import count_total_downloads
-from db.subscription_crud import create_subscription
+from db.subscription_crud import create_subscription, delete_all_subscriptions
 from sqlalchemy import select, update
 from bot.state import AdminStates
 from io import BytesIO
@@ -268,6 +268,7 @@ async def admin_panel(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
         [InlineKeyboardButton(text="🍪 Загрузить cookies", callback_data="admin_upload_cookies")],
         [InlineKeyboardButton(text="📦 Установить лимит всем", callback_data="admin_set_download_limit")],
+        [InlineKeyboardButton(text="🗑️ Удалить все подписки", callback_data="admin_delete_all_subscriptions")],
         [InlineKeyboardButton(text="📢 Оповещение", callback_data="admin_broadcast")],
     ])
     await message.answer("📂 Панель администратора", reply_markup=keyboard)
@@ -519,3 +520,67 @@ async def send_broadcast(message: types.Message, state: FSMContext, bot: Bot):
 
     await message.answer(f"✅ Рассылка завершена!\n📬 Отправлено: {sent}\n⚠️ Ошибок: {failed}")
     await state.clear()
+
+
+# Удаление всех подписок - запрос подтверждения
+@router.callback_query(lambda c: c.data == "admin_delete_all_subscriptions")
+async def confirm_delete_all_subscriptions(callback: types.CallbackQuery):
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет доступа.", show_alert=True)
+        return
+
+    # Подсчитываем количество подписок
+    async for session in get_session():
+        result = await session.execute(select(Subscription))
+        subscriptions_count = len(result.scalars().all())
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Да, удалить все", callback_data="admin_confirm_delete_subscriptions")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="admin_cancel_delete_subscriptions")]
+    ])
+
+    await callback.message.edit_text(
+        f"⚠️ <b>Внимание!</b>\n\n"
+        f"Вы уверены, что хотите удалить ВСЕ подписки?\n\n"
+        f"📊 Подписок в базе: <b>{subscriptions_count}</b>\n\n"
+        f"⚠️ Это действие необратимо!",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await callback.answer()
+
+
+# Подтверждение удаления всех подписок
+@router.callback_query(lambda c: c.data == "admin_confirm_delete_subscriptions")
+async def delete_all_subs_confirmed(callback: types.CallbackQuery):
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет доступа.", show_alert=True)
+        return
+
+    try:
+        async for session in get_session():
+            deleted_count = await delete_all_subscriptions(session)
+
+        await callback.message.edit_text(
+            f"✅ <b>Все подписки удалены!</b>\n\n"
+            f"🗑️ Удалено подписок: <b>{deleted_count}</b>",
+            parse_mode="HTML"
+        )
+        await callback.answer("✅ Подписки удалены!")
+    except Exception as e:
+        await callback.message.edit_text(
+            f"❌ <b>Ошибка при удалении подписок:</b>\n\n"
+            f"<code>{e}</code>",
+            parse_mode="HTML"
+        )
+        await callback.answer("❌ Ошибка!")
+        print(f"[ADMIN] Ошибка удаления подписок: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+# Отмена удаления подписок
+@router.callback_query(lambda c: c.data == "admin_cancel_delete_subscriptions")
+async def cancel_delete_subscriptions(callback: types.CallbackQuery):
+    await callback.message.edit_text("❌ Удаление подписок отменено.")
+    await callback.answer()

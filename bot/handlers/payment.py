@@ -6,11 +6,13 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from services.crypto import create_crypto_invoice
 from services.json_reader import dict_to_namespace
 from pathlib import Path
-from bot.handlers.messages import SUB_PAYMENT_MONTHLY, SUB_PAYMENT_DAILY
+from bot.handlers.messages import SUB_PAYMENT_MONTHLY, SUB_PAYMENT_DAILY, ALREADY_HAS_SUBSCRIPTION
 from db.session import get_session
 from db.payment_crud import create_payment
 from db.user_crud import get_user_by_telegram_id
+from db.subscription_crud import get_active_subscription
 from aiogram.filters import Command
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -101,12 +103,51 @@ async def show_plan_details(callback_query: types.CallbackQuery):
     else:
         message_template = SUB_PAYMENT_MONTHLY  # По умолчанию
 
+    # Проверяем наличие активной подписки
+    user_id = callback_query.from_user.id
+    async for session in get_session():
+        # Получаем пользователя из БД
+        user = await get_user_by_telegram_id(session, user_id)
+        if not user:
+            print(f"[PAYMENT] ❌ User not found in DB: {user_id}")
+            await callback_query.message.answer("❌ Пользователь не найден. Начните с /start")
+            await callback_query.answer()
+            return
+
+        # Проверяем активную подписку
+        active_subscription = await get_active_subscription(session, user.id)
+        if active_subscription:
+            # У пользователя уже есть активная подписка
+            subscription_type_name = active_subscription.subscription_type.value
+            end_date = active_subscription.end_date.strftime("%d.%m.%Y %H:%M")
+
+            message = ALREADY_HAS_SUBSCRIPTION.format(
+                subscription_type=subscription_type_name,
+                end_date=end_date,
+                credits=user.credits
+            )
+
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_subscription")]
+                ]
+            )
+
+            print(f"[PAYMENT] ⚠️ User {user_id} already has active subscription: {subscription_type_name}")
+            await callback_query.message.edit_text(
+                message,
+                reply_markup=keyboard,
+                parse_mode="HTML",
+                disable_web_page_preview=True
+            )
+            await callback_query.answer()
+            return
+
     # Показываем детали подписки
     description = message_template.format(_price=plan.price)
     print(f"[PAYMENT] Description created for plan: {plan_key}, length: {len(description)}")
 
     # Создаем инвойс сразу
-    user_id = callback_query.from_user.id
     print(f"[PAYMENT] Creating invoice for user_id: {user_id}, amount: {plan.price}, plan_key: {plan_key}")
 
     try:

@@ -41,7 +41,8 @@ async def set_bot_commands(bot: Bot):
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# Initialize link processor for Envato downloads
+# Initialize bot services
+BotServices.bot = bot
 BotServices.link_processor = LinkProcessor(max_workers=3)
 
 # Роутеры бота
