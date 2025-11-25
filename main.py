@@ -97,7 +97,7 @@ async def main():
     try:
         # 4. Запуск сервера и бота параллельно
         await asyncio.gather(
-            # start_server(),
+            start_server(),
             start_bot()
         )
     finally:
