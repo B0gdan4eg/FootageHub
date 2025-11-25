@@ -5,7 +5,7 @@ from sqlalchemy import select, update, func
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from db.session import get_session
-from db.models import User, UserRole, Payment  # Ваша модель пользователя
+from db.models import User, UserRole, Payment
 from bot.state import ManagerFlow
 from bot.handlers.admin import is_admin
 

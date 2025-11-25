@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.models import User, Media
+from db.models import User, Media, Subscription
 from datetime import datetime, timedelta
-from sqlalchemy import update, func
+from sqlalchemy import update, func, and_
 from db.models import UserRole
 
 async def get_user_by_telegram_id(session: AsyncSession, tg_id: int):
@@ -53,11 +53,13 @@ async def get_all_users(session: AsyncSession):
 
 
 async def count_active_subs(session: AsyncSession):
+    """Подсчитывает количество активных подписок"""
     result = await session.execute(
-        select(func.count()).select_from(User).where(
-            User.is_subscribed == True,
-            User.subscription_until != None,
-            User.subscription_until > func.now()
+        select(func.count()).select_from(Subscription).where(
+            and_(
+                Subscription.is_active == True,
+                Subscription.end_date > datetime.utcnow()
+            )
         )
     )
     return result.scalar()

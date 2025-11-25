@@ -3,7 +3,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFil
 from aiogram.fsm.context import FSMContext
 from aiogram import Bot
 
-from db.models import User, Download, Media, Payment, UserRole, SubscriptionType, ServiceType
+from db.models import User, Download, Media, Payment, UserRole, SubscriptionType, ServiceType, Subscription, ReferralReward
 from db.session import get_session
 from db.user_crud import get_all_users, count_active_subs, get_user_by_telegram_id
 from db.downloaded_file_crud import count_total_downloads
@@ -329,7 +329,9 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
         (User, "Users"),
         (Media, "Media"),
         (Download, "Downloads"),
-        (Payment, "Payments")
+        (Payment, "Payments"),
+        (Subscription, "Subscriptions"),
+        (ReferralReward, "ReferralRewards")
     ]
 
     for model, sheet_name in tables:
@@ -364,11 +366,17 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
     file_path = "/tmp/full_database_export.xlsx"
     wb.save(file_path)
 
-    await bot.send_document(
-        chat_id=chat_id,
-        document=FSInputFile(file_path),
-        caption="📊 Полный экспорт базы данных"
-    )
+    try:
+        await bot.send_document(
+            chat_id=chat_id,
+            document=FSInputFile(file_path),
+            caption="📊 Полный экспорт базы данных"
+        )
+    finally:
+        # Удаляем файл после отправки
+        import os
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 @router.callback_query(lambda c: c.data == "export_db")
 async def export_db_callback(callback_query: types.CallbackQuery, bot: Bot):
