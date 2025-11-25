@@ -13,7 +13,7 @@ async def create_crypto_invoice(user_id: int, amount: float, plan_key: str):
     Returns:
         tuple: (pay_url, invoice_id)
     """
-    crypto = CryptoPay(token=CRYPTO_BOT_API_KEY, network=TESTNET)
+    crypto = CryptoPay(token=CRYPTO_BOT_API_KEY, network=MAINNET)
 
     invoice = await crypto.create_invoice(
         currency_type="crypto",

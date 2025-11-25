@@ -136,9 +136,7 @@ class LinkProcessor:
         await self.queue.put(LinkTask(url=url, future=future, with_license=with_license))
 
         try:
-            print(f"[LinkProcessor] Waiting for result...")
             result = await future
-            print(f"[LinkProcessor] Result ({license_mode}): {'✅ Success' if result else '❌ Failed'}")
             logger.info(f"URL processing completed ({license_mode}): {url[:50]}... -> {'Success' if result else 'Failed'}")
             return result
         except Exception as e:

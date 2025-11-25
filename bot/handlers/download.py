@@ -169,11 +169,9 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             await message.answer(ALREADY_DOWNLOADED)
 
             # Get link_processor from BotServices
-            print(f"[DOWNLOAD] Получаем ссылку через LinkProcessor для повторной загрузки: {url[:50]}...")
             from bot.services import BotServices
             link_processor = BotServices.link_processor
             file_path = await link_processor.submit(url, with_license=with_license)
-            print(f"[DOWNLOAD] Результат: {file_path[:50] if file_path else 'None'}...")
 
             # ✅ ДОБАВЛЯЕМ ПРОВЕРКУ
             if file_path:
@@ -219,13 +217,9 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         thinking_msg = await message.answer(PROCESSING_LINK)
 
         # Get link_processor from BotServices (no circular import)
-        print(f"[DOWNLOAD] Получаем ссылку через LinkProcessor для: {url[:50]}...")
         from bot.services import BotServices
-        print(f"[DOWNLOAD] BotServices импортирован")
         link_processor = BotServices.link_processor
-        print(f"[DOWNLOAD] link_processor получен: {link_processor}")
         file_path = await link_processor.submit(url, with_license=with_license)
-        print(f"[DOWNLOAD] Результат: {file_path[:50] if file_path else 'None'}...")
         
         if file_path:
             media = await create_media(session, url=url, file_type="image")
@@ -303,11 +297,8 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
             await message.answer(ALREADY_DOWNLOADED)
 
             # Get Freepik downloader
-            print(f"[DOWNLOAD] Получаем ссылку Freepik для: {url[:50]}...")
             from freepik_utils.freepik import get_freepik_direct_download_url
-            print(f"[DOWNLOAD] Freepik импортирован")
             file_path = await get_freepik_direct_download_url(url)
-            print(f"[DOWNLOAD] Результат: {file_path[:50] if file_path else 'None'}...")
 
             if file_path:
                 keyboard = InlineKeyboardMarkup(
@@ -352,11 +343,8 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
         thinking_msg = await message.answer(PROCESSING_LINK)
 
         # Get Freepik downloader
-        print(f"[DOWNLOAD] Получаем ссылку Freepik для: {url[:50]}...")
         from freepik_utils.freepik import get_freepik_direct_download_url
-        print(f"[DOWNLOAD] Freepik импортирован")
         file_path = await get_freepik_direct_download_url(url)
-        print(f"[DOWNLOAD] Результат: {file_path[:50] if file_path else 'None'}...")
 
         if file_path:
             media = await create_media(session, url=url, file_type="image")

@@ -30,9 +30,17 @@ async def info(message: types.Message):
         if subscription:
             sub_status = "✅ Активна"
             sub_until = subscription.end_date.strftime("%d.%m.%Y")
-            sub_limits = f"{subscription.used_total}/{subscription.total_limit or '∞'}"
-            if subscription.daily_limit:
-                sub_limits += f" (сегодня: {subscription.used_today}/{subscription.daily_limit})"
+
+            # Определяем тип отображения лимитов
+            if subscription.total_limit:
+                # MONTHLY_150: показываем общий лимит
+                sub_limits = f"{subscription.used_total}/{subscription.total_limit}"
+            elif subscription.daily_limit:
+                # DAILY_30: показываем только дневной лимит
+                sub_limits = f"{subscription.used_today}/{subscription.daily_limit} (сегодня)"
+            else:
+                # UNLIMITED: безлимит
+                sub_limits = "♾️ Безлимит"
         else:
             sub_status = "❌ Неактивна"
             sub_until = "—"
