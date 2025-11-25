@@ -1,33 +1,20 @@
 {
     "subscription_plans": {
-        "basic": {
-            "name": "Базовая",
-            "price": 3.99,
-            "period": 30
+        "monthly_150": {
+            "name": "Загрузки",
+            "price": 5.9,
+            "period_days": 30,
+            "total_limit": 150,
+            "daily_limit": null,
+            "subscription_type": "MONTHLY_100"
         },
-        "pro": {
-            "name": "Про",
-            "price": 9.99,
-            "period": 60
-        },
-        "premium": {
-            "name": "Премиум",
-            "price": 16.99,
-            "period": 90
-        }
-    },
-    "credits_limit": {
-        "fifteen": {
-            "max_downloads": 15,
-            "price": 4.59
-        },
-        "thirty": {
-            "max_downloads": 30,
-            "price": 7.99
-        },
-        "sixty": {
-            "max_downloads": 60,
-            "price": 14.49
+        "daily_30": {
+            "name": "Дневная подписка",
+            "price": 11.9,
+            "period_days": 30,
+            "total_limit": null,
+            "daily_limit": 30,
+            "subscription_type": "DAILY_20"
         }
     }
 }

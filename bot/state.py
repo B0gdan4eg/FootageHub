@@ -18,3 +18,6 @@ class AdminStates(StatesGroup):
     waiting_for_cookies_json = State()
     waiting_for_limit_value = State()
     waiting_for_broadcast_text = State()
+    # Новые состояния для выдачи подписки
+    waiting_for_subscription_user_id = State()
+    waiting_for_subscription_plan = State()

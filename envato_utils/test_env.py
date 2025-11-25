@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 class LinkTask(NamedTuple):
     url: str
     future: asyncio.Future
+    with_license: bool = False
 
 
 class LinkProcessor:
@@ -87,15 +88,20 @@ class LinkProcessor:
                     # Check if browser needs restart
                     await self._restart_browser_if_needed()
 
-                    result = await self.downloader.get_download_url(task.url)
+                    # Use appropriate method based on license flag
+                    if task.with_license:
+                        result = await self.downloader.get_download_url_with_license(task.url)
+                    else:
+                        result = await self.downloader.get_download_url(task.url)
                     self.request_count += 1
 
+                    license_mode = "WITH LICENSE" if task.with_license else "WITHOUT LICENSE"
                     if result:
-                        print(f"[Worker {idx}] ✅ Success!")
-                        logger.info(f"Worker {idx} success: {task.url[:50]}... -> {result[:50]}...")
+                        print(f"[Worker {idx}] ✅ Success ({license_mode})!")
+                        logger.info(f"Worker {idx} success ({license_mode}): {task.url[:50]}... -> {result[:50]}...")
                     else:
-                        print(f"[Worker {idx}] ❌ Failed - No URL")
-                        logger.warning(f"Worker {idx} failed: {task.url[:50]}... -> No URL returned")
+                        print(f"[Worker {idx}] ❌ Failed - No URL ({license_mode})")
+                        logger.warning(f"Worker {idx} failed ({license_mode}): {task.url[:50]}... -> No URL returned")
                     task.future.set_result(result)
                 except Exception as e:
                     print(f"[Worker {idx}] ❌ Error: {e}")
@@ -111,29 +117,31 @@ class LinkProcessor:
                 print(f"[Worker {idx}] Unexpected error: {e}")
                 logger.error(f"Worker {idx} unexpected error: {e}")
 
-    async def submit(self, url: str) -> str:
+    async def submit(self, url: str, with_license: bool = False) -> str:
         """
         Submit a URL for processing and wait for result.
 
         Args:
             url: Envato Elements URL to process
+            with_license: If True, downloads WITH license (requires active subscription)
 
         Returns:
             Direct download URL or None if failed
         """
-        print(f"[LinkProcessor] Submitting URL: {url[:50]}...")
-        logger.info(f"Submitting URL to queue: {url[:50]}...")
+        license_mode = "WITH LICENSE" if with_license else "WITHOUT LICENSE"
+        print(f"[LinkProcessor] Submitting URL ({license_mode}): {url[:50]}...")
+        logger.info(f"Submitting URL to queue ({license_mode}): {url[:50]}...")
         loop = asyncio.get_running_loop()
         future = loop.create_future()
-        await self.queue.put(LinkTask(url=url, future=future))
+        await self.queue.put(LinkTask(url=url, future=future, with_license=with_license))
 
         try:
             print(f"[LinkProcessor] Waiting for result...")
             result = await future
-            print(f"[LinkProcessor] Result: {'✅ Success' if result else '❌ Failed'}")
-            logger.info(f"URL processing completed: {url[:50]}... -> {'Success' if result else 'Failed'}")
+            print(f"[LinkProcessor] Result ({license_mode}): {'✅ Success' if result else '❌ Failed'}")
+            logger.info(f"URL processing completed ({license_mode}): {url[:50]}... -> {'Success' if result else 'Failed'}")
             return result
         except Exception as e:
-            print(f"[LinkProcessor] ERROR: {e}")
-            logger.error(f"URL processing failed: {url[:50]}... -> {e}")
+            print(f"[LinkProcessor] ERROR ({license_mode}): {e}")
+            logger.error(f"URL processing failed ({license_mode}): {url[:50]}... -> {e}")
             return None

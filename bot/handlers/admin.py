@@ -1,13 +1,13 @@
 from aiogram import Router, types, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram import Bot
 
-from db.models import User, Download, Media, Payment, UserRole  # предполагаемая модель
+from db.models import User, Download, Media, Payment, UserRole, SubscriptionType, ServiceType
 from db.session import get_session
-from db.user_crud import get_all_users, count_active_subs
+from db.user_crud import get_all_users, count_active_subs, get_user_by_telegram_id
 from db.downloaded_file_crud import count_total_downloads
+from db.subscription_crud import create_subscription
 from sqlalchemy import select, update
 from bot.state import AdminStates
 from io import BytesIO
@@ -56,36 +56,163 @@ async def show_stats(callback: types.CallbackQuery):
 # ------------------------------------------------------------
 
 
-# Роутер на коллбэк список пользователей
+# Роутер на коллбэк выдачи подписки - шаг 1: запрос ID пользователя
 # ------------------------------------------------------------
-@router.callback_query(F.data == "admin_users")
-async def list_users(callback: types.CallbackQuery):
+@router.callback_query(F.data == "admin_give_subscription")
+async def give_subscription_start(callback: types.CallbackQuery, state: FSMContext):
     if not await is_admin(callback.from_user.id):
         await callback.answer("❌ У вас нет доступа.", show_alert=True)
         return
 
-    async for session in get_session():
-        stmt = select(User).order_by(User.id.desc()).limit(10)
-        result = await session.execute(stmt)
-        users = result.scalars().all()
+    await state.set_state(AdminStates.waiting_for_subscription_user_id)
+    await callback.message.answer(
+        "🆔 <b>Выдача подписки</b>\n\n"
+        "Введите Telegram ID пользователя, которому хотите выдать подписку:\n\n"
+        "Отправьте 'q' для отмены",
+        parse_mode="HTML"
+    )
+    await callback.answer()
+# ------------------------------------------------------------
 
-    if not users:
-        await callback.message.edit_text("🙅‍ Пользователи не найдены.")
+# Роутер на получение ID пользователя - шаг 2: выбор плана
+# ------------------------------------------------------------
+@router.message(AdminStates.waiting_for_subscription_user_id)
+async def receive_subscription_user_id(message: types.Message, state: FSMContext):
+    user_id_text = message.text.strip()
+
+    if user_id_text.lower() == "q":
+        await state.clear()
+        return await message.answer("❌ Выдача подписки отменена.")
+
+    if not user_id_text.isdigit():
+        return await message.answer("❌ ID должен быть числом. Попробуйте снова или отправьте 'q' для отмены.")
+
+    user_id = int(user_id_text)
+
+    # Проверяем существование пользователя
+    async for session in get_session():
+        user = await get_user_by_telegram_id(session, user_id)
+        if not user:
+            return await message.answer(f"❌ Пользователь с ID {user_id} не найден в базе данных.")
+
+    # Сохраняем ID в state
+    await state.update_data(subscription_user_id=user_id)
+
+    # Показываем выбор плана подписки
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📦 Monthly 150 (30 дней)", callback_data="sub_plan_monthly_150")],
+        [InlineKeyboardButton(text="⚡ Daily 30 (30 дней)", callback_data="sub_plan_daily_30")],
+        [InlineKeyboardButton(text="♾️ Unlimited (30 дней)", callback_data="sub_plan_unlimited")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="sub_plan_cancel")],
+    ])
+
+    await message.answer(
+        f"✅ Пользователь найден: <b>{user_id}</b>\n\n"
+        f"Выберите план подписки:",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await state.set_state(AdminStates.waiting_for_subscription_plan)
+# ------------------------------------------------------------
+
+# Роутер на выбор плана подписки - шаг 3: создание подписки
+# ------------------------------------------------------------
+@router.callback_query(AdminStates.waiting_for_subscription_plan, F.data.startswith("sub_plan_"))
+async def create_subscription_for_user(callback: types.CallbackQuery, state: FSMContext):
+    if callback.data == "sub_plan_cancel":
+        await state.clear()
+        await callback.message.edit_text("❌ Выдача подписки отменена.")
+        await callback.answer()
         return
 
-    text = "👥 Последние пользователи:\n\n"
-    keyboard = InlineKeyboardBuilder()
+    # Получаем сохраненный ID пользователя
+    data = await state.get_data()
+    user_id = data.get("subscription_user_id")
 
-    for user in users:
-        sub_until = user.subscription_until.strftime("%d.%m.%Y") if user.subscription_until else "—"
-        text += (
-            f"🆔 {user.tg_id}\n"
-            f"👤 {user.username or 'Без имени'}\n"
-            f"💳 Кредиты: {user.credits}\n"
-            f"📅 Подписка до: {user.subscription_until}\n\n"
-        )
-        
-    await callback.message.edit_text(text)
+    if not user_id:
+        await callback.message.edit_text("❌ Ошибка: ID пользователя не найден. Начните заново.")
+        await state.clear()
+        await callback.answer()
+        return
+
+    # Определяем параметры подписки по выбранному плану
+    plan_key = callback.data.replace("sub_plan_", "")
+
+    if plan_key == "monthly_150":
+        subscription_type = SubscriptionType.MONTHLY_100
+        total_limit = 150
+        daily_limit = None
+        plan_name = "Monthly 150"
+    elif plan_key == "daily_30":
+        subscription_type = SubscriptionType.DAILY_20
+        total_limit = None
+        daily_limit = 30
+        plan_name = "Daily 30"
+    elif plan_key == "unlimited":
+        subscription_type = SubscriptionType.UNLIMITED
+        total_limit = None
+        daily_limit = None
+        plan_name = "Unlimited ♾️"
+    else:
+        await callback.message.edit_text("❌ Неизвестный план подписки.")
+        await state.clear()
+        await callback.answer()
+        return
+
+    # Создаем подписку
+    async for session in get_session():
+        user = await get_user_by_telegram_id(session, user_id)
+        if not user:
+            await callback.message.edit_text(f"❌ Пользователь с ID {user_id} не найден.")
+            await state.clear()
+            await callback.answer()
+            return
+
+        try:
+            subscription = await create_subscription(
+                session=session,
+                user_id=user.id,
+                subscription_type=subscription_type,
+                service_type=ServiceType.ALL,
+                total_limit=total_limit,
+                daily_limit=daily_limit,
+                days=30,
+                payment_id=None  # Подписка выдана администратором
+            )
+
+            limit_text = "♾️ Безлимит" if plan_key == "unlimited" else (f"{total_limit} скачиваний" if total_limit else f"{daily_limit}/день")
+
+            await callback.message.edit_text(
+                f"✅ <b>Подписка успешно выдана!</b>\n\n"
+                f"👤 Пользователь: <code>{user_id}</code>\n"
+                f"📦 План: <b>{plan_name}</b>\n"
+                f"📊 Лимит: {limit_text}\n"
+                f"📅 Срок: 30 дней\n"
+                f"🆔 ID подписки: <code>{subscription.id}</code>",
+                parse_mode="HTML"
+            )
+
+            # Опционально: уведомляем пользователя
+            try:
+                await callback.bot.send_message(
+                    user_id,
+                    f"🎁 <b>Вам выдана подписка!</b>\n\n"
+                    f"📦 План: <b>{plan_name}</b>\n"
+                    f"📊 Лимит: {limit_text}\n"
+                    f"📅 Срок действия: 30 дней\n\n"
+                    f"Приятного использования! 🚀",
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                print(f"[ADMIN] Не удалось отправить уведомление пользователю {user_id}: {e}")
+
+        except Exception as e:
+            await callback.message.edit_text(f"❌ Ошибка при создании подписки: {e}")
+            print(f"[ADMIN] Ошибка создания подписки: {e}")
+            import traceback
+            traceback.print_exc()
+
+    await state.clear()
     await callback.answer()
 # ------------------------------------------------------------
 
@@ -98,15 +225,13 @@ async def admin_panel(message: types.Message, state: FSMContext):
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
-        [InlineKeyboardButton(text="👥 Пользователи", callback_data="admin_users")],
+        [InlineKeyboardButton(text="🎁 Выдать подписку", callback_data="admin_give_subscription")],
         [InlineKeyboardButton(text="👤 Назначить роль", callback_data="admin_assign_role")],
         [InlineKeyboardButton(text="💳 Загрузить цены", callback_data="admin_upload_prices")],
-        [InlineKeyboardButton(text="🧹 Очистка базы", callback_data="clear_db")],
         [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
         [InlineKeyboardButton(text="🍪 Загрузить cookies", callback_data="admin_upload_cookies")],
         [InlineKeyboardButton(text="📦 Установить лимит всем", callback_data="admin_set_download_limit")],
         [InlineKeyboardButton(text="📢 Оповещение", callback_data="admin_broadcast")],
-        
     ])
     await message.answer("📂 Панель администратора", reply_markup=keyboard)
     await state.clear()
@@ -244,21 +369,6 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
         document=FSInputFile(file_path),
         caption="📊 Полный экспорт базы данных"
     )
-
-@router.callback_query(lambda c: c.data == "clear_db")
-async def clear_db_callback(callback_query: types.CallbackQuery, bot: Bot):
-    async for session in get_session():
-        # 1️⃣ Сначала выгружаем базу и отправляем пользователю
-        await export_full_db_and_send(session, bot, callback_query.message.chat.id)
-
-        # 2️⃣ После успешной отправки очищаем таблицы
-        await session.execute("DELETE FROM payments")
-        await session.execute("DELETE FROM downloads")
-        await session.execute("DELETE FROM media")
-        await session.execute("DELETE FROM users")
-        await session.commit()
-
-    await callback_query.answer("✅ База выгружена и очищена!")
 
 @router.callback_query(lambda c: c.data == "export_db")
 async def export_db_callback(callback_query: types.CallbackQuery, bot: Bot):

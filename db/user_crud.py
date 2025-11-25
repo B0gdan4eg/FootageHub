@@ -18,7 +18,7 @@ async def create_user(session: AsyncSession, tg_id: int):
         )
     user = User(
         tg_id=tg_id,
-        credits=5
+        credits=3
         )
     session.add(user)
     await session.commit()

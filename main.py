@@ -8,7 +8,7 @@ from aiogram.types import BotCommand
 from bot.config import BOT_TOKEN
 from bot.handlers import start, download, info, admin, payment, channel_check, manager, menu #group_st
 from db.base import run_migrations, create_tables
-from bot.schedule_tasks import scheduler_job, daily_backup_job, cleanup_playwright_cache
+from bot.schedule_tasks import scheduler_job, daily_backup_job, cleanup_playwright_cache, process_monthly_subscriptions, check_expired_subscriptions
 from bot.webhook.server_start import start_server
 from envato_utils.test_env import LinkProcessor
 from bot.services import BotServices
@@ -30,9 +30,10 @@ async def set_bot_commands(bot: Bot):
     """Устанавливает список команд бота, чтобы меню отображалось на всех устройствах."""
     commands = [
         BotCommand(command="envato", description="Скачать Envato"),
-        BotCommand(command="freepik", description="Скачать Freepik(Скоро...)"),
+        BotCommand(command="freepik", description="Скачать Freepik"),
         BotCommand(command="info", description="Информация"),
         BotCommand(command="menu", description="Меню"),
+        BotCommand(command="pay", description="Увеличить лимиты"),
     ]
     await bot.set_my_commands(commands)
 
@@ -77,12 +78,21 @@ async def main():
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
     # Ежедневное начисление кредитов в 03:00
     scheduler.add_job(scheduler_job, "cron", hour=3, minute=0, args=[bot])
+    # Обработка месячных подписок (MONTHLY_150) в 03:05
+    scheduler.add_job(process_monthly_subscriptions, "cron", hour=3, minute=5, args=[bot])
+    # Проверка истекших подписок в 03:10
+    scheduler.add_job(check_expired_subscriptions, "cron", hour=3, minute=10, args=[bot])
     # Ежедневный бэкап БД в 04:00
-    scheduler.add_job(daily_backup_job, "cron", hour=4, minute=0)
-    # Очистка Playwright кэша каждые 6 часов
-    scheduler.add_job(cleanup_playwright_cache, "interval", hours=6)
+    scheduler.add_job(daily_backup_job, "interval", hours=4)
+    # Очистка Playwright кэша каждые 2 часа
+    scheduler.add_job(cleanup_playwright_cache, "interval", hours=2)
     scheduler.start()
-    print("[INFO] ✅ Scheduler started: daily credits at 03:00, daily backup at 04:00, playwright cleanup every 6 hours")
+    print("[INFO] ✅ Scheduler started:")
+    print("  - Daily credits: 03:00")
+    print("  - MONTHLY_150 processing: 03:05")
+    print("  - Expired subscriptions check: 03:10")
+    print("  - Daily backup: every 4 hours")
+    print("  - Playwright cleanup: every 2 hours")
 
     try:
         # 4. Запуск сервера и бота параллельно

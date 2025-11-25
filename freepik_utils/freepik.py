@@ -35,21 +35,24 @@ class FreepikDownloader:
         return self
 
     async def __aexit__(self, *args):
-        if self.browser:
-            await self.browser.close()
-        if self.playwright:
-            await self.playwright.stop()
+        # Закрываем контекст перед браузером для корректной очистки
+        if self.context:
+            try:
+                await self.context.close()
+            except Exception as e:
+                print(f"⚠️ [FREEPIK] Ошибка при закрытии контекста: {e}")
 
-        total = self.success_count + self.fail_count
-        if total > 0:
-            avg_time = self.total_time / total
-            print("\n" + "="*70)
-            print("📊 СТАТИСТИКА:")
-            print(f"   ✅ Успешно: {self.success_count}")
-            print(f"   ❌ Провалов: {self.fail_count}")
-            print(f"   ⏱️  Общее время: {self.total_time:.2f} сек")
-            print(f"   ⏱️  Среднее время: {avg_time:.2f} сек/ссылка")
-            print("="*70)
+        if self.browser:
+            try:
+                await self.browser.close()
+            except Exception as e:
+                print(f"⚠️ [FREEPIK] Ошибка при закрытии браузера: {e}")
+
+        if self.playwright:
+            try:
+                await self.playwright.stop()
+            except Exception as e:
+                print(f"⚠️ [FREEPIK] Ошибка при остановке playwright: {e}")
 
     async def get_download_url(self, asset_url: str) -> str | None:
         """
@@ -75,10 +78,27 @@ class FreepikDownloader:
             await client.send("Network.enable")
 
             captured_responses = []
+            download_initiated = []  # Перехват прямых ссылок
 
             def on_response(event):
-                url = event.get("response", {}).get("url", "")
-                if "/api/regular/download" in url:
+                response = event.get("response", {})
+                url = response.get("url", "")
+                status = response.get("status", 0)
+                headers = response.get("headers", {})
+
+                # Перехватываем редиректы (301, 302, 303, 307, 308)
+                if status in [301, 302, 303, 307, 308]:
+                    location = headers.get("location", headers.get("Location", ""))
+                    if location:
+                        download_initiated.append(location)
+
+                # Перехватываем Content-Disposition (прямое скачивание)
+                content_disposition = headers.get("content-disposition", headers.get("Content-Disposition", ""))
+                if "attachment" in content_disposition or "filename=" in content_disposition:
+                    download_initiated.append(url)
+
+                # Ищем запросы API для скачивания
+                if any(keyword in url for keyword in ["/api/regular/download", "/download", "/api/", "cdn"]):
                     captured_responses.append(event)
 
             client.on("Network.responseReceived", on_response)
@@ -90,7 +110,7 @@ class FreepikDownloader:
             await page.click("button[data-cy='download-button']", timeout=15000)
 
             # Wait for download URL from intercepted network responses
-            download_url = await self._wait_for_download_url(client, captured_responses, timeout=10)
+            download_url = await self._wait_for_download_url(client, captured_responses, download_initiated, timeout=10)
 
             elapsed = time.time() - start_time
             self.total_time += elapsed
@@ -127,7 +147,7 @@ class FreepikDownloader:
                 except Exception:
                     pass
 
-    async def _wait_for_download_url(self, client, captured_responses, timeout=10) -> str | None:
+    async def _wait_for_download_url(self, client, captured_responses, download_initiated, timeout=10) -> str | None:
         """
         Wait for download URL to appear in intercepted network responses.
         Non-blocking approach using asyncio.sleep instead of time.sleep.
@@ -135,6 +155,7 @@ class FreepikDownloader:
         Args:
             client: CDP client session
             captured_responses: List of captured network responses
+            download_initiated: List of direct download URLs from headers
             timeout: Maximum wait time in seconds
 
         Returns:
@@ -142,6 +163,11 @@ class FreepikDownloader:
         """
         start = time.time()
         while time.time() - start < timeout:
+            # Сначала проверяем прямые ссылки (редиректы и Content-Disposition)
+            if download_initiated:
+                return download_initiated[0]
+
+            # Потом проверяем API ответы
             for resp in captured_responses:
                 try:
                     body = await client.send("Network.getResponseBody", {"requestId": resp["requestId"]})
@@ -149,8 +175,9 @@ class FreepikDownloader:
                     url = data.get("url")
                     if url:
                         return url
-                except:
+                except Exception:
                     continue
+
             await asyncio.sleep(0.1)
         return None
 
@@ -182,7 +209,7 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
         # Если запускается не из бота (тесты), семафор не нужен
         semaphore = None
 
-    print(f"🚀 Загружаем: {asset_url}")
+    print(f"🚀 [FREEPIK] Загружаем: {asset_url}")
 
     if semaphore:
         async with semaphore:
@@ -190,40 +217,18 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
                 link = await downloader.get_download_url(asset_url)
 
                 if link:
-                    print(f"✅ Прямая ссылка получена")
+                    print(f"✅ [FREEPIK] Прямая ссылка получена")
                     return link
                 else:
-                    print("❌ Не удалось получить ссылку")
+                    print("❌ [FREEPIK] Не удалось получить ссылку")
                     return None
     else:
         async with FreepikDownloader() as downloader:
             link = await downloader.get_download_url(asset_url)
 
             if link:
-                print(f"✅ Прямая ссылка получена")
+                print(f"✅ [FREEPIK] Прямая ссылка получена")
                 return link
             else:
-                print("❌ Не удалось получить ссылку")
+                print("❌ [FREEPIK] Не удалось получить ссылку")
                 return None
-
-
-# Test/debug functions
-async def test_single_url():
-    """Test single URL download"""
-    test_url = "https://www.freepik.com/free-photo/young-student-learning-library_21138972.htm"
-    print("="*70)
-    print("🚀 Получение прямой ссылки на скачивание")
-    print("="*70)
-    print(f"🔗 URL: {test_url}\n")
-
-    result = await get_freepik_direct_download_url(test_url)
-
-    if result:
-        print(f"\n✅ Прямая ссылка получена!")
-        print(f"🔗 {result[:100]}...")
-    else:
-        print(f"\n❌ Не удалось получить ссылку")
-
-if __name__ == "__main__":
-    asyncio.run(test_single_url())
-

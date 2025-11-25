@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from db.session import get_session
-from db.user_crud import grant_access, get_user_by_telegram_id
-from db.payment_crud import create_payment
+from db.user_crud import get_user_by_telegram_id
+from db.payment_crud import get_payment_by_invoice_id, mark_payment_success
+from db.subscription_crud import create_subscription
+from db.models import SubscriptionType, ServiceType
 from pathlib import Path
 import json
 import os
@@ -27,7 +29,7 @@ async def webhook(request: Request):
     invoice_id = payload.get("invoice_id")
     amount = payload.get("amount")
     currency = payload.get("asset")
-    user_payload = payload.get("payload")  # Например: "559268908:credits:five"
+    user_payload = payload.get("payload")  # Например: "559268908:monthly_150"
     description = payload.get("description")
     paid_at = payload.get("paid_at")
 
@@ -45,57 +47,78 @@ async def webhook(request: Request):
         plans = json.load(f)
 
     try:
-        user_id, type_, value = parse_payload(user_payload, plans)
+        user_id, plan_key = parse_payload(user_payload)
 
         async for session in get_session():
-            
+            # Проверяем пользователя
             user = await get_user_by_telegram_id(session, user_id)
             if not user:
                 print(f"❌ Пользователь с id {user_id} не найден")
                 return JSONResponse(content={"error": f"User {user_id} not found"}, status_code=404)
-            
-            # Выдача подписки или кредитов
-            await grant_access(user_id=user_id, type_=type_, value=value, session=session)
 
-            # Запись платежа
-            await create_payment(
+            # Проверяем платеж в БД
+            payment = await get_payment_by_invoice_id(session, str(invoice_id))
+            if not payment:
+                print(f"❌ Платеж с invoice_id {invoice_id} не найден в БД")
+                return JSONResponse(content={"error": "Payment not found"}, status_code=404)
+
+            # Проверяем, что платеж еще не обработан
+            if payment.status == "success":
+                print(f"⚠️ Платеж {invoice_id} уже обработан")
+                return JSONResponse(content={"status": "already_processed"}, status_code=200)
+
+            # Получаем план из JSON
+            plan_data = plans["subscription_plans"].get(plan_key)
+            if not plan_data:
+                print(f"❌ План {plan_key} не найден в конфигурации")
+                return JSONResponse(content={"error": f"Plan {plan_key} not found"}, status_code=404)
+
+            # Создаем подписку
+            subscription_type = SubscriptionType[plan_data["subscription_type"]]
+            period_days = plan_data["period_days"]
+            total_limit = plan_data.get("total_limit")
+            daily_limit = plan_data.get("daily_limit")
+
+            await create_subscription(
                 session=session,
                 user_id=user.id,
-                amount=amount,
-                currency=currency,
-                payment_type=type_,
-                invoice_id=str(invoice_id)
+                subscription_type=subscription_type,
+                service_type=ServiceType.ALL,
+                total_limit=total_limit,
+                daily_limit=daily_limit,
+                days=period_days,
+                payment_id=payment.id
             )
+
+            # Помечаем платеж как успешный
+            await mark_payment_success(session, str(invoice_id))
+
+            print(f"✅ Подписка {plan_key} успешно создана для пользователя {user_id}")
+            print(f"   Период: {period_days} дней")
+            print(f"   Лимиты: total={total_limit}, daily={daily_limit}")
 
     except Exception as e:
         print(f"❌ Ошибка при обработке платежа: {e}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
     return JSONResponse(content={"status": "processed"}, status_code=200)
 
 
-def parse_payload(payload: str, plans: dict):
+def parse_payload(payload: str):
+    """
+    Парсит payload формата "user_id:plan_key"
+
+    Args:
+        payload: Строка формата "559268908:monthly_150"
+
+    Returns:
+        tuple: (user_id: int, plan_key: str)
+    """
     try:
-        user_id_str, type_, plan_key = payload.split(":")
+        user_id_str, plan_key = payload.split(":")
         user_id = int(user_id_str)
-
-        if type_ == "subscription":
-            plan_dict = plans["subscription_plans"].get(plan_key)
-            if not plan_dict:
-                raise ValueError(f"Неизвестный план подписки: {plan_key}")
-            value = int(plan_dict["period"])
-
-        elif type_ == "credits":
-            plan_dict = plans["credits_limit"].get(plan_key)
-            if not plan_dict:
-                raise ValueError(f"Неизвестный кредитный план: {plan_key}")
-            value = int(plan_dict["max_downloads"])
-
-        else:
-            raise ValueError("Тип должен быть 'subscription' или 'credits'")
-
-        return user_id, type_, value
-
+        return user_id, plan_key
     except ValueError as e:
-        raise ValueError(f"Некорректный payload: {payload}. Ошибка: {e}")
-
+        raise ValueError(f"Некорректный payload: {payload}. Ожидается формат 'user_id:plan_key'. Ошибка: {e}")
