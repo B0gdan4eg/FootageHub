@@ -34,7 +34,7 @@ async def scheduler_job(bot: Bot):
             await session.execute(
                 update(User)
                 .where(User.id.in_(daily_sub_users))
-                .values(credits=User.credits + 30)
+                .values(credits=30)
             )
             logging.info(f"✅ Начислено 30 кредитов {len(daily_sub_users)} пользователям с дневной подпиской")
 

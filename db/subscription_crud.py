@@ -42,16 +42,22 @@ async def create_subscription(
 
     session.add(subscription)
 
-    # Начисляем кредиты пользователю при создании подписки с total_limit
-    if total_limit:
-        result = await session.execute(
-            select(User).where(User.id == user_id)
-        )
-        user = result.scalar_one_or_none()
+    # Получаем пользователя для начисления кредитов
+    result = await session.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
 
-        if user:
+    if user:
+        # Для MONTHLY_150: добавляем total_limit к текущим кредитам
+        if total_limit:
             user.credits += total_limit
             print(f"[SUBSCRIPTION] Начислено {total_limit} кредитов пользователю {user_id}")
+
+        # Для DAILY_30: устанавливаем кредиты равными daily_limit
+        elif daily_limit:
+            user.credits = daily_limit
+            print(f"[SUBSCRIPTION] Установлено {daily_limit} кредитов пользователю {user_id}")
 
     await session.commit()
     await session.refresh(subscription)
