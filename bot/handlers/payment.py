@@ -43,7 +43,6 @@ async def send_price_menu(message_or_callback):
                 limits_text = f"{item.daily_limit}/день"
 
             callback_data = f"select_plan_{key}"
-            print(f"[PAYMENT] Creating button with callback_data: {callback_data}")
             keyboard_buttons.append([
                 InlineKeyboardButton(
                     text=f"{item.name} ({limits_text}) — {item.price} USDT",
@@ -66,15 +65,12 @@ async def send_price_menu(message_or_callback):
 @router.message(lambda message: message.text == "Увеличить лимиты 💳")
 @router.callback_query(lambda c: c.data == "buy_subscription")
 async def choose_plan_callback(callback_query: types.CallbackQuery):
-    print(f"[PAYMENT] Received buy_subscription callback from user {callback_query.from_user.id}")
     await send_price_menu(callback_query)
 
 @router.callback_query(F.data.startswith("select_plan_"))
 async def show_plan_details(callback_query: types.CallbackQuery):
     """Показывает детали выбранной подписки с описанием всех тарифов."""
-    print(f"[PAYMENT] Received select_plan callback: {callback_query.data} from user {callback_query.from_user.id}")
     plan_key = callback_query.data.replace("select_plan_", "")
-    print(f"[PAYMENT] Extracted plan_key: {plan_key}")
 
     # Загружаем данные плана
     if not os.path.exists(PRICE_LIST):
@@ -87,7 +83,6 @@ async def show_plan_details(callback_query: types.CallbackQuery):
 
     data = dict_to_namespace(pr)
     plan = getattr(data.subscription_plans, plan_key, None)
-    print(f"[PAYMENT] Plan found: {plan is not None}")
 
     if not plan:
         print(f"[PAYMENT] ❌ Plan not found for key: {plan_key}")
@@ -145,7 +140,6 @@ async def show_plan_details(callback_query: types.CallbackQuery):
 
     # Показываем детали подписки
     description = message_template.format(_price=plan.price)
-    print(f"[PAYMENT] Description created for plan: {plan_key}, length: {len(description)}")
 
     # Создаем инвойс сразу
     print(f"[PAYMENT] Creating invoice for user_id: {user_id}, amount: {plan.price}, plan_key: {plan_key}")
@@ -156,7 +150,6 @@ async def show_plan_details(callback_query: types.CallbackQuery):
             amount=plan.price,
             plan_key=plan_key
         )
-        print(f"[PAYMENT] Invoice created: invoice_id={invoice_id}, pay_url exists={pay_url is not None}")
     except Exception as e:
         print(f"[PAYMENT] ❌ Error creating invoice: {e}")
         await callback_query.message.answer("❌ Ошибка при создании инвойса. Попробуйте позже.")
