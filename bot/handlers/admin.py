@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 from aiogram.filters import Command
 from enum import Enum
+from datetime import datetime, timedelta
 
 router = Router()
 
@@ -41,16 +42,52 @@ async def is_admin(user_id: int) -> bool:
 # ------------------------------------------------------------
 @router.callback_query(F.data == "admin_stats")
 async def show_stats(callback: types.CallbackQuery):
+    from sqlalchemy import func
+
     async for session in get_session():
         total_users = len(await get_all_users(session))
         active_subs = await count_active_subs(session)
         total_downloads = await count_total_downloads(session)
 
+        # Граница времени (последние 24 часа)
+        time_limit = datetime.utcnow() - timedelta(hours=24)
+
+        # Новые пользователи за сутки
+        result = await session.execute(
+            select(func.count(User.id)).where(User.created_at >= time_limit)
+        )
+        new_users_24h = result.scalar()
+
+        # Загрузки за сутки
+        result = await session.execute(
+            select(func.count(Download.id)).where(Download.downloaded_at >= time_limit)
+        )
+        downloads_24h = result.scalar()
+
+        # Общая сумма всех успешных платежей
+        result = await session.execute(
+            select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == "success")
+        )
+        total_payment_sum = float(result.scalar())
+
+        # Сумма платежей за сутки
+        result = await session.execute(
+            select(func.coalesce(func.sum(Payment.amount), 0)).where(
+                Payment.status == "success",
+                Payment.created_at >= time_limit
+            )
+        )
+        payment_sum_24h = float(result.scalar())
+
     text = (
-        f"📊 Статистика:\n"
-        f"👥 Пользователей: {total_users}\n"
-        f"🔐 Подписок: {active_subs}\n"
-        f"⬇️ Скачиваний: {total_downloads}"
+        f"📊 Статистика:\n\n"
+        f"👥 Всего пользователей: {total_users}\n"
+        f"🆕 Новых за сутки: {new_users_24h}\n\n"
+        f"🔐 Активных подписок: {active_subs}\n\n"
+        f"⬇️ Всего скачиваний: {total_downloads}\n"
+        f"📥 За сутки: {downloads_24h}\n\n"
+        f"💰 Всего платежей: {total_payment_sum:.2f}\n"
+        f"💵 За сутки: {payment_sum_24h:.2f}"
     )
     await callback.message.edit_text(text)
 # ------------------------------------------------------------

@@ -1,7 +1,7 @@
 # channel_check.py
 from aiogram import Bot, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from aiogram.exceptions import TelegramForbiddenError
+from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from aiogram.enums import ChatMemberStatus
 from bot.handlers.messages import CHANEL_CANCLE, CHANEL_APPLY
 from aiogram.enums.parse_mode import ParseMode
@@ -53,12 +53,17 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                 [InlineKeyboardButton(text="Проверить подписку 🔍", callback_data="check_subscription")]
             ]
         )
-        await callback.message.edit_text(
-            CHANEL_CANCLE,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
-            reply_markup=keyboard
-        )
+        try:
+            await callback.message.edit_text(
+                CHANEL_CANCLE,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+                reply_markup=keyboard
+            )
+        except TelegramBadRequest as e:
+            # Игнорируем ошибку, если сообщение не изменилось
+            if "message is not modified" not in str(e):
+                raise
     else:
         async for session in get_session():
             user = await session.scalar(select(User).where(User.tg_id == user_id))
@@ -71,11 +76,16 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                 else:
                     text = f"{CHANEL_APPLY}\n❌ Бонус за подписку вы уже получали ранее."
 
-                await callback.message.edit_text(
-                    text,
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True,
-                )
+                try:
+                    await callback.message.edit_text(
+                        text,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
+                    )
+                except TelegramBadRequest as e:
+                    # Игнорируем ошибку, если сообщение не изменилось
+                    if "message is not modified" not in str(e):
+                        raise
 
     await callback.answer()  # убирает "часики"
 
