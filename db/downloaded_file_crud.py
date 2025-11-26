@@ -1,6 +1,7 @@
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import Media, Download
+from datetime import datetime, timedelta
 
 async def get_media_by_url(session, url: str):
     result = await session.execute(select(Media).where(Media.url == url))

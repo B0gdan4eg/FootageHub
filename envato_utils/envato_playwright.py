@@ -320,7 +320,6 @@ class EnvatoDownloader:
                     )
 
                     if url and ("video-downloads.elements.envatousercontent.com" in url or "download" in url):
-                        print(f"✅ [FOUND] Download URL in API response!")
                         return url
                 except Exception:
                     continue

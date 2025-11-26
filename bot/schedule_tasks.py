@@ -132,7 +132,7 @@ async def daily_backup_job():
 
 def cleanup_playwright_cache():
     """Очистка временных файлов Playwright для освобождения места на диске."""
-    logging.info("🧹 Starting Playwright cache cleanup...")
+    print("🧹 Starting Playwright cache cleanup...")
 
     temp_dir = Path(tempfile.gettempdir())
     patterns = ["playwright*", "playwright_*", "chromium*", ".playwright-*"]
@@ -155,6 +155,6 @@ def cleanup_playwright_cache():
                 logging.warning(f"   ⚠️ Failed to remove {dir_path.name}: {e}")
 
     if removed_count > 0:
-        logging.info(f"✅ Cleanup complete: Removed {removed_count} directories, freed {total_size:.2f} MB")
+        print(f"✅ Cleanup complete: Removed {removed_count} directories, freed {total_size:.2f} MB")
     else:
-        logging.info("✅ No Playwright cache to clean")
+        print("✅ No Playwright cache to clean")

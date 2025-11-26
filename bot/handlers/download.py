@@ -117,7 +117,6 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         print(f"[DOWNLOAD] Запрос на скачивание С ЛИЦЕНЗИЕЙ: {url[:50]}...")
     elif url.startswith("https://elements.envato.com/"):
         with_license = False
-        print(f"[DOWNLOAD] Запрос на скачивание БЕЗ ЛИЦЕНЗИИ: {url[:50]}...")
     else:
         await message.answer(
             BAD_URL,
@@ -392,10 +391,37 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
 # Хэндлер на кнопку "Скачать ещё"
 @router.callback_query(F.data == "download_more")
 async def download_more(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    # Получаем telegram_id из callback, а не из message
+    telegram_id = callback.from_user.id
+
     async for session in get_session():
-        is_eligible, user = await check_user_eligibility(callback.message, bot, session)
-        if not is_eligible:
+        user = await get_user_by_telegram_id(session, telegram_id)
+
+        if not user:
+            await callback.message.answer(
+                USER_NOT_REGISTERED,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            await callback.answer()
             return
+
+        if user.credits <= 0:
+            if not await is_subscribed(bot, telegram_id):
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [InlineKeyboardButton(text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")],
+                        [InlineKeyboardButton(text="Проверить подписку 🔍", callback_data="check_subscription")]
+                    ]
+                )
+                await callback.message.answer(
+                    CHANEL_CHECK,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    reply_markup=keyboard
+                )
+                await callback.answer()
+                return
 
         await callback.message.answer(
             APPLY_DOWNLOAD.format(credit=user.credits),
@@ -403,14 +429,42 @@ async def download_more(callback: CallbackQuery, state: FSMContext, bot: Bot):
             disable_web_page_preview=True
         )
         await state.set_state(DownloadFlow.waiting_for_link)
+        await callback.answer()
 
 # Хэндлер на кнопку "Скачать ещё" для Freepik
 @router.callback_query(F.data == "download_more_freepik")
 async def download_more_freepik(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    # Получаем telegram_id из callback, а не из message
+    telegram_id = callback.from_user.id
+
     async for session in get_session():
-        is_eligible, user = await check_user_eligibility(callback.message, bot, session)
-        if not is_eligible:
+        user = await get_user_by_telegram_id(session, telegram_id)
+
+        if not user:
+            await callback.message.answer(
+                USER_NOT_REGISTERED,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            await callback.answer()
             return
+
+        if user.credits <= 0:
+            if not await is_subscribed(bot, telegram_id):
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [InlineKeyboardButton(text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")],
+                        [InlineKeyboardButton(text="Проверить подписку 🔍", callback_data="check_subscription")]
+                    ]
+                )
+                await callback.message.answer(
+                    CHANEL_CHECK,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    reply_markup=keyboard
+                )
+                await callback.answer()
+                return
 
         await callback.message.answer(
             APPLY_DOWNLOAD_FREEPIK.format(credit=user.credits),
@@ -418,3 +472,4 @@ async def download_more_freepik(callback: CallbackQuery, state: FSMContext, bot:
             disable_web_page_preview=True
         )
         await state.set_state(DownloadFlow.waiting_for_freepik_link)
+        await callback.answer()

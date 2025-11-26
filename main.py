@@ -86,7 +86,7 @@ async def main():
     # Ежедневный бэкап БД в 04:00
     scheduler.add_job(daily_backup_job, "interval", hours=4)
     # Очистка Playwright кэша каждые 2 часа
-    scheduler.add_job(cleanup_playwright_cache, "interval", hours=2)
+    scheduler.add_job(cleanup_playwright_cache, "interval", hours=1)
     scheduler.start()
     print("[INFO] ✅ Scheduler started:")
     print("  - Daily credits: 03:00")

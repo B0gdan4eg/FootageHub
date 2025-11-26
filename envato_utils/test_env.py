@@ -129,8 +129,6 @@ class LinkProcessor:
             Direct download URL or None if failed
         """
         license_mode = "WITH LICENSE" if with_license else "WITHOUT LICENSE"
-        print(f"[LinkProcessor] Submitting URL ({license_mode}): {url[:50]}...")
-        logger.info(f"Submitting URL to queue ({license_mode}): {url[:50]}...")
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         await self.queue.put(LinkTask(url=url, future=future, with_license=with_license))
