@@ -9,7 +9,7 @@ from db.session import async_engine
 from db.models import Base
 
 # Use /app/backups for Docker container (mounted to host ./backups)
-BACKUP_DIR = os.getenv("BACKUP_DIR", "/app/backups")
+BACKUP_DIR = os.getenv("BACKUP_DIR", "/opt/backups")
 
 def _backup_database_sync():
     """

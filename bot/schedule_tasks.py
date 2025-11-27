@@ -2,7 +2,6 @@ from db.session import get_session
 from db.user_crud import add_daily_credits
 from db.base import backup_database
 from aiogram import Bot
-import logging
 from db.models import User, Subscription, SubscriptionType
 from sqlalchemy import update, select, and_
 from datetime import datetime
@@ -12,7 +11,7 @@ from pathlib import Path
 
 async def scheduler_job(bot: Bot):
     """Ежедневная выдача кредитов."""
-    logging.info("Ежедневное начисление!")
+    print("Ежедневное начисление!")
     async for session in get_session():
         # Всем пользователям начисляем базовые 3 кредита
         await session.execute(update(User).values(credits=3))
@@ -36,14 +35,14 @@ async def scheduler_job(bot: Bot):
                 .where(User.id.in_(daily_sub_users))
                 .values(credits=30)
             )
-            logging.info(f"✅ Начислено 30 кредитов {len(daily_sub_users)} пользователям с дневной подпиской")
+            print(f"✅ Начислено 30 кредитов {len(daily_sub_users)} пользователям с дневной подпиской")
 
         await session.commit()
         # await add_daily_credits(session, bot)
 
 async def process_monthly_subscriptions(bot: Bot):
     """Обработка месячных подписок MONTHLY_150 - начисление остатка и деактивация при исчерпании."""
-    logging.info("🔄 Обработка месячных подписок MONTHLY_150...")
+    print("🔄 Обработка месячных подписок MONTHLY_150...")
     async for session in get_session():
         # Получаем активные месячные подписки
         result = await session.execute(
@@ -61,8 +60,15 @@ async def process_monthly_subscriptions(bot: Bot):
         deactivated_count = 0
 
         for subscription in monthly_subscriptions:
+            # Вычитаем использованные сегодня кредиты из used_total перед расчетом остатка
+            effective_used_total = subscription.used_total
+            if subscription.used_today >= 3:
+                effective_used_total -= 3
+            else:
+                effective_used_total -= subscription.used_today
+
             # Вычисляем остаток кредитов
-            remaining_credits = subscription.total_limit - subscription.used_total
+            remaining_credits = subscription.total_limit - effective_used_total
 
             if remaining_credits > 0:
                 # Начисляем оставшиеся кредиты
@@ -72,25 +78,28 @@ async def process_monthly_subscriptions(bot: Bot):
                 user = result.scalar_one_or_none()
                 if user:
                     user.credits += remaining_credits
-                    logging.info(f"✅ Начислено {remaining_credits} кредитов пользователю {subscription.user_id} (MONTHLY_150)")
+                    print(f"✅ Начислено {remaining_credits} кредитов пользователю {subscription.user_id} (MONTHLY_150)")
                     processed_count += 1
             else:
                 # Лимит исчерпан - деактивируем подписку
                 subscription.is_active = False
                 subscription.updated_at = datetime.utcnow()
-                logging.info(f"⚠️ Подписка #{subscription.id} деактивирована (лимит исчерпан, пользователь {subscription.user_id})")
+                print(f"⚠️ Подписка #{subscription.id} деактивирована (лимит исчерпан, пользователь {subscription.user_id})")
                 deactivated_count += 1
+
+            # Сбрасываем used_today в любом случае
+            subscription.used_today = 0
 
         await session.commit()
 
         if processed_count > 0 or deactivated_count > 0:
-            logging.info(f"✅ Обработка MONTHLY_150 завершена: начислено {processed_count}, деактивировано {deactivated_count}")
+            print(f"✅ Обработка MONTHLY_150 завершена: начислено {processed_count}, деактивировано {deactivated_count}")
         else:
-            logging.info("✅ Нет активных подписок MONTHLY_150 для обработки")
+            print("✅ Нет активных подписок MONTHLY_150 для обработки")
 
 async def check_expired_subscriptions(bot: Bot):
     """Проверка и деактивация истекших подписок."""
-    logging.info("🔄 Проверка истекших подписок...")
+    print("🔄 Проверка истекших подписок...")
     async for session in get_session():
         # Находим все активные подписки, срок которых истек
         result = await session.execute(
@@ -108,7 +117,7 @@ async def check_expired_subscriptions(bot: Bot):
             for subscription in expired_subscriptions:
                 subscription.is_active = False
                 subscription.updated_at = datetime.utcnow()
-                logging.info(
+                print(
                     f"⏰ Подписка #{subscription.id} деактивирована (истек срок): "
                     f"тип={subscription.subscription_type.value}, "
                     f"пользователь={subscription.user_id}, "
@@ -117,18 +126,18 @@ async def check_expired_subscriptions(bot: Bot):
                 expired_count += 1
 
             await session.commit()
-            logging.info(f"✅ Деактивировано истекших подписок: {expired_count}")
+            print(f"✅ Деактивировано истекших подписок: {expired_count}")
         else:
-            logging.info("✅ Нет истекших подписок")
+            print("✅ Нет истекших подписок")
 
 async def daily_backup_job():
     """Ежедневный бэкап базы данных."""
-    logging.info("🔄 Starting daily database backup...")
+    print("🔄 Starting daily database backup...")
     try:
         await backup_database()
-        logging.info("✅ Daily backup completed successfully")
+        print("✅ Daily backup completed successfully")
     except Exception as e:
-        logging.error(f"❌ Daily backup failed: {e}")
+        print(f"❌ Daily backup failed: {e}")
 
 def cleanup_playwright_cache():
     """Очистка временных файлов Playwright для освобождения места на диске."""
@@ -150,9 +159,9 @@ def cleanup_playwright_cache():
                 # Remove directory
                 shutil.rmtree(dir_path, ignore_errors=True)
                 removed_count += 1
-                logging.info(f"   🗑️ Removed: {dir_path.name} ({size_mb:.2f} MB)")
+                print(f"   🗑️ Removed: {dir_path.name} ({size_mb:.2f} MB)")
             except Exception as e:
-                logging.warning(f"   ⚠️ Failed to remove {dir_path.name}: {e}")
+                print(f"   ⚠️ Failed to remove {dir_path.name}: {e}")
 
     if removed_count > 0:
         print(f"✅ Cleanup complete: Removed {removed_count} directories, freed {total_size:.2f} MB")
