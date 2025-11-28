@@ -14,7 +14,7 @@ async def scheduler_job(bot: Bot):
     print("Ежедневное начисление!")
     async for session in get_session():
         # Всем пользователям начисляем базовые 3 кредита
-        await session.execute(update(User).values(credits=3))
+        await session.execute(update(User).values(credits=6))
 
         # Получаем всех пользователей с активной дневной подпиской
         result = await session.execute(
