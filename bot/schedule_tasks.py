@@ -14,7 +14,7 @@ async def scheduler_job(bot: Bot):
     print("Ежедневное начисление!")
     async for session in get_session():
         # Всем пользователям начисляем базовые 3 кредита
-        await session.execute(update(User).values(credits=6))
+        await session.execute(update(User).values(credits=3))
 
         # Получаем всех пользователей с активной дневной подпиской
         result = await session.execute(
@@ -62,8 +62,8 @@ async def process_monthly_subscriptions(bot: Bot):
         for subscription in monthly_subscriptions:
             # Вычитаем использованные сегодня кредиты из used_total перед расчетом остатка
             effective_used_total = subscription.used_total
-            if subscription.used_today >= 3:
-                effective_used_total -= 3
+            if subscription.used_today >= 6:
+                effective_used_total -= 6
             else:
                 effective_used_total -= subscription.used_today
 
