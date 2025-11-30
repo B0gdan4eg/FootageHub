@@ -62,8 +62,8 @@ async def process_monthly_subscriptions(bot: Bot):
         for subscription in monthly_subscriptions:
             # Вычитаем использованные сегодня кредиты из used_total перед расчетом остатка
             effective_used_total = subscription.used_total
-            if subscription.used_today >= 6:
-                effective_used_total -= 6
+            if subscription.used_today >= 3:
+                effective_used_total -= 3
             else:
                 effective_used_total -= subscription.used_today
 
