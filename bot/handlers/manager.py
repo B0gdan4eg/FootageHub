@@ -8,6 +8,7 @@ from db.session import get_session
 from db.models import User, UserRole, Payment
 from bot.state import ManagerFlow
 from bot.handlers.admin import is_admin
+from bot.services import BotServices
 
 router = Router()
 
@@ -36,7 +37,8 @@ async def manager_command(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
         [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
         [InlineKeyboardButton(text="➕ Создать реферальную ссылку", callback_data="manager_create_referral")],
-        [InlineKeyboardButton(text="👥 Просмотреть всех рефералов", callback_data="manager_view_referrals")]
+        [InlineKeyboardButton(text="👥 Просмотреть всех рефералов", callback_data="manager_view_referrals")],
+        [InlineKeyboardButton(text="🔄 Рестарт браузера Envato", callback_data="manager_restart_browser")]
     ])
     # Если роль менеджера подтверждена
     await message.answer(
@@ -140,3 +142,43 @@ async def view_referrals(callback: types.CallbackQuery):
         )
 
         await callback.message.answer(summary)
+
+
+@router.callback_query(lambda c: c.data == "manager_restart_browser")
+async def restart_browser(callback: types.CallbackQuery):
+    """Принудительный рестарт браузера Envato через LinkProcessor"""
+    try:
+        # Получаем LinkProcessor из BotServices
+        link_processor = BotServices.link_processor
+
+        if not link_processor or not link_processor.downloader:
+            await callback.answer("⚠️ Браузер не запущен", show_alert=True)
+            return
+
+        await callback.message.answer("🔄 Начинаю рестарт браузера Envato...")
+
+        # Принудительно запускаем рестарт браузера
+        async with link_processor._restart_lock:
+            # Текущее количество запросов
+            current_requests = link_processor.request_count
+
+            # Закрываем старый браузер
+            if link_processor.downloader:
+                await link_processor.downloader.__aexit__(None, None, None)
+
+            # Создаем новый браузер
+            from envato_utils.envato_playwright import EnvatoDownloader
+            link_processor.downloader = await EnvatoDownloader().__aenter__()
+            link_processor.request_count = 0
+
+        await callback.message.answer(
+            f"✅ Браузер Envato перезапущен!\n\n"
+            f"📊 Обработано запросов до рестарта: {current_requests}\n"
+            f"🔄 Счетчик сброшен: 0/{link_processor.restart_after}"
+        )
+        await callback.answer("✅ Рестарт завершен!")
+
+    except Exception as e:
+        await callback.message.answer(f"❌ Ошибка при рестарте браузера:\n{e}")
+        await callback.answer("❌ Ошибка!", show_alert=True)
+        print(f"[MANAGER] Ошибка рестарта браузера: {e}")

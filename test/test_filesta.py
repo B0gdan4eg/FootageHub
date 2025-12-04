@@ -8,7 +8,7 @@ from filesta_playwright import get_filesta_download_url
 
 async def test_filesta():
     # Тестовая ссылка на Envato Elements (замените на реальную)
-    test_url = "https://elements.envato.com/ru/brown-recycle-paper-texture-can-be-use-as-backgrou-3WJSMZK"
+    test_url = "https://elements.envato.com/ru/clean-sticker-for-text-and-a-brush-on-the-backgrou-4KF38R2"
 
     print("=" * 70)
     print("🧪 ТЕСТ FILESTA DOWNLOADER")

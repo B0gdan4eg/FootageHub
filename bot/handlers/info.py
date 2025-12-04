@@ -68,10 +68,9 @@ async def info(message: types.Message):
             f"📅 <b>Действует до:</b> {sub_until}\n"
             f"📊 <b>Лимиты подписки:</b> {sub_limits}\n"
             f"📥 <b>Ваших скачиваний:</b> {downloads_count}\n\n"
-            f"{'─' * 30}\n\n"
+            f"{'─' * 16}\n\n"
             f"📈 <b>Статистика сервиса за 24 часа</b>\n"
             f"🔥 Скачано файлов: <b>{downloads_24h}</b>\n"
-            f"👥 Активных пользователей: <b>{total_users:,}</b>"
         )
 
         # Создаём кнопку увеличения лимитов

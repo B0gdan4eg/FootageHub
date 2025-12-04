@@ -3,6 +3,7 @@ import json
 import os
 import time
 from playwright.async_api import async_playwright
+from .logger import logger
 
 COOKIE_FILE = os.path.join(os.path.dirname(__file__), "freepik_cookies.json")
 
@@ -56,8 +57,8 @@ class FreepikDownloader:
 
     async def get_download_url(self, asset_url: str) -> str | None:
         """
-        Get direct download URL using CDP network interception.
-        Faster and more reliable than waiting for downloads.
+        Get direct download URL using download event interception.
+        Fastest and most reliable method.
 
         Args:
             asset_url: URL of the Freepik asset page
@@ -66,42 +67,24 @@ class FreepikDownloader:
             Direct download URL or None if failed
         """
         page = None
-        client = None
         start_time = time.time()
         download_url = None
 
         try:
             page = await self.context.new_page()
 
-            # Enable CDP session for network monitoring
-            client = await self.context.new_cdp_session(page)
-            await client.send("Network.enable")
+            # Перехватываем только download event - самый быстрый и надежный способ
+            download_info = {}
 
-            captured_responses = []
-            download_initiated = []  # Перехват прямых ссылок
+            async def handle_download(download):
+                try:
+                    download_info['url'] = download.url
+                    # Отменяем скачивание, нам нужна только ссылка
+                    await download.cancel()
+                except Exception as e:
+                    print(f"⚠️ [FREEPIK] Ошибка: {e}")
 
-            def on_response(event):
-                response = event.get("response", {})
-                url = response.get("url", "")
-                status = response.get("status", 0)
-                headers = response.get("headers", {})
-
-                # Перехватываем редиректы (301, 302, 303, 307, 308)
-                if status in [301, 302, 303, 307, 308]:
-                    location = headers.get("location", headers.get("Location", ""))
-                    if location:
-                        download_initiated.append(location)
-
-                # Перехватываем Content-Disposition (прямое скачивание)
-                content_disposition = headers.get("content-disposition", headers.get("Content-Disposition", ""))
-                if "attachment" in content_disposition or "filename=" in content_disposition:
-                    download_initiated.append(url)
-
-                # Ищем запросы API для скачивания
-                if any(keyword in url for keyword in ["/api/regular/download", "/download", "/api/", "cdn"]):
-                    captured_responses.append(event)
-
-            client.on("Network.responseReceived", on_response)
+            page.on("download", handle_download)
 
             # Navigate to asset page
             await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
@@ -109,18 +92,22 @@ class FreepikDownloader:
             # Click download button
             await page.click("button[data-cy='download-button']", timeout=15000)
 
-            # Wait for download URL from intercepted network responses
-            download_url = await self._wait_for_download_url(client, captured_responses, download_initiated, timeout=10)
+            # Ждём download event (обычно срабатывает за 1-2 секунды)
+            await asyncio.sleep(2)
+
+            # Получаем ссылку
+            download_url = download_info.get('url')
 
             elapsed = time.time() - start_time
             self.total_time += elapsed
 
             if download_url:
                 self.success_count += 1
-                print(f"   ✅ {elapsed:.2f} сек")
+                print(f"✅ [FREEPIK] Ссылка получена за {elapsed:.2f} сек")
             else:
                 self.fail_count += 1
-                print(f"   ❌ Не получен URL")
+                print(f"❌ [FREEPIK] Download event не сработал")
+                await logger.error(f"❌ [FREEPIK] Download event не сработал\nURL: {asset_url}")
 
             return download_url
 
@@ -128,58 +115,17 @@ class FreepikDownloader:
             elapsed = time.time() - start_time
             self.total_time += elapsed
             self.fail_count += 1
-            print(f"   ❌ Ошибка: {e}")
-            print(f"   ⏱️  {elapsed:.2f} сек")
+            print(f"❌ [FREEPIK] Ошибка: {e}")
+            await logger.error(f"❌ [FREEPIK] Ошибка: {e}\nURL: {asset_url}")
             return None
 
         finally:
-            # IMPORTANT: Close CDP session first to prevent resource leaks
-            if client:
-                try:
-                    await client.detach()
-                except Exception:
-                    pass
-
-            # Then close the page
+            # Close the page
             if page:
                 try:
                     await page.close()
                 except Exception:
                     pass
-
-    async def _wait_for_download_url(self, client, captured_responses, download_initiated, timeout=10) -> str | None:
-        """
-        Wait for download URL to appear in intercepted network responses.
-        Non-blocking approach using asyncio.sleep instead of time.sleep.
-
-        Args:
-            client: CDP client session
-            captured_responses: List of captured network responses
-            download_initiated: List of direct download URLs from headers
-            timeout: Maximum wait time in seconds
-
-        Returns:
-            Download URL or None if timeout
-        """
-        start = time.time()
-        while time.time() - start < timeout:
-            # Сначала проверяем прямые ссылки (редиректы и Content-Disposition)
-            if download_initiated:
-                return download_initiated[0]
-
-            # Потом проверяем API ответы
-            for resp in captured_responses:
-                try:
-                    body = await client.send("Network.getResponseBody", {"requestId": resp["requestId"]})
-                    data = json.loads(body["body"])
-                    url = data.get("url")
-                    if url:
-                        return url
-                except Exception:
-                    continue
-
-            await asyncio.sleep(0.1)
-        return None
 
 
 # Main API function for bot integration

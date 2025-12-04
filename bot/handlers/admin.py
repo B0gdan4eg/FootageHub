@@ -253,6 +253,32 @@ async def create_subscription_for_user(callback: types.CallbackQuery, state: FSM
     await callback.answer()
 # ------------------------------------------------------------
 
+# Временная команда для получения chat_id группы
+# ------------------------------------------------------------
+@router.message(Command("get_chat_id"))
+async def get_chat_id_command(message: types.Message):
+    """Показывает ID текущего чата (работает в группах и личных сообщениях)"""
+    chat_type = message.chat.type
+    chat_id = message.chat.id
+
+    if chat_type in ["group", "supergroup"]:
+        await message.answer(
+            f"📋 <b>Информация о группе:</b>\n\n"
+            f"🆔 Chat ID: <code>{chat_id}</code>\n"
+            f"📛 Название: {message.chat.title}\n"
+            f"📊 Тип: {chat_type}\n\n"
+            f"Используйте этот Chat ID для ADMIN_CHAT_ID в .env",
+            parse_mode="HTML"
+        )
+    else:
+        await message.answer(
+            f"📋 <b>Информация о чате:</b>\n\n"
+            f"🆔 Chat ID: <code>{chat_id}</code>\n"
+            f"📊 Тип: {chat_type}",
+            parse_mode="HTML"
+        )
+# ------------------------------------------------------------
+
 # Роутер на текст вызов панели админа
 # ------------------------------------------------------------
 @router.message(Command("admin"))

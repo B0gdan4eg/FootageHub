@@ -15,8 +15,37 @@ from aiogram.enums.parse_mode import ParseMode
 from bot.state import DownloadFlow
 from aiogram.fsm.context import FSMContext
 from bot.handlers.channel_check import is_subscribed, CHANNEL_ID
+import asyncio
 
 router = Router()
+
+
+async def auto_delete_download_link(message: types.Message, delay: int = 30, keep_second_button: bool = False):
+    """
+    Удаляет кнопку со ссылкой на скачивание через заданное время.
+
+    Args:
+        message: Сообщение с кнопкой скачивания
+        delay: Задержка в секундах (по умолчанию 30)
+        keep_second_button: Оставить вторую кнопку (например "Скачать ещё")
+    """
+    await asyncio.sleep(delay)
+    try:
+        if keep_second_button:
+            # Получаем текущую клавиатуру
+            current_keyboard = message.reply_markup
+            if current_keyboard and len(current_keyboard.inline_keyboard) > 1:
+                # Оставляем только вторую строку с кнопкой "Скачать ещё"
+                new_keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[current_keyboard.inline_keyboard[1]]
+                )
+                await message.edit_reply_markup(reply_markup=new_keyboard)
+            else:
+                await message.edit_reply_markup(reply_markup=None)
+        else:
+            await message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
 
 
 async def check_user_eligibility(message: types.Message, bot: Bot, session) -> tuple[bool, any]:
@@ -180,10 +209,15 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
                     ]
                 )
 
-                await message.answer(
+                sent_message = await message.answer(
                     LINK_READY,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
                     reply_markup=keyboard
                 )
+
+                # Удаляем кнопку через 30 секунд
+                asyncio.create_task(auto_delete_download_link(sent_message, delay=30, keep_second_button=True))
             else:
                 await message.answer(
                     LINK_NOT_FOUND,
@@ -243,12 +277,15 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
                 await increment_download_count(session, subscription.id)
                 print(f"[DOWNLOAD] ✅ Увеличен счетчик подписки #{subscription.id}")
 
-            await message.answer(
+            sent_message = await message.answer(
                 DOWNLOAD_FILE.format(credit=user.credits),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 reply_markup=keyboard
             )
+
+            # Удаляем кнопку через 30 секунд, оставляя кнопку "Скачать ещё"
+            asyncio.create_task(auto_delete_download_link(sent_message, delay=30, keep_second_button=True))
 
             await session.commit()
         else:
@@ -306,10 +343,15 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
                     ]
                 )
 
-                await message.answer(
+                sent_message = await message.answer(
                     LINK_READY,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
                     reply_markup=keyboard
                 )
+
+                # Удаляем кнопку через 30 секунд
+                asyncio.create_task(auto_delete_download_link(sent_message, delay=30, keep_second_button=True))
             else:
                 await message.answer(
                     LINK_NOT_FOUND,
@@ -368,12 +410,15 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
                 await increment_download_count(session, subscription.id)
                 print(f"[DOWNLOAD] ✅ Увеличен счетчик подписки #{subscription.id}")
 
-            await message.answer(
+            sent_message = await message.answer(
                 DOWNLOAD_FILE.format(credit=user.credits),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 reply_markup=keyboard
             )
+
+            # Удаляем кнопку через 30 секунд, оставляя кнопку "Скачать ещё"
+            asyncio.create_task(auto_delete_download_link(sent_message, delay=30, keep_second_button=True))
 
             await session.commit()
         else:

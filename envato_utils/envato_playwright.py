@@ -3,6 +3,7 @@ import json
 import os
 import time
 from playwright.async_api import async_playwright
+from freepik_utils.logger import logger
 
 COOKIE_DIR = os.path.dirname(__file__)
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "cookie_index.txt")
@@ -66,7 +67,7 @@ class EnvatoDownloader:
 
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=False)
+        self.browser = await self.playwright.chromium.launch(headless=True)
         self.context = await self.browser.new_context()
 
         # Получаем следующий файл с куками (ротация)
@@ -161,6 +162,7 @@ class EnvatoDownloader:
             else:
                 self.fail_count += 1
                 print(f"   ❌ Не получен URL")
+                await logger.error(f"❌ [ENVATO] Download URL не получен (WITHOUT LICENSE)\nURL: {asset_url}")
 
             return download_url
 
@@ -170,6 +172,7 @@ class EnvatoDownloader:
             self.fail_count += 1
             print(f"   ❌ Ошибка: {e}")
             print(f"   ⏱️  {elapsed:.2f} сек")
+            await logger.error(f"❌ [ENVATO] Ошибка при скачивании (WITHOUT LICENSE)\nURL: {asset_url}\nОшибка: {e}")
             return None
 
         finally:
@@ -246,6 +249,7 @@ class EnvatoDownloader:
             else:
                 self.fail_count += 1
                 print(f"   ❌ Не получен URL (WITH LICENSE)")
+                await logger.error(f"❌ [ENVATO] Download URL не получен (WITH LICENSE)\nURL: {asset_url}")
 
             return download_url
 
@@ -255,6 +259,7 @@ class EnvatoDownloader:
             self.fail_count += 1
             print(f"   ❌ Ошибка (WITH LICENSE): {e}")
             print(f"   ⏱️  {elapsed:.2f} сек")
+            await logger.error(f"❌ [ENVATO] Ошибка при скачивании (WITH LICENSE)\nURL: {asset_url}\nОшибка: {e}")
             return None
 
         finally:

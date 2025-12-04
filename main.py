@@ -12,6 +12,7 @@ from bot.schedule_tasks import scheduler_job, daily_backup_job, cleanup_playwrig
 from bot.webhook.server_start import start_server
 from envato_utils.test_env import LinkProcessor
 from bot.services import BotServices
+from freepik_utils.logger import logger
 
 # Setup logging
 logging.basicConfig(
@@ -45,15 +46,18 @@ dp = Dispatcher(storage=MemoryStorage())
 BotServices.bot = bot
 BotServices.link_processor = LinkProcessor(max_workers=3)
 
+# Initialize universal logger for error reporting
+logger.set_bot(bot)
+
 # Роутеры бота
 dp.include_router(start.router)
 dp.include_router(admin.router)
+dp.include_router(manager.router)
 dp.include_router(menu.router)
 dp.include_router(info.router)
 dp.include_router(download.router)
-dp.include_router(payment.router)
 dp.include_router(channel_check.router)
-dp.include_router(manager.router)
+dp.include_router(payment.router)
 #dp.include_router(group_st.router)
 
 async def start_bot():
