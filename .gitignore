@@ -18,6 +18,7 @@ cert.pem
 test_link_processor.py
 services/st.py
 bot/handlers/group_st.py
+debug_screenshots/
 
 # Backups (exclude from git, stored on server outside Docker)
 backups/
