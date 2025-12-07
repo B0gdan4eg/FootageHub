@@ -21,3 +21,4 @@ class AdminStates(StatesGroup):
     # Новые состояния для выдачи подписки
     waiting_for_subscription_user_id = State()
     waiting_for_subscription_plan = State()
+    waiting_for_restore_xlsx = State()

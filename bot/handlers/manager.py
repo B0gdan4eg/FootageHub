@@ -81,7 +81,7 @@ async def save_referral(message: types.Message, state: FSMContext):
         )
         await session.commit()
 
-    referral_link = f"https://t.me/YourBot?start={ref_code}"
+    referral_link = f"https://t.me/FootageHub_bot?start={ref_code}"
     await message.answer(f"✅ Реферальная ссылка создана!\n\nСсылка: {referral_link}\nОписание: {description}")
     await state.clear()
 

@@ -3,6 +3,7 @@ import json
 import os
 import time
 from playwright.async_api import async_playwright
+from freepik_utils.logger import logger
 
 COOKIE_DIR = os.path.dirname(__file__)
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "filesta_cookie_index.txt")
@@ -66,7 +67,7 @@ class FilestaDownloader:
 
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=False)
+        self.browser = await self.playwright.chromium.launch(headless=True)
         self.context = await self.browser.new_context()
 
         # Получаем следующий файл с куками (ротация)
@@ -176,6 +177,19 @@ class FilestaDownloader:
                 self.fail_count += 1
                 print(f"   ❌ Не получен URL")
 
+                # Получаем отладочную информацию о странице
+                page_title = await page.title()
+                page_url = page.url
+                page_content_snippet = (await page.content())[:200]
+
+                await logger.error(
+                    f"❌ [FILESTA] Download URL не получен\n"
+                    f"URL: {envato_url[:80]}...\n"
+                    f"Title: {page_title[:100]}\n"
+                    f"Current: {page_url[:80]}...\n"
+                    f"HTML: {page_content_snippet}"
+                )
+
             return download_url
 
         except Exception as e:
@@ -184,6 +198,7 @@ class FilestaDownloader:
             self.fail_count += 1
             print(f"   ❌ Ошибка: {e}")
             print(f"   ⏱️  {elapsed:.2f} сек")
+            await logger.error(f"❌ [FILESTA] Ошибка при скачивании\nURL: {envato_url}\nОшибка: {e}")
             return None
 
         finally:

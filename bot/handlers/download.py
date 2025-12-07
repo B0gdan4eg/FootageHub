@@ -9,7 +9,7 @@ from bot.handlers.messages import (
     CHANEL_CHECK, CANCLE_DOWNLOAD_PAYMENT_OFF, APPLY_DOWNLOAD_FREEPIK,
     BAD_URL_FREEPIK, USER_NOT_REGISTERED, USER_NOT_FOUND, DOWNLOAD_FAILED,
     DOWNLOAD_RETRY, LINK_NOT_FOUND, LINK_READY, PROCESSING_LINK,
-    PROCESSING_COMPLETE, ALREADY_DOWNLOADED, NO_SUBSCRIPTION_FOR_LICENSE
+    PROCESSING_COMPLETE, ALREADY_DOWNLOADED
 )
 from aiogram.enums.parse_mode import ParseMode
 from bot.state import DownloadFlow
@@ -137,16 +137,13 @@ async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: B
 async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
     url = message.text.strip()
 
-    # Проверяем формат ссылки и определяем нужна ли лицензия
-    with_license = False
+    # Убираем точку перед URL если она есть (старый формат для лицензии, больше не используется)
     if url.startswith(".https://elements.envato.com/"):
-        # Убираем точку и включаем режим с лицензией
-        url = url[1:]
-        with_license = True
-        print(f"[DOWNLOAD] Запрос на скачивание С ЛИЦЕНЗИЕЙ: {url[:50]}...")
-    elif url.startswith("https://elements.envato.com/"):
-        with_license = False
-    else:
+        url = url[1:]  # Remove leading dot
+        print(f"[DOWNLOAD] ⚠️ Точка перед URL игнорируется - Filesta не поддерживает лицензирование")
+
+    # Проверяем формат ссылки
+    if not url.startswith("https://elements.envato.com/"):
         await message.answer(
             BAD_URL,
             parse_mode=ParseMode.HTML,
@@ -166,29 +163,6 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             )
             await state.clear()
             return
-        
-        # Проверка подписки для скачивания с лицензией
-        if with_license:
-            from db.subscription_crud import get_active_subscription
-            from db.models import ServiceType
-
-            subscription = await get_active_subscription(session, user.id, ServiceType.ENVATO)
-            if not subscription:
-                # Нет активной подписки - отказываем
-                keyboard = InlineKeyboardMarkup(
-                    inline_keyboard=[
-                        [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="buy_subscription")]
-                    ]
-                )
-                await message.answer(
-                    NO_SUBSCRIPTION_FOR_LICENSE,
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True,
-                    reply_markup=keyboard
-                )
-                await state.clear()
-                return
-            print(f"[DOWNLOAD] ✅ Подписка активна, разрешаем скачивание с лицензией")
 
         downloaded = await has_user_downloaded(session=session, user_id=user.id, url=url)
         print(downloaded)
@@ -199,7 +173,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             # Get link_processor from BotServices
             from bot.services import BotServices
             link_processor = BotServices.link_processor
-            file_path = await link_processor.submit(url, with_license=with_license)
+            file_path = await link_processor.submit(url, with_license=False)
 
             # ✅ ДОБАВЛЯЕМ ПРОВЕРКУ
             if file_path:
@@ -252,7 +226,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         # Get link_processor from BotServices (no circular import)
         from bot.services import BotServices
         link_processor = BotServices.link_processor
-        file_path = await link_processor.submit(url, with_license=with_license)
+        file_path = await link_processor.submit(url, with_license=False)
         
         if file_path:
             media = await create_media(session, url=url, file_type="image")

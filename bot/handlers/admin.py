@@ -292,6 +292,7 @@ async def admin_panel(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="👤 Назначить роль", callback_data="admin_assign_role")],
         [InlineKeyboardButton(text="💳 Загрузить цены", callback_data="admin_upload_prices")],
         [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
+        [InlineKeyboardButton(text="🔄 Восстановить базу", callback_data="admin_restore_db")],
         [InlineKeyboardButton(text="🍪 Загрузить cookies", callback_data="admin_upload_cookies")],
         [InlineKeyboardButton(text="📦 Установить лимит всем", callback_data="admin_set_download_limit")],
         [InlineKeyboardButton(text="🗑️ Удалить все подписки", callback_data="admin_delete_all_subscriptions")],
@@ -610,3 +611,97 @@ async def delete_all_subs_confirmed(callback: types.CallbackQuery):
 async def cancel_delete_subscriptions(callback: types.CallbackQuery):
     await callback.message.edit_text("❌ Удаление подписок отменено.")
     await callback.answer()
+
+
+# Восстановление базы данных из XLSX
+@router.callback_query(lambda c: c.data == "admin_restore_db")
+async def restore_db_start(callback: types.CallbackQuery, state: FSMContext):
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет доступа.", show_alert=True)
+        return
+
+    await state.set_state(AdminStates.waiting_for_restore_xlsx)
+    await callback.message.answer(
+        "🔄 <b>Восстановление базы данных</b>\n\n"
+        "Отправьте XLSX файл с экспортом базы данных.\n\n"
+        "⚠️ <b>Внимание:</b>\n"
+        "• Файл должен содержать листы: Users, Media, Downloads, Payments, Subscriptions, ReferralRewards\n"
+        "• Существующие записи будут пропущены (не перезаписаны)\n"
+        "• Это безопасная операция - дубликаты не создаются\n\n"
+        "Отправьте 'отмена' для отмены.",
+        parse_mode="HTML"
+    )
+    await callback.answer()
+
+
+@router.message(AdminStates.waiting_for_restore_xlsx, F.content_type == "document")
+async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: Bot):
+    """Обработка загруженного XLSX файла для восстановления базы"""
+    try:
+        # Скачиваем файл
+        file = await bot.get_file(message.document.file_id)
+        file_path = file.file_path
+
+        # Сохраняем во временную директорию
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        local_file_path = Path(temp_dir) / f"restore_{message.from_user.id}_{message.document.file_name}"
+
+        await bot.download_file(file_path, local_file_path)
+
+        # Проверяем, что это XLSX файл
+        if not str(local_file_path).endswith(('.xlsx', '.xls')):
+            local_file_path.unlink(missing_ok=True)
+            return await message.answer("❌ Файл должен быть в формате XLSX")
+
+        # Отправляем сообщение о начале восстановления
+        status_msg = await message.answer(
+            "⏳ <b>Восстановление базы данных...</b>\n\n"
+            "Это может занять некоторое время.",
+            parse_mode="HTML"
+        )
+
+        # Импортируем функцию восстановления
+        from db.from_xlsx import restore_database
+
+        # Запускаем восстановление
+        try:
+            await restore_database(str(local_file_path))
+
+            await status_msg.edit_text(
+                "✅ <b>База данных успешно восстановлена!</b>\n\n"
+                "Все данные из файла были импортированы.\n"
+                "Существующие записи были пропущены.",
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            await status_msg.edit_text(
+                f"❌ <b>Ошибка при восстановлении базы:</b>\n\n"
+                f"<code>{str(e)[:500]}</code>",
+                parse_mode="HTML"
+            )
+            print(f"[ADMIN] Ошибка восстановления базы: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Удаляем временный файл
+            local_file_path.unlink(missing_ok=True)
+
+    except Exception as e:
+        return await message.answer(
+            f"❌ Ошибка при обработке файла:\n\n"
+            f"<code>{str(e)[:500]}</code>",
+            parse_mode="HTML"
+        )
+
+    await state.clear()
+
+
+@router.message(AdminStates.waiting_for_restore_xlsx, F.text)
+async def cancel_restore_db(message: types.Message, state: FSMContext):
+    """Отмена восстановления базы"""
+    if message.text.lower() in ["отмена", "cancel", "q"]:
+        await state.clear()
+        await message.answer("❌ Восстановление базы отменено.")
+    else:
+        await message.answer("❌ Пожалуйста, отправьте XLSX файл или напишите 'отмена' для отмены.")

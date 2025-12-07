@@ -24,11 +24,6 @@ elements\u200b.\u200benvato\u200b.\u200bcom/ru/
 breathtaking-valley-nature-
 landscape-YFR4FBV
 
-📄 <b>Скачать с лицензией:</b>
-Поставь точку перед ссылкой:
-<code>.https://elements.envato.com/..</code>
-(требуется активная подписка)
-
 У тебя осталось {credit} бесплатные
 загрузки
 """
@@ -60,7 +55,7 @@ CANCLE_DOWNLOAD = """
 "Оплата 💳" и выбери нужный
 тебе сервис
 
-💬 Вопросы по оплате? Обратись в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Вопросы по оплате? Обратись в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 CANCLE_DOWNLOAD_PAYMENT_OFF = """
@@ -85,7 +80,7 @@ landscape-YFR4FBV
 Либо нажми на кнопку
 "Посмотреть инструкцию"
 
-💬 Нужна помощь? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Нужна помощь? Пиши в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 BAD_URL_FREEPIK = """
@@ -104,7 +99,7 @@ library_21138972.htm
 Либо нажми на кнопку
 "Посмотреть инструкцию"
 
-💬 Нужна помощь? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Нужна помощь? Пиши в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 DOWNLOAD_FILE = """
@@ -150,9 +145,9 @@ CHANEL_APPLY = """
 
 CHANEL_CANCLE = """
 ❌ Ты всё ещё не подписан на
-наш <a href="https://t.me/+HVUoctN58uc3ZDYy">канал</a>, нажми на
-“подписаться”, а затем на
-“Проверить подписку”
+наш <a href="https://t.me/footagehub_channel">канал</a>, нажми на
+"подписаться", а затем на
+"Проверить подписку"
 """
 
 FREEPIK = """
@@ -162,7 +157,7 @@ FREEPIK = """
 появится в боте.</b>
 
 Чтобы не пропустить новость
-подпишись на наш <a href="https://t.me/+HVUoctN58uc3ZDYy">канал</a> и
+подпишись на наш <a href="https://t.me/footagehub_channel">канал</a> и
 следи за обновлениями!
 """
 
@@ -181,7 +176,7 @@ SUB_PAYMENT_MONTHLY = """
 
 Перейдите по ссылке для оплаты:
 
-💬 Проблемы с оплатой? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Проблемы с оплатой? Пиши в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 SUB_PAYMENT_DAILY = """
@@ -198,26 +193,28 @@ SUB_PAYMENT_DAILY = """
 
 Перейдите по ссылке для оплаты:
 
-💬 Проблемы с оплатой? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Проблемы с оплатой? Пиши в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 # Сообщения об ошибках и статусах
 USER_NOT_REGISTERED = """
 Похоже, вы не зарегистрированы. Пожалуйста, начните с /start.
 
-💬 Проблемы? Обратись в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Проблемы? Обратись в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 USER_NOT_FOUND = """
 ❌ Пользователь не найден в системе.
 
-💬 Нужна помощь? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+Попробуйте нажать /start
+
+💬 Нужна помощь? Пиши в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 DOWNLOAD_FAILED = """
 ❌ Не удалось скачать файл по ссылке.
 
-💬 Проблемы? Пиши в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Проблемы? Пиши в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 DOWNLOAD_RETRY = """
@@ -227,7 +224,7 @@ DOWNLOAD_RETRY = """
 LINK_NOT_FOUND = """
 ❌ Не удалось получить ссылку на файл.
 
-💬 Попробуйте позже или обратитесь в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Попробуйте позже или обратитесь в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 LINK_READY = """
@@ -270,7 +267,7 @@ ALREADY_HAS_SUBSCRIPTION = """
 
 Вы можете использовать текущую подписку. Новая подписка будет доступна после истечения текущей.
 
-💬 Вопросы? Обратитесь в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Вопросы? Обратитесь в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
 
 SUBSCRIPTION_ACTIVATED = """
@@ -286,5 +283,5 @@ SUBSCRIPTION_ACTIVATED = """
 
 Для скачивания файла выберите нужный сервис в меню.
 
-💬 Вопросы? Обратитесь в <a href="https://t.me/footage_hub_support">поддержку</a>
+💬 Вопросы? Обратитесь в <a href="https://t.me/FootageHub_support">поддержку</a>
 """
