@@ -172,8 +172,8 @@ class EnvatoDownloader:
 
                 await logger.error(
                     f"❌ [ENVATO] Download URL не получен (WITHOUT LICENSE)\n"
-                    f"URL: {asset_url}\n"
-                    f"Screenshot: error_{int(time.time())}.png"
+                    f"URL: {asset_url}",
+                    screenshot_path=screenshot_path
                 )
 
             return download_url

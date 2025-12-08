@@ -63,13 +63,14 @@ class TelegramLogger:
         """Включить отправку в Telegram"""
         self._enabled = True
 
-    async def error(self, message: str, send_to_telegram: bool = True):
+    async def error(self, message: str, send_to_telegram: bool = True, screenshot_path: Optional[str] = None):
         """
         Логировать ошибку (в консоль + Telegram админу)
 
         Args:
             message: Текст сообщения об ошибке
             send_to_telegram: Отправлять ли в Telegram (по умолчанию True)
+            screenshot_path: Путь к скриншоту для отправки (опционально)
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         console_message = f"[{timestamp}] {message}"
@@ -80,7 +81,24 @@ class TelegramLogger:
         # Отправляем в Telegram если настроено и разрешено
         if send_to_telegram and self._enabled and self.bot and self.admin_chat_id:
             try:
-                await self.bot.send_message(self.admin_chat_id, message, parse_mode=None)
+                # Если есть скриншот, отправляем его с подписью
+                if screenshot_path and os.path.exists(screenshot_path):
+                    from aiogram.types import FSInputFile
+                    photo = FSInputFile(screenshot_path)
+                    await self.bot.send_photo(
+                        self.admin_chat_id,
+                        photo=photo,
+                        caption=message[:1024]  # Telegram limit for caption
+                    )
+                    # Удаляем скриншот после успешной отправки
+                    try:
+                        os.remove(screenshot_path)
+                        print(f"🗑️ Скриншот удален: {os.path.basename(screenshot_path)}")
+                    except Exception as rm_error:
+                        print(f"⚠️ Не удалось удалить скриншот: {rm_error}")
+                else:
+                    # Просто текстовое сообщение
+                    await self.bot.send_message(self.admin_chat_id, message, parse_mode=None)
             except Exception as e:
                 print(f"⚠️ Не удалось отправить ошибку в Telegram: {e}")
 
