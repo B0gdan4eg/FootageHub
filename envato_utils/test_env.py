@@ -20,10 +20,10 @@ class LinkProcessor:
     Supports both WITH and WITHOUT license downloads.
     """
 
-    def __init__(self, max_workers=3, restart_after=50):
+    def __init__(self, max_workers=5, restart_after=50):
         """
         Args:
-            max_workers: Number of concurrent workers (default: 3, reduced from 10 to prevent resource exhaustion)
+            max_workers: Number of concurrent workers (default: 5, reduced from 10 to prevent resource exhaustion)
             restart_after: Restart browser context after N requests to prevent memory leaks (default: 50)
         """
         self.queue = asyncio.Queue()

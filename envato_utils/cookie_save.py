@@ -1,8 +1,8 @@
 from playwright.async_api import async_playwright
 import json
 
-COOKIE_FILE = "envato_cookies.json"
-LOGIN_URL = "https://account.envato.com/sign_in"
+COOKIE_FILE = "freepik_cookies.json"
+LOGIN_URL = "https://www.freepik.com/log-in"
 
 async def save_cookies_after_login():
     async with async_playwright() as p:
@@ -15,7 +15,7 @@ async def save_cookies_after_login():
 
         # Ждем, пока пользователь вручную залогинится и попадет на главную
         # Можно подождать пока URL поменяется, например на https://envato.com или другую страницу после логина
-        await page.wait_for_url("https://account.envato.com/", timeout=300000)  # ждем до 5 минут
+        await page.wait_for_url("https://www.freepik.com/?log-in=google", timeout=300000)  # ждем до 5 минут
 
         # Получаем все куки из текущего контекста
         cookies = await context.cookies()

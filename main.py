@@ -44,7 +44,7 @@ dp = Dispatcher(storage=MemoryStorage())
 
 # Initialize bot services
 BotServices.bot = bot
-BotServices.link_processor = LinkProcessor(max_workers=3)
+BotServices.link_processor = LinkProcessor(max_workers=5)
 
 # Initialize universal logger for error reporting
 logger.set_bot(bot)
