@@ -4,7 +4,7 @@ import os
 import time
 from playwright.async_api import async_playwright
 
-COOKIE_FILE = os.path.join(os.path.dirname(__file__), "envato_cookies_1.json")
+COOKIE_FILE = os.path.join(os.path.dirname(__file__), "envato_cookies.json")
 
 
 class EnvatoDownloader:

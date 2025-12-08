@@ -67,7 +67,7 @@ class EnvatoDownloader:
 
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=False)
+        self.browser = await self.playwright.chromium.launch(headless=True)
         self.context = await self.browser.new_context()
 
         # Получаем следующий файл с куками (ротация)

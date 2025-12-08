@@ -137,10 +137,12 @@ async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: B
 async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
     url = message.text.strip()
 
-    # Убираем точку перед URL если она есть (старый формат для лицензии, больше не используется)
+    # Проверяем, нужна ли лицензия (точка перед URL)
+    with_license = False
     if url.startswith(".https://elements.envato.com/"):
         url = url[1:]  # Remove leading dot
-        print(f"[DOWNLOAD] ⚠️ Точка перед URL игнорируется - Filesta не поддерживает лицензирование")
+        with_license = True
+        print(f"[DOWNLOAD] 🔐 Лицензия запрошена для: {url[:60]}...")
 
     # Проверяем формат ссылки
     if not url.startswith("https://elements.envato.com/"):
@@ -173,7 +175,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             # Get link_processor from BotServices
             from bot.services import BotServices
             link_processor = BotServices.link_processor
-            file_path = await link_processor.submit(url, with_license=False)
+            file_path = await link_processor.submit(url, with_license=with_license)
 
             # ✅ ДОБАВЛЯЕМ ПРОВЕРКУ
             if file_path:
@@ -226,7 +228,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         # Get link_processor from BotServices (no circular import)
         from bot.services import BotServices
         link_processor = BotServices.link_processor
-        file_path = await link_processor.submit(url, with_license=False)
+        file_path = await link_processor.submit(url, with_license=with_license)
         
         if file_path:
             media = await create_media(session, url=url, file_type="image")

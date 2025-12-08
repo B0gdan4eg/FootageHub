@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from typing import NamedTuple
-from filesta.filesta_playwright import FilestaDownloader
+from envato_utils.envato_playwright import EnvatoDownloader
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -10,14 +10,14 @@ logger = logging.getLogger(__name__)
 class LinkTask(NamedTuple):
     url: str
     future: asyncio.Future
-    with_license: bool = False  # Kept for compatibility, but ignored (Filesta doesn't support licensing)
+    with_license: bool = False
 
 
 class LinkProcessor:
     """
-    Queue-based link processor for handling multiple download requests efficiently via Filesta.com.
+    Queue-based link processor for handling multiple download requests efficiently.
     Uses a pool of workers to process Envato URLs concurrently while reusing a single browser instance.
-    Note: Downloads are always WITHOUT license (Filesta limitation).
+    Supports both WITH and WITHOUT license downloads.
     """
 
     def __init__(self, max_workers=3, restart_after=50):
@@ -37,9 +37,9 @@ class LinkProcessor:
     async def start(self):
         """Initialize browser and start worker pool"""
         try:
-            print(f"[LinkProcessor] Starting with {self.max_workers} workers (Filesta)...")
-            logger.info(f"Starting LinkProcessor with {self.max_workers} workers (Filesta)...")
-            self.downloader = await FilestaDownloader().__aenter__()
+            print(f"[LinkProcessor] Starting with {self.max_workers} workers (Envato)...")
+            logger.info(f"Starting LinkProcessor with {self.max_workers} workers (Envato)...")
+            self.downloader = await EnvatoDownloader().__aenter__()
             self.workers = [asyncio.create_task(self.worker(i)) for i in range(self.max_workers)]
             print(f"[LinkProcessor] Started successfully! Workers: {len(self.workers)}")
             logger.info("LinkProcessor started successfully")
@@ -70,7 +70,7 @@ class LinkProcessor:
                     await self.downloader.__aexit__(None, None, None)
 
                 # Create new downloader
-                self.downloader = await FilestaDownloader().__aenter__()
+                self.downloader = await EnvatoDownloader().__aenter__()
                 self.request_count = 0
 
                 print(f"[LinkProcessor] Browser restarted successfully")
@@ -89,20 +89,20 @@ class LinkProcessor:
                     # Check if browser needs restart
                     await self._restart_browser_if_needed()
 
-                    # Filesta always downloads without license (ignoring with_license flag)
-                    result = await self.downloader.get_download_url(task.url)
+                    # Use appropriate method based on license flag
+                    if task.with_license:
+                        result = await self.downloader.get_download_url_with_license(task.url)
+                    else:
+                        result = await self.downloader.get_download_url(task.url)
                     self.request_count += 1
 
-                    if task.with_license:
-                        print(f"[Worker {idx}] ⚠️ License requested but Filesta doesn't support licensing - downloading without license")
-                        logger.warning(f"Worker {idx}: License requested for {task.url[:50]}... but Filesta doesn't support it")
-
                     if result:
-                        print(f"[Worker {idx}] ✅ Success (via Filesta)!")
-                        logger.info(f"Worker {idx} success (Filesta): {task.url[:50]}... -> {result[:50]}...")
+                        license_mode = "WITH LICENSE" if task.with_license else "WITHOUT LICENSE"
+                        print(f"[Worker {idx}] ✅ Success ({license_mode})!")
+                        logger.info(f"Worker {idx} success ({license_mode}): {task.url[:50]}... -> {result[:50]}...")
                     else:
                         print(f"[Worker {idx}] ❌ Failed - No URL")
-                        logger.warning(f"Worker {idx} failed (Filesta): {task.url[:50]}... -> No URL returned")
+                        logger.warning(f"Worker {idx} failed: {task.url[:50]}... -> No URL returned")
                     task.future.set_result(result)
                 except Exception as e:
                     print(f"[Worker {idx}] ❌ Error: {e}")
@@ -123,24 +123,22 @@ class LinkProcessor:
         Submit a URL for processing and wait for result.
 
         Args:
-            url: Envato Elements URL to process via Filesta.com
-            with_license: Kept for compatibility but IGNORED (Filesta doesn't support licensing)
+            url: Envato Elements URL to process
+            with_license: If True, downloads WITH license (requires active subscription)
 
         Returns:
             Direct download URL or None if failed
         """
-        if with_license:
-            logger.warning(f"License requested for {url[:50]}... but Filesta doesn't support licensing - will download without license")
-
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         await self.queue.put(LinkTask(url=url, future=future, with_license=with_license))
 
         try:
             result = await future
-            logger.info(f"URL processing completed (Filesta): {url[:50]}... -> {'Success' if result else 'Failed'}")
+            license_mode = "WITH LICENSE" if with_license else "WITHOUT LICENSE"
+            logger.info(f"URL processing completed ({license_mode}): {url[:50]}... -> {'Success' if result else 'Failed'}")
             return result
         except Exception as e:
-            print(f"[LinkProcessor] ERROR (Filesta): {e}")
-            logger.error(f"URL processing failed (Filesta): {url[:50]}... -> {e}")
+            print(f"[LinkProcessor] ERROR: {e}")
+            logger.error(f"URL processing failed: {url[:50]}... -> {e}")
             return None

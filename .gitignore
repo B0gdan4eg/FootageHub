@@ -20,6 +20,11 @@ services/st.py
 bot/handlers/group_st.py
 debug_screenshots/
 
+# Test and temporary files
+test/
+filesta/screenshots/
+filesta/filesta_cookie_index.txt
+
 # Backups (exclude from git, stored on server outside Docker)
 backups/
 *.sql
@@ -27,3 +32,4 @@ backups/
 *.dump
 *.md
 *.sh
+*.png
