@@ -107,7 +107,19 @@ class FreepikDownloader:
             else:
                 self.fail_count += 1
                 print(f"❌ [FREEPIK] Download event не сработал")
-                await logger.error(f"❌ [FREEPIK] Download event не сработал\nURL: {asset_url}")
+
+                # Делаем скриншот для отладки
+                import os
+                screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
+                os.makedirs(screenshot_dir, exist_ok=True)
+                screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
+                await page.screenshot(path=screenshot_path, full_page=False)
+
+                await logger.error(
+                    f"❌ [FREEPIK] Download event не сработал\n"
+                    f"URL: {asset_url}\n"
+                    f"Screenshot: error_{int(time.time())}.png"
+                )
 
             return download_url
 
@@ -116,7 +128,25 @@ class FreepikDownloader:
             self.total_time += elapsed
             self.fail_count += 1
             print(f"❌ [FREEPIK] Ошибка: {e}")
-            await logger.error(f"❌ [FREEPIK] Ошибка: {e}\nURL: {asset_url}")
+
+            # Делаем скриншот при ошибке, если страница доступна
+            screenshot_path = "N/A"
+            if page:
+                try:
+                    import os
+                    screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
+                    os.makedirs(screenshot_dir, exist_ok=True)
+                    screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
+                    await page.screenshot(path=screenshot_path, full_page=False)
+                    screenshot_path = f"error_{int(time.time())}.png"
+                except:
+                    screenshot_path = "N/A"
+
+            await logger.error(
+                f"❌ [FREEPIK] Ошибка: {e}\n"
+                f"URL: {asset_url}\n"
+                f"Screenshot: {screenshot_path}"
+            )
             return None
 
         finally:

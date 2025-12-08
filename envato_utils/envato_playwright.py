@@ -67,7 +67,7 @@ class EnvatoDownloader:
 
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=True)
+        self.browser = await self.playwright.chromium.launch(headless=False)
         self.context = await self.browser.new_context()
 
         # Получаем следующий файл с куками (ротация)
@@ -163,11 +163,6 @@ class EnvatoDownloader:
                 self.fail_count += 1
                 print(f"   ❌ Не получен URL")
 
-                # Получаем отладочную информацию о странице
-                page_title = await page.title()
-                page_url = page.url
-                page_content_snippet = (await page.content())[:200]
-
                 # Делаем скриншот для отладки
                 import os
                 screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
@@ -177,11 +172,8 @@ class EnvatoDownloader:
 
                 await logger.error(
                     f"❌ [ENVATO] Download URL не получен (WITHOUT LICENSE)\n"
-                    f"URL: {asset_url[:80]}...\n"
-                    f"Title: {page_title[:100]}\n"
-                    f"Current: {page_url[:80]}...\n"
-                    f"Screenshot: error_{int(time.time())}.png\n"
-                    f"HTML: {page_content_snippet}"
+                    f"URL: {asset_url}\n"
+                    f"Screenshot: error_{int(time.time())}.png"
                 )
 
             return download_url
