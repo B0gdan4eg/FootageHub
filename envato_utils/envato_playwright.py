@@ -184,7 +184,25 @@ class EnvatoDownloader:
             self.fail_count += 1
             print(f"   ❌ Ошибка: {e}")
             print(f"   ⏱️  {elapsed:.2f} сек")
-            await logger.error(f"❌ [ENVATO] Ошибка при скачивании (WITHOUT LICENSE)\nURL: {asset_url}\nОшибка: {e}")
+
+            # Делаем скриншот при ошибке, если страница доступна
+            screenshot_path = None
+            if page:
+                try:
+                    import os
+                    screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
+                    os.makedirs(screenshot_dir, exist_ok=True)
+                    screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
+                    await page.screenshot(path=screenshot_path, full_page=False)
+                except:
+                    screenshot_path = None
+
+            await logger.error(
+                f"❌ [ENVATO] Ошибка при скачивании (WITHOUT LICENSE)\n"
+                f"URL: {asset_url}\n"
+                f"Ошибка: {e}",
+                screenshot_path=screenshot_path
+            )
             return None
 
         finally:
@@ -271,7 +289,25 @@ class EnvatoDownloader:
             self.fail_count += 1
             print(f"   ❌ Ошибка (WITH LICENSE): {e}")
             print(f"   ⏱️  {elapsed:.2f} сек")
-            await logger.error(f"❌ [ENVATO] Ошибка при скачивании (WITH LICENSE)\nURL: {asset_url}\nОшибка: {e}")
+
+            # Делаем скриншот при ошибке, если страница доступна
+            screenshot_path = None
+            if page:
+                try:
+                    import os
+                    screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
+                    os.makedirs(screenshot_dir, exist_ok=True)
+                    screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
+                    await page.screenshot(path=screenshot_path, full_page=False)
+                except:
+                    screenshot_path = None
+
+            await logger.error(
+                f"❌ [ENVATO] Ошибка при скачивании (WITH LICENSE)\n"
+                f"URL: {asset_url}\n"
+                f"Ошибка: {e}",
+                screenshot_path=screenshot_path
+            )
             return None
 
         finally:
