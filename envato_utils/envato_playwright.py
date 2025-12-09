@@ -144,18 +144,20 @@ class EnvatoDownloader:
             # Navigate to asset page
             await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
 
-            # Close cookie banner if it appears
+            # Close cookie banner if it appears - click "Reject All"
             try:
-                await page.evaluate("document.querySelector('#CybotCookiebotDialogBodyButtonAccept')?.click()")
+                # Wait for cookie dialog and click reject button
+                await page.wait_for_selector("#CybotCookiebotDialog", timeout=3000)
+                await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=2000)
                 await asyncio.sleep(0.5)
             except:
                 pass  # Cookie banner not found, continue
 
-            # Click download button (use force click to bypass any overlays)
-            await page.click("button[data-testid='button-download']", timeout=15000, force=True)
+            # Click download button
+            await page.click("button[data-testid='button-download']", timeout=15000)
 
-            # Click download without license (use force click to bypass any overlays)
-            await page.click("button[data-testid='download-without-license-button']", timeout=15000, force=True)
+            # Click download without license
+            await page.click("button[data-testid='download-without-license-button']", timeout=15000)
 
             # Wait for download URL from intercepted network responses
             download_url = await self._wait_for_download_url_from_license(client, captured_responses, timeout=10)
@@ -263,9 +265,11 @@ class EnvatoDownloader:
             # Navigate to asset page
             await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
 
-            # Close cookie banner if it appears
+            # Close cookie banner if it appears - click "Reject All"
             try:
-                await page.click("#CybotCookiebotDialogBodyButtonAccept", timeout=3000)
+                # Wait for cookie dialog and click reject button
+                await page.wait_for_selector("#CybotCookiebotDialog", timeout=3000)
+                await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=2000)
                 await asyncio.sleep(0.5)
             except:
                 pass  # Cookie banner not found, continue
