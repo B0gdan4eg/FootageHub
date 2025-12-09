@@ -1,8 +1,12 @@
 from playwright.async_api import async_playwright
 import json
 
-COOKIE_FILE = "freepik_cookies.json"
-LOGIN_URL = "https://www.freepik.com/log-in"
+# COOKIE_FILE = "freepik_cookies.json"
+# LOGIN_URL = "https://www.freepik.com/log-in"
+# https://www.freepik.com/?log-in=email
+COOKIE_FILE = "envato_cookies.json"
+LOGIN_URL = "https://elements.envato.com/ru/sign-in"
+
 
 async def save_cookies_after_login():
     async with async_playwright() as p:
