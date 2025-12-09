@@ -228,7 +228,7 @@ async def get_envato_direct_download_url(asset_url: str) -> str | None:
 # Test/debug functions
 async def test_single_url():
     """Test single URL download"""
-    test_url = "https://elements.envato.com/ru/sand-blowing-over-dunes-in-wind-sandstorm-in-gobi--PQTNE9Z"
+    test_url = "https://elements.envato.com/ru/young-woman-lying-in-the-bed-at-night-and-having-i-2ZBFRTB"
     print("="*70)
     print("🚀 Получение прямой ссылки на скачивание")
     print("="*70)

@@ -144,6 +144,13 @@ class EnvatoDownloader:
             # Navigate to asset page
             await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
 
+            # Close cookie banner if it appears
+            try:
+                await page.click("#CybotCookiebotDialogBodyButtonAccept", timeout=3000)
+                await asyncio.sleep(0.5)
+            except:
+                pass  # Cookie banner not found, continue
+
             # Click download button
             await page.click("button[data-testid='button-download']", timeout=15000)
 
@@ -255,6 +262,13 @@ class EnvatoDownloader:
 
             # Navigate to asset page
             await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
+
+            # Close cookie banner if it appears
+            try:
+                await page.click("#CybotCookiebotDialogBodyButtonAccept", timeout=3000)
+                await asyncio.sleep(0.5)
+            except:
+                pass  # Cookie banner not found, continue
 
             # Step 1: Click download button to open modal
             await page.click("button[data-testid='button-download']", timeout=15000)
