@@ -33,3 +33,4 @@ backups/
 *.md
 *.sh
 *.png
+motion_utils/motion.py
