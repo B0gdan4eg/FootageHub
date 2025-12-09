@@ -5,7 +5,50 @@ import time
 from playwright.async_api import async_playwright
 from .logger import logger
 
-COOKIE_FILE = os.path.join(os.path.dirname(__file__), "freepik_cookies.json")
+COOKIE_DIR = os.path.dirname(__file__)
+COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "freepik_cookie_index.txt")
+
+
+def get_next_cookie_file():
+    """
+    Получает следующий файл с куками из списка доступных файлов.
+    Использует ротацию: cookie_1.json -> cookie_2.json -> cookie_3.json -> cookie_1.json...
+    """
+    # Находим все файлы freepik_cookies_*.json
+    cookie_files = []
+    for filename in os.listdir(COOKIE_DIR):
+        if filename.startswith("freepik_cookies") and filename.endswith(".json"):
+            cookie_files.append(os.path.join(COOKIE_DIR, filename))
+
+    # Если нет файлов с паттерном freepik_cookies_*.json, используем старый файл
+    if not cookie_files:
+        legacy_file = os.path.join(COOKIE_DIR, "freepik_cookies.json")
+        if os.path.exists(legacy_file):
+            return legacy_file
+        raise FileNotFoundError("No cookie files found in freepik_utils/")
+
+    # Сортируем файлы для предсказуемого порядка
+    cookie_files.sort()
+
+    # Читаем текущий индекс
+    current_index = 0
+    if os.path.exists(COOKIE_INDEX_FILE):
+        try:
+            with open(COOKIE_INDEX_FILE, "r") as f:
+                current_index = int(f.read().strip())
+        except:
+            current_index = 0
+
+    # Выбираем следующий файл (с оборачиванием)
+    next_index = (current_index + 1) % len(cookie_files)
+    selected_file = cookie_files[next_index]
+
+    # Сохраняем новый индекс
+    with open(COOKIE_INDEX_FILE, "w") as f:
+        f.write(str(next_index))
+
+    print(f"[FREEPIK] 🔄 Using cookie file: {os.path.basename(selected_file)} ({next_index + 1}/{len(cookie_files)})")
+    return selected_file
 
 
 class FreepikDownloader:
@@ -27,10 +70,10 @@ class FreepikDownloader:
         self.browser = await self.playwright.chromium.launch(headless=False)
         self.context = await self.browser.new_context()
 
-        if not os.path.exists(COOKIE_FILE):
-            raise FileNotFoundError(f"Cookies file not found: {COOKIE_FILE}")
+        # Получаем следующий файл с куками (ротация)
+        cookie_file = get_next_cookie_file()
 
-        with open(COOKIE_FILE, "r") as f:
+        with open(cookie_file, "r") as f:
             await self.context.add_cookies(json.load(f))
 
         return self
@@ -172,8 +215,11 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
     Example:
         url = await get_freepik_direct_download_url("https://www.freepik.com/...")
     """
-    if not os.path.exists(COOKIE_FILE):
-        print(f"❌ Cookies file not found: {COOKIE_FILE}")
+    # Проверяем наличие хотя бы одного файла с куками
+    try:
+        get_next_cookie_file()
+    except FileNotFoundError as e:
+        print(f"❌ {e}")
         return None
 
     # Используем семафор для ограничения параллельных скачиваний
@@ -183,8 +229,6 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
     except:
         # Если запускается не из бота (тесты), семафор не нужен
         semaphore = None
-
-    print(f"🚀 [FREEPIK] Загружаем: {asset_url}")
 
     if semaphore:
         async with semaphore:

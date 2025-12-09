@@ -308,9 +308,10 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
 
             await message.answer(ALREADY_DOWNLOADED)
 
-            # Get Freepik downloader
-            from freepik_utils.freepik import get_freepik_direct_download_url
-            file_path = await get_freepik_direct_download_url(url)
+            # Get link_processor from BotServices
+            from bot.services import BotServices
+            link_processor = BotServices.link_processor
+            file_path = await link_processor.submit(url, platform="freepik")
 
             if file_path:
                 keyboard = InlineKeyboardMarkup(
@@ -359,9 +360,10 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
         # Отправляем сообщение о загрузке
         thinking_msg = await message.answer(PROCESSING_LINK)
 
-        # Get Freepik downloader
-        from freepik_utils.freepik import get_freepik_direct_download_url
-        file_path = await get_freepik_direct_download_url(url)
+        # Get link_processor from BotServices
+        from bot.services import BotServices
+        link_processor = BotServices.link_processor
+        file_path = await link_processor.submit(url, platform="freepik")
 
         if file_path:
             media = await create_media(session, url=url, file_type="image")

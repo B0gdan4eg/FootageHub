@@ -75,8 +75,8 @@ async def main():
 
     await set_bot_commands(bot)
 
-    # 2. Запуск LinkProcessor для Envato
-    print("[INFO] Запуск LinkProcessor...")
+    # 2. Запуск LinkProcessor для Envato и Freepik
+    print("[INFO] Запуск LinkProcessor (Envato + Freepik)...")
     await BotServices.link_processor.start()
 
     # 3. Планировщик
