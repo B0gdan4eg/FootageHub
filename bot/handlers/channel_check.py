@@ -14,7 +14,7 @@ import aiofiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # ID или @username канала УБРАТЬ!!!
-CHANNEL_ID = "@footagehub_chanel"  # например, "@mycoolchannel"
+CHANNEL_ID = "@footagehub_channel"  # например, "@mycoolchannel"
 
 router = Router()
 
