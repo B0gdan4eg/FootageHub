@@ -50,7 +50,7 @@ async def show_stats(callback: types.CallbackQuery):
         total_downloads = await count_total_downloads(session)
 
         # Граница времени (начало сегодняшнего дня в UTC)
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Новые пользователи с начала дня
         result = await session.execute(
