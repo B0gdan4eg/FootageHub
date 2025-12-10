@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from aiogram.filters import Command
 from enum import Enum
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 
 router = Router()
 
@@ -49,20 +49,38 @@ async def show_stats(callback: types.CallbackQuery):
         active_subs = await count_active_subs(session)
         total_downloads = await count_total_downloads(session)
 
-        # Граница времени (последние 24 часа)
-        time_limit = datetime.utcnow() - timedelta(hours=24)
+        # Граница времени (начало сегодняшнего дня в UTC)
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # Новые пользователи за сутки
+        # Новые пользователи с начала дня
         result = await session.execute(
-            select(func.count(User.id)).where(User.created_at >= time_limit)
+            select(func.count(User.id)).where(User.created_at >= today_start)
         )
-        new_users_24h = result.scalar()
+        new_users_today = result.scalar()
 
-        # Загрузки за сутки
+        # Загрузки с начала дня
         result = await session.execute(
-            select(func.count(Download.id)).where(Download.downloaded_at >= time_limit)
+            select(func.count(Download.id)).where(Download.downloaded_at >= today_start)
         )
-        downloads_24h = result.scalar()
+        downloads_today = result.scalar()
+
+        # Загрузки с Envato за сегодня
+        result = await session.execute(
+            select(func.count(Download.id)).where(
+                Download.downloaded_at >= today_start,
+                Download.service_type == ServiceType.ENVATO
+            )
+        )
+        envato_downloads_today = result.scalar()
+
+        # Загрузки с Freepik за сегодня
+        result = await session.execute(
+            select(func.count(Download.id)).where(
+                Download.downloaded_at >= today_start,
+                Download.service_type == ServiceType.FREEPIK
+            )
+        )
+        freepik_downloads_today = result.scalar()
 
         # Общая сумма всех успешных платежей
         result = await session.execute(
@@ -70,24 +88,26 @@ async def show_stats(callback: types.CallbackQuery):
         )
         total_payment_sum = float(result.scalar())
 
-        # Сумма платежей за сутки
+        # Сумма платежей за сегодня
         result = await session.execute(
             select(func.coalesce(func.sum(Payment.amount), 0)).where(
                 Payment.status == "success",
-                Payment.created_at >= time_limit
+                Payment.created_at >= today_start
             )
         )
-        payment_sum_24h = float(result.scalar())
+        payment_sum_today = float(result.scalar())
 
     text = (
         f"📊 Статистика:\n\n"
         f"👥 Всего пользователей: {total_users}\n"
-        f"🆕 Новых за сутки: {new_users_24h}\n\n"
+        f"🆕 Новых сегодня: {new_users_today}\n\n"
         f"🔐 Активных подписок: {active_subs}\n\n"
         f"⬇️ Всего скачиваний: {total_downloads}\n"
-        f"📥 За сутки: {downloads_24h}\n\n"
+        f"📥 Сегодня: {downloads_today}\n"
+        f"   • Envato: {envato_downloads_today}\n"
+        f"   • Freepik: {freepik_downloads_today}\n\n"
         f"💰 Всего платежей: {total_payment_sum:.2f}\n"
-        f"💵 За сутки: {payment_sum_24h:.2f}"
+        f"💵 Сегодня: {payment_sum_today:.2f}"
     )
     await callback.message.edit_text(text)
 # ------------------------------------------------------------

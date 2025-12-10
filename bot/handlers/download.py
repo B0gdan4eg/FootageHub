@@ -2,6 +2,7 @@ from aiogram import Router, types, F, Bot
 from db.session import get_session
 from db.user_crud import get_user_by_telegram_id, has_user_downloaded
 from db.downloaded_file_crud import create_media, create_download
+from db.models import ServiceType
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from aiogram.filters import Command
 from bot.handlers.messages import (
@@ -229,10 +230,10 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         from bot.services import BotServices
         link_processor = BotServices.link_processor
         file_path = await link_processor.submit(url, with_license=with_license)
-        
+
         if file_path:
             media = await create_media(session, url=url, file_type="image")
-            await create_download(session, user.id, media.id)
+            await create_download(session, user.id, media.id, service_type=ServiceType.ENVATO)
 
             await thinking_msg.edit_text(PROCESSING_COMPLETE)
 
@@ -367,7 +368,7 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
 
         if file_path:
             media = await create_media(session, url=url, file_type="image")
-            await create_download(session, user.id, media.id)
+            await create_download(session, user.id, media.id, service_type=ServiceType.FREEPIK)
 
             await thinking_msg.edit_text(PROCESSING_COMPLETE)
 

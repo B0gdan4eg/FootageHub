@@ -1,6 +1,6 @@
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.models import Media, Download
+from db.models import Media, Download, ServiceType
 from datetime import datetime, timedelta
 
 async def get_media_by_url(session, url: str):
@@ -24,8 +24,8 @@ async def create_media(session, url: str, file_type: str):
     return media
 
 
-async def create_download(session, user_id: int, media_id: int):
-    download = Download(user_id=user_id, media_id=media_id)
+async def create_download(session, user_id: int, media_id: int, service_type: ServiceType = None):
+    download = Download(user_id=user_id, media_id=media_id, service_type=service_type)
     session.add(download)
     await session.commit()
     await session.refresh(download)
