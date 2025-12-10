@@ -30,7 +30,8 @@ async def is_subscribed(bot: Bot, tg_user_id: int) -> bool:
         print(f"[DEBUG] Member status: {member.status}")
         return member.status in (
             ChatMemberStatus.MEMBER,
-            ChatMemberStatus.ADMINISTRATOR
+            ChatMemberStatus.ADMINISTRATOR,
+            ChatMemberStatus.CREATOR
         )
     except TelegramForbiddenError as e:
         print(f"[DEBUG] TelegramForbiddenError: {e}")
