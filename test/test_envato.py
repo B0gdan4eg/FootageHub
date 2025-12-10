@@ -4,7 +4,7 @@ import os
 import time
 from playwright.async_api import async_playwright
 
-COOKIE_FILE = os.path.join(os.path.dirname(__file__), "envato_cookies.json")
+COOKIE_FILE = os.path.join(os.path.dirname(__file__), "envato_cookies_1.json")
 
 
 class EnvatoDownloader:
@@ -228,7 +228,7 @@ async def get_envato_direct_download_url(asset_url: str) -> str | None:
 # Test/debug functions
 async def test_single_url():
     """Test single URL download"""
-    test_url = "https://elements.envato.com/ru/young-woman-lying-in-the-bed-at-night-and-having-i-2ZBFRTB"
+    test_url = "https://elements.envato.com/ru/financial-growth-scene-CZP362L"
     print("="*70)
     print("🚀 Получение прямой ссылки на скачивание")
     print("="*70)

@@ -149,15 +149,45 @@ class EnvatoDownloader:
                 # Wait for cookie dialog and click reject button
                 await page.wait_for_selector("#CybotCookiebotDialog", timeout=3000)
                 await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=2000)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1)
             except:
                 pass  # Cookie banner not found, continue
 
-            # Click download button
-            await page.click("button[data-testid='button-download']", timeout=15000)
+            # Wait for download button to be ready and click with retry
+            await page.wait_for_selector("button[data-testid='button-download']", state="visible", timeout=15000)
+            await asyncio.sleep(0.5)  # Small delay to ensure button is fully ready
 
-            # Click download without license
-            await page.click("button[data-testid='download-without-license-button']", timeout=15000)
+            # Try clicking download button with multiple attempts
+            clicked = False
+            for attempt in range(3):
+                try:
+                    await page.click("button[data-testid='button-download']", timeout=5000)
+                    clicked = True
+                    break
+                except:
+                    if attempt < 2:
+                        print(f"[ENVATO] Retry click download button (attempt {attempt + 2}/3)")
+                        await asyncio.sleep(1)
+                    else:
+                        raise
+
+            if not clicked:
+                raise Exception("Failed to click download button after 3 attempts")
+
+            # Wait for modal to appear
+            await asyncio.sleep(1)
+
+            # Click download without license with retry
+            for attempt in range(3):
+                try:
+                    await page.click("button[data-testid='download-without-license-button']", timeout=5000)
+                    break
+                except:
+                    if attempt < 2:
+                        print(f"[ENVATO] Retry click without-license button (attempt {attempt + 2}/3)")
+                        await asyncio.sleep(1)
+                    else:
+                        raise
 
             # Wait for download URL from intercepted network responses
             download_url = await self._wait_for_download_url_from_license(client, captured_responses, timeout=10)
@@ -270,12 +300,26 @@ class EnvatoDownloader:
                 # Wait for cookie dialog and click reject button
                 await page.wait_for_selector("#CybotCookiebotDialog", timeout=3000)
                 await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=2000)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1)
             except:
                 pass  # Cookie banner not found, continue
 
-            # Step 1: Click download button to open modal
-            await page.click("button[data-testid='button-download']", timeout=15000)
+            # Step 1: Wait for download button to be ready and click with retry
+            await page.wait_for_selector("button[data-testid='button-download']", state="visible", timeout=15000)
+            await asyncio.sleep(0.5)  # Small delay to ensure button is fully ready
+
+            # Try clicking download button with multiple attempts
+            for attempt in range(3):
+                try:
+                    await page.click("button[data-testid='button-download']", timeout=5000)
+                    break
+                except:
+                    if attempt < 2:
+                        print(f"[ENVATO] (WITH LICENSE) Retry click download button (attempt {attempt + 2}/3)")
+                        await asyncio.sleep(1)
+                    else:
+                        raise
+
             await asyncio.sleep(1)  # Wait for modal to appear
 
             # Step 2: Click radio button to select project (from recorded_actions.json)

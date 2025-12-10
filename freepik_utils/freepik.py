@@ -135,8 +135,8 @@ class FreepikDownloader:
             # Click download button
             await page.click("button[data-cy='download-button']", timeout=15000)
 
-            # Ждём download event (обычно срабатывает за 1-2 секунды)
-            await asyncio.sleep(2)
+            # Ждём download event (увеличено до 5 секунд для надежности)
+            await asyncio.sleep(5)
 
             # Получаем ссылку
             download_url = download_info.get('url')
