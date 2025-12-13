@@ -151,6 +151,16 @@
     },
     {
         "name": "_ga_QWX66025LC",
+        "value": "GS2.1.s1765519433$o1$g1$t1765519499$j59$l0$h0",
+        "domain": ".freepik.com",
+        "path": "/",
+        "expires": 1800079499.975265,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "_ga_QWX66025LC",
         "value": "GS2.1.s1765646339$o1$g1$t1765646373$j26$l0$h0",
         "domain": ".freepik.com",
         "path": "/",
