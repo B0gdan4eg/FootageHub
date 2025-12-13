@@ -21,7 +21,7 @@ bot/handlers/group_st.py
 debug_screenshots/
 
 # Test and temporary files
-test/
+/test
 filesta/screenshots/
 filesta/filesta_cookie_index.txt
 freepik_utils/freepik_cookie_index.txt

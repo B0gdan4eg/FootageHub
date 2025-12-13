@@ -24,7 +24,9 @@ class EnvatoDownloader:
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(headless=False)
-        self.context = await self.browser.new_context()
+        self.context = await self.browser.new_context(
+            viewport={'width': 1920, 'height': 1080}
+        )
 
         if not os.path.exists(COOKIE_FILE):
             raise FileNotFoundError(f"Cookies file not found: {COOKIE_FILE}")
@@ -67,8 +69,8 @@ class EnvatoDownloader:
 
     async def get_download_url(self, asset_url: str) -> str | None:
         """
-        Get direct download URL using CDP network interception.
-        Faster and more reliable than waiting for downloads.
+        Get direct download URL using download event interception.
+        Similar to Freepik approach.
 
         Args:
             asset_url: URL of the Envato Elements asset page
@@ -77,37 +79,43 @@ class EnvatoDownloader:
             Direct download URL or None if failed
         """
         page = None
-        client = None
         start_time = time.time()
         download_url = None
 
         try:
             page = await self.context.new_page()
 
-            # Enable CDP session for network monitoring
-            client = await self.context.new_cdp_session(page)
-            await client.send("Network.enable")
+            # Перехватываем download event
+            download_info = {}
 
-            captured_responses = []
+            async def handle_download(download):
+                try:
+                    download_info['url'] = download.url
+                    print(f"[DEBUG] ✅ Download event captured: {download.url}")
+                    # Отменяем скачивание, нам нужна только ссылка
+                    await download.cancel()
+                except Exception as e:
+                    print(f"[DEBUG] ⚠️ Error in download handler: {e}")
 
-            def on_response(event):
-                url = event.get("response", {}).get("url", "")
-                if "download_and_license" in url:
-                    captured_responses.append(event)
-
-            client.on("Network.responseReceived", on_response)
+            page.on("download", handle_download)
 
             # Navigate to asset page
             await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
 
-            # Click download button
-            await page.click("button[data-testid='button-download']", timeout=15000)
+            # Click download button - новый формат с data-analytics-name
+            print("[DEBUG] Clicking download button...")
+            await page.click("button[data-analytics-name='download']", timeout=15000)
+            print("[DEBUG] Button clicked, waiting for download event...")
 
-            # Click download without license
-            await page.click("button[data-testid='download-without-license-button']", timeout=15000)
+            # Wait for download event
+            await asyncio.sleep(5)
 
-            # Wait for download URL from intercepted network responses
-            download_url = await self._wait_for_download_url(client, captured_responses, timeout=10)
+            # Take screenshot for debugging
+            await page.screenshot(path="debug_after_click.png")
+            print("[DEBUG] Screenshot saved: debug_after_click.png")
+
+            # Get download URL
+            download_url = download_info.get('url')
 
             elapsed = time.time() - start_time
             self.total_time += elapsed
@@ -117,7 +125,7 @@ class EnvatoDownloader:
                 print(f"   ✅ {elapsed:.2f} сек")
             else:
                 self.fail_count += 1
-                print(f"   ❌ Не получен URL")
+                print(f"   ❌ Download event не сработал")
 
             return download_url
 
@@ -130,47 +138,12 @@ class EnvatoDownloader:
             return None
 
         finally:
-            # IMPORTANT: Close CDP session first to prevent resource leaks
-            if client:
-                try:
-                    await client.detach()
-                except Exception:
-                    pass
-
-            # Then close the page
+            # Close the page
             if page:
                 try:
                     await page.close()
                 except Exception:
                     pass
-
-
-    async def _wait_for_download_url(self, client, captured_responses, timeout=10) -> str | None:
-        """
-        Wait for download URL to appear in intercepted network responses.
-        Non-blocking approach using asyncio.sleep instead of time.sleep.
-
-        Args:
-            client: CDP client session
-            captured_responses: List of captured network responses
-            timeout: Maximum wait time in seconds
-
-        Returns:
-            Download URL or None if timeout
-        """
-        start = time.time()
-        while time.time() - start < timeout:
-            for resp in captured_responses:
-                try:
-                    body = await client.send("Network.getResponseBody", {"requestId": resp["requestId"]})
-                    data = json.loads(body["body"])
-                    url = data.get("data", {}).get("attributes", {}).get("downloadUrl")
-                    if url:
-                        return url
-                except:
-                    continue
-            await asyncio.sleep(0.1)
-        return None
 
 
 # Main API function for bot integration
