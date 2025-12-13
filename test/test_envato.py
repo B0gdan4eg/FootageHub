@@ -99,20 +99,52 @@ class EnvatoDownloader:
 
             page.on("download", handle_download)
 
-            # Navigate to asset page
-            await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
+            # Navigate to asset page - wait for redirect to complete
+            print("[DEBUG] Navigating to asset page...")
+            await page.goto(asset_url, wait_until="load", timeout=30000)
 
-            # Click download button - новый формат с data-analytics-name
+            # Wait for redirect to app.envato.com if needed
+            redirected = False
+            if "elements.envato.com" in page.url:
+                print("[DEBUG] Waiting for redirect to app.envato.com...")
+                try:
+                    await page.wait_for_url("**/app.envato.com/**", timeout=1500)
+                    redirected = True
+                    print(f"[DEBUG] ✅ Redirected to: {page.url}")
+                except:
+                    print(f"[DEBUG] ⚠️ No redirect after 1.5s, staying on: {page.url}")
+
+            print(f"[DEBUG] Final URL: {page.url}")
+
+            # Click download button - пробуем новый формат, если не получается - старый
             print("[DEBUG] Clicking download button...")
-            await page.click("button[data-analytics-name='download']", timeout=15000)
+            if redirected or "app.envato.com" in page.url:
+                # Новый формат кнопки на app.envato.com
+                await page.wait_for_selector("button[data-analytics-name='download']", state="visible", timeout=10000)
+                await page.click("button[data-analytics-name='download']", delay=0)
+                print("[DEBUG] Clicked NEW format button (data-analytics-name)")
+            else:
+                # Старый формат кнопки на elements.envato.com
+                await page.wait_for_selector("button[data-testid='button-download']", state="visible", timeout=10000)
+                await page.click("button[data-testid='button-download']", delay=0)
+                await asyncio.sleep(0.5)
+                # Кликаем "download without license"
+                await page.click("button[data-testid='download-without-license-button']", delay=0)
+                print("[DEBUG] Clicked OLD format buttons (data-testid)")
             print("[DEBUG] Button clicked, waiting for download event...")
 
-            # Wait for download event
-            await asyncio.sleep(5)
-
-            # Take screenshot for debugging
-            await page.screenshot(path="debug_after_click.png")
-            print("[DEBUG] Screenshot saved: debug_after_click.png")
+            # Wait for download event with timeout
+            max_wait = 5
+            for i in range(max_wait * 10):  # Check every 0.1 seconds
+                if download_info.get('url'):
+                    print(f"[DEBUG] ✅ Download URL received after {i/10:.1f}s")
+                    break
+                await asyncio.sleep(0.1)
+            else:
+                print(f"[DEBUG] ❌ No download event after {max_wait}s, taking screenshot...")
+                # Take screenshot for debugging if failed
+                await page.screenshot(path="debug_after_click.png")
+                print("[DEBUG] Screenshot saved: debug_after_click.png")
 
             # Get download URL
             download_url = download_info.get('url')

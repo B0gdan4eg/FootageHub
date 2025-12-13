@@ -38,7 +38,8 @@ async def manager_command(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
         [InlineKeyboardButton(text="➕ Создать реферальную ссылку", callback_data="manager_create_referral")],
         [InlineKeyboardButton(text="👥 Просмотреть всех рефералов", callback_data="manager_view_referrals")],
-        [InlineKeyboardButton(text="🔄 Рестарт браузера Envato", callback_data="manager_restart_browser")]
+        [InlineKeyboardButton(text="🔄 Рестарт Envato", callback_data="manager_restart_envato")],
+        [InlineKeyboardButton(text="🔄 Рестарт Freepik", callback_data="manager_restart_freepik")]
     ])
     # Если роль менеджера подтверждена
     await message.answer(
@@ -144,32 +145,32 @@ async def view_referrals(callback: types.CallbackQuery):
         await callback.message.answer(summary)
 
 
-@router.callback_query(lambda c: c.data == "manager_restart_browser")
-async def restart_browser(callback: types.CallbackQuery):
+@router.callback_query(lambda c: c.data == "manager_restart_envato")
+async def restart_envato_browser(callback: types.CallbackQuery):
     """Принудительный рестарт браузера Envato через LinkProcessor"""
     try:
         # Получаем LinkProcessor из BotServices
         link_processor = BotServices.link_processor
 
-        if not link_processor or not link_processor.downloader:
-            await callback.answer("⚠️ Браузер не запущен", show_alert=True)
+        if not link_processor or not link_processor.envato_downloader:
+            await callback.answer("⚠️ Браузер Envato не запущен", show_alert=True)
             return
 
         await callback.message.answer("🔄 Начинаю рестарт браузера Envato...")
 
         # Принудительно запускаем рестарт браузера
-        async with link_processor._restart_lock:
+        async with link_processor._envato_restart_lock:
             # Текущее количество запросов
-            current_requests = link_processor.request_count
+            current_requests = link_processor.envato_request_count
 
             # Закрываем старый браузер
-            if link_processor.downloader:
-                await link_processor.downloader.__aexit__(None, None, None)
+            if link_processor.envato_downloader:
+                await link_processor.envato_downloader.__aexit__(None, None, None)
 
             # Создаем новый браузер
             from envato_utils.envato_playwright import EnvatoDownloader
-            link_processor.downloader = await EnvatoDownloader().__aenter__()
-            link_processor.request_count = 0
+            link_processor.envato_downloader = await EnvatoDownloader().__aenter__()
+            link_processor.envato_request_count = 0
 
         await callback.message.answer(
             f"✅ Браузер Envato перезапущен!\n\n"
@@ -179,6 +180,46 @@ async def restart_browser(callback: types.CallbackQuery):
         await callback.answer("✅ Рестарт завершен!")
 
     except Exception as e:
-        await callback.message.answer(f"❌ Ошибка при рестарте браузера:\n{e}")
+        await callback.message.answer(f"❌ Ошибка при рестарте браузера Envato:\n{e}")
         await callback.answer("❌ Ошибка!", show_alert=True)
-        print(f"[MANAGER] Ошибка рестарта браузера: {e}")
+        print(f"[MANAGER] Ошибка рестарта браузера Envato: {e}")
+
+
+@router.callback_query(lambda c: c.data == "manager_restart_freepik")
+async def restart_freepik_browser(callback: types.CallbackQuery):
+    """Принудительный рестарт браузера Freepik через LinkProcessor"""
+    try:
+        # Получаем LinkProcessor из BotServices
+        link_processor = BotServices.link_processor
+
+        if not link_processor or not link_processor.freepik_downloader:
+            await callback.answer("⚠️ Браузер Freepik не запущен", show_alert=True)
+            return
+
+        await callback.message.answer("🔄 Начинаю рестарт браузера Freepik...")
+
+        # Принудительно запускаем рестарт браузера
+        async with link_processor._freepik_restart_lock:
+            # Текущее количество запросов
+            current_requests = link_processor.freepik_request_count
+
+            # Закрываем старый браузер
+            if link_processor.freepik_downloader:
+                await link_processor.freepik_downloader.__aexit__(None, None, None)
+
+            # Создаем новый браузер
+            from freepik_utils.freepik import FreepikDownloader
+            link_processor.freepik_downloader = await FreepikDownloader().__aenter__()
+            link_processor.freepik_request_count = 0
+
+        await callback.message.answer(
+            f"✅ Браузер Freepik перезапущен!\n\n"
+            f"📊 Обработано запросов до рестарта: {current_requests}\n"
+            f"🔄 Счетчик сброшен: 0/{link_processor.restart_after}"
+        )
+        await callback.answer("✅ Рестарт завершен!")
+
+    except Exception as e:
+        await callback.message.answer(f"❌ Ошибка при рестарте браузера Freepik:\n{e}")
+        await callback.answer("❌ Ошибка!", show_alert=True)
+        print(f"[MANAGER] Ошибка рестарта браузера Freepik: {e}")

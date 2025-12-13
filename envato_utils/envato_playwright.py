@@ -68,7 +68,9 @@ class EnvatoDownloader:
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(headless=False)
-        self.context = await self.browser.new_context()
+        self.context = await self.browser.new_context(
+            viewport={'width': 1920, 'height': 1080}
+        )
 
         # Получаем следующий файл с куками (ротация)
         cookie_file = get_next_cookie_file()
@@ -111,8 +113,8 @@ class EnvatoDownloader:
 
     async def get_download_url(self, asset_url: str) -> str | None:
         """
-        Get direct download URL using CDP network interception.
-        Faster and more reliable than waiting for downloads.
+        Get direct download URL using download event interception.
+        Supports both old (elements.envato.com) and new (app.envato.com) site formats.
 
         Args:
             asset_url: URL of the Envato Elements asset page
@@ -121,46 +123,59 @@ class EnvatoDownloader:
             Direct download URL or None if failed
         """
         page = None
-        client = None
         start_time = time.time()
         download_url = None
 
         try:
             page = await self.context.new_page()
 
-            # Enable CDP session for network monitoring
-            client = await self.context.new_cdp_session(page)
-            await client.send("Network.enable")
+            # Перехватываем download event
+            download_info = {}
 
-            captured_responses = []
+            async def handle_download(download):
+                try:
+                    download_info['url'] = download.url
+                    # Отменяем скачивание, нам нужна только ссылка
+                    await download.cancel()
+                except Exception as e:
+                    print(f"[ENVATO] ⚠️ Error in download handler: {e}")
 
-            def on_response(event):
-                url = event.get("response", {}).get("url", "")
-                if "download_and_license" in url:
-                    captured_responses.append(event)
-
-            client.on("Network.responseReceived", on_response)
+            page.on("download", handle_download)
 
             # Navigate to asset page
-            await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
+            await page.goto(asset_url, wait_until="load", timeout=30000)
 
-            # Close cookie banner if it appears - click "Reject All"
-            try:
-                # Wait for cookie dialog and click reject button
-                await page.wait_for_selector("#CybotCookiebotDialog", timeout=3000)
-                await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=2000)
+            # Wait for redirect to app.envato.com if needed
+            redirected = False
+            if "elements.envato.com" in page.url:
+                try:
+                    await page.wait_for_url("**/app.envato.com/**", timeout=1500)
+                    redirected = True
+                except:
+                    pass  # No redirect, staying on old format
+
+            # Click download button - новый или старый формат
+            if redirected or "app.envato.com" in page.url:
+                # Новый формат кнопки на app.envato.com
+                await page.wait_for_selector("button[data-analytics-name='download']", state="visible", timeout=10000)
+                await page.click("button[data-analytics-name='download']", delay=0)
+            else:
+                # Старый формат кнопки на elements.envato.com
+                await page.wait_for_selector("button[data-testid='button-download']", state="visible", timeout=10000)
+                await page.click("button[data-testid='button-download']", delay=0)
                 await asyncio.sleep(0.5)
-            except:
-                pass  # Cookie banner not found, continue
+                # Кликаем "download without license"
+                await page.click("button[data-testid='download-without-license-button']", delay=0)
 
-            # Click download button
-            await page.click("button[data-testid='button-download']", timeout=15000)
+            # Wait for download event with timeout
+            max_wait = 5
+            for i in range(max_wait * 10):  # Check every 0.1 seconds
+                if download_info.get('url'):
+                    break
+                await asyncio.sleep(0.1)
 
-            # Click download without license
-            await page.click("button[data-testid='download-without-license-button']", timeout=15000)
-
-            # Wait for download URL from intercepted network responses
-            download_url = await self._wait_for_download_url_from_license(client, captured_responses, timeout=10)
+            # Get download URL
+            download_url = download_info.get('url')
 
             elapsed = time.time() - start_time
             self.total_time += elapsed
@@ -170,7 +185,7 @@ class EnvatoDownloader:
                 print(f"   ✅ {elapsed:.2f} сек")
             else:
                 self.fail_count += 1
-                print(f"   ❌ Не получен URL")
+                print(f"   ❌ Download event не сработал")
 
                 # Делаем скриншот для отладки
                 import os
@@ -180,7 +195,7 @@ class EnvatoDownloader:
                 await page.screenshot(path=screenshot_path, full_page=False)
 
                 await logger.error(
-                    f"❌ [ENVATO] Download URL не получен (WITHOUT LICENSE)\n"
+                    f"❌ [ENVATO] Download event не сработал\n"
                     f"URL: {asset_url}",
                     screenshot_path=screenshot_path
                 )
@@ -207,7 +222,7 @@ class EnvatoDownloader:
                     screenshot_path = None
 
             await logger.error(
-                f"❌ [ENVATO] Ошибка при скачивании (WITHOUT LICENSE)\n"
+                f"❌ [ENVATO] Ошибка при скачивании\n"
                 f"URL: {asset_url}\n"
                 f"Ошибка: {e}",
                 screenshot_path=screenshot_path
@@ -215,14 +230,7 @@ class EnvatoDownloader:
             return None
 
         finally:
-            # IMPORTANT: Close CDP session first to prevent resource leaks
-            if client:
-                try:
-                    await client.detach()
-                except Exception:
-                    pass
-
-            # Then close the page
+            # Close the page
             if page:
                 try:
                     await page.close()
