@@ -19,7 +19,7 @@ async def save_cookies_after_login():
 
         # Ждем, пока пользователь вручную залогинится и попадет на главную
         # Можно подождать пока URL поменяется, например на https://envato.com или другую страницу после логина
-        await page.wait_for_url("https://www.freepik.com/", timeout=300000)  # ждем до 5 минут
+        await page.wait_for_url("https://www.freepik.com", timeout=300000)  # ждем до 5 минут
 
         # Получаем все куки из текущего контекста
         cookies = await context.cookies()
