@@ -7,13 +7,12 @@ app = FastAPI()
 app.include_router(cryptobot.router)
 
 async def start_server():
-    """Запуск FastAPI сервера с SSL."""
+    """Запуск FastAPI сервера без SSL (SSL обрабатывает Nginx)."""
     config = uvicorn.Config(
         app,
         host="0.0.0.0",
-        port=443,
-        ssl_certfile="/app/ssl/cert.pem",
-        ssl_keyfile="/app/ssl/key.pem",
+        port=8443,  # Изменили с 443 на 8443
+        # Убрали ssl_certfile и ssl_keyfile
         log_level="info"
     )
     server = uvicorn.Server(config)
