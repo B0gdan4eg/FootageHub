@@ -9,6 +9,8 @@ from db.models import User, UserRole, Payment
 from bot.state import ManagerFlow
 from bot.handlers.admin import is_admin
 from bot.services import BotServices
+from bot.webpay_utils import webpay_api
+import uuid
 
 router = Router()
 
@@ -39,7 +41,8 @@ async def manager_command(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="➕ Создать реферальную ссылку", callback_data="manager_create_referral")],
         [InlineKeyboardButton(text="👥 Просмотреть всех рефералов", callback_data="manager_view_referrals")],
         [InlineKeyboardButton(text="🔄 Рестарт Envato", callback_data="manager_restart_envato")],
-        [InlineKeyboardButton(text="🔄 Рестарт Freepik", callback_data="manager_restart_freepik")]
+        [InlineKeyboardButton(text="🔄 Рестарт Freepik", callback_data="manager_restart_freepik")],
+        [InlineKeyboardButton(text="💳 Тест WebPay", callback_data="manager_test_webpay")]
     ])
     # Если роль менеджера подтверждена
     await message.answer(
@@ -223,3 +226,58 @@ async def restart_freepik_browser(callback: types.CallbackQuery):
         await callback.message.answer(f"❌ Ошибка при рестарте браузера Freepik:\n{e}")
         await callback.answer("❌ Ошибка!", show_alert=True)
         print(f"[MANAGER] Ошибка рестарта браузера Freepik: {e}")
+
+
+@router.callback_query(lambda c: c.data == "manager_test_webpay")
+async def test_webpay_payment(callback: types.CallbackQuery):
+    """Тестовый платеж через WebPay"""
+    try:
+        await callback.answer()
+
+        # Генерируем уникальный ID заказа
+        order_id = f"TEST_{uuid.uuid4().hex[:16]}"
+
+        # Параметры тестового платежа
+        amount = 10.00  # 10 BYN
+        description = "Тестовый платеж FootageHub"
+
+        # URL для вебхуков (нужно будет настроить на сервере)
+        base_url = "https://your-domain.com"  # TODO: заменить на реальный домен
+        return_url = f"{base_url}/payment/success"
+        cancel_url = f"{base_url}/payment/cancel"
+        notify_url = f"{base_url}/api/webpay/webhook"
+
+        await callback.message.answer("⏳ Создаю тестовый счет WebPay...")
+
+        # Создаем счет
+        result = await webpay_api.create_invoice(
+            order_id=order_id,
+            amount=amount,
+            description=description,
+            return_url=return_url,
+            cancel_url=cancel_url,
+            notify_url=notify_url
+        )
+
+        invoice_url = result.get('invoiceUrl')
+        invoice_number = result.get('webpayInvoiceNumber')
+
+        if invoice_url:
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💳 Оплатить", url=invoice_url)]
+            ])
+
+            await callback.message.answer(
+                f"✅ Тестовый счет создан!\n\n"
+                f"📋 Номер заказа: {order_id}\n"
+                f"📄 Номер счета: {invoice_number}\n"
+                f"💰 Сумма: {amount} BYN\n\n"
+                f"Нажмите кнопку ниже для оплаты:",
+                reply_markup=keyboard
+            )
+        else:
+            await callback.message.answer("❌ Не удалось получить ссылку на оплату")
+
+    except Exception as e:
+        await callback.message.answer(f"❌ Ошибка при создании счета:\n{e}")
+        print(f"[MANAGER] Ошибка WebPay: {e}")
