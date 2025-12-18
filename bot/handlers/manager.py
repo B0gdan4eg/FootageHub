@@ -242,7 +242,7 @@ async def test_webpay_payment(callback: types.CallbackQuery):
         description = "Тестовый платеж FootageHub"
 
         # URL для вебхуков (нужно будет настроить на сервере)
-        base_url = "https://your-domain.com"  # TODO: заменить на реальный домен
+        base_url = "https://footage.com.by"  # TODO: заменить на реальный домен
         return_url = f"{base_url}/payment/success"
         cancel_url = f"{base_url}/payment/cancel"
         notify_url = f"{base_url}/api/webpay/webhook"
