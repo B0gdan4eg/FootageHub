@@ -1,49 +1,32 @@
 import hashlib
 import httpx
-from bot.config import WEBPAY_RESOURCE_ID, WEBPAY_API_KEY, WEBPAY_SECRET_KEY, WEBPAY_SANDBOX
+from bot.config import (
+    WEBPAY_RESOURCE_ID,
+    WEBPAY_AUTH_TOKEN,
+    WEBPAY_SECRET_KEY,
+    WEBPAY_SANDBOX
+)
 
 
 class WebPayAPI:
     """WebPay JSON API integration for payment processing"""
 
     def __init__(self):
-        self.merchant_id = WEBPAY_RESOURCE_ID  # merchantId для логина
-        self.username = WEBPAY_API_KEY  # username для логина
-        self.password = WEBPAY_SECRET_KEY  # password для логина
+        self.merchant_id = WEBPAY_RESOURCE_ID
+        self.auth_token = WEBPAY_AUTH_TOKEN  # Токен из .env
+        self.secret_key = WEBPAY_SECRET_KEY  # Для проверки webhook подписей
         self.sandbox = WEBPAY_SANDBOX
-        self.auth_token = None  # Токен аутентификации
 
         if self.sandbox:
             self.base_url = "https://sandbox.webpay.by"
         else:
             self.base_url = "https://billing.webpay.by"
 
-    async def _login(self) -> str:
-        """
-        Аутентификация в WebPay API и получение auth_token
-
-        Returns:
-            auth_token для использования в других запросах
-        """
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.base_url}/api/login",
-                json={
-                    "merchantId": self.merchant_id,
-                    "username": self.username,
-                    "password": self.password
-                },
-                timeout=30.0
+        if not self.auth_token:
+            raise ValueError(
+                "WEBPAY_AUTH_TOKEN не найден в .env! "
+                "Запустите get_webpay_token.py для получения токена."
             )
-            response.raise_for_status()
-            data = response.json()
-
-            # Сохраняем токен
-            self.auth_token = data.get("data", {}).get("auth_token")
-            if not self.auth_token:
-                raise ValueError("Failed to get auth_token from login response")
-
-            return self.auth_token
 
     async def create_invoice(
         self,
@@ -68,10 +51,6 @@ class WebPayAPI:
         Returns:
             dict с URL для перенаправления пользователя на оплату
         """
-        # Получаем токен аутентификации
-        if not self.auth_token:
-            await self._login()
-
         # Формируем payload для создания платежа
         payload = {
             "wsb_storeid": int(self.merchant_id),
