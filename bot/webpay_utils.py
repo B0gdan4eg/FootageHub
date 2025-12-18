@@ -38,7 +38,7 @@ class WebPayAPI:
         notify_url: str
     ) -> dict:
         """
-        Создает счет для оплаты через JSON API
+        Создает счет для оплаты через Billing API
 
         Args:
             order_id: Уникальный номер заказа
@@ -51,42 +51,64 @@ class WebPayAPI:
         Returns:
             dict с URL для перенаправления пользователя на оплату
         """
-        # Формируем payload для создания платежа
+        # Вычисляем подпись для запроса
+        seed = f"{self.merchant_id}{order_id}{amount}BYN{self.secret_key}"
+        signature = hashlib.md5(seed.encode('utf-8')).hexdigest()
+
+        # Формируем payload для создания платежа (form-data)
         payload = {
-            "wsb_storeid": int(self.merchant_id),
-            "wsb_store": int(self.merchant_id),
+            "wsb_storeid": self.merchant_id,
+            "wsb_store": self.merchant_id,
             "wsb_order_num": order_id,
             "wsb_currency_id": "BYN",
-            "wsb_total": amount,
+            "wsb_total": str(amount),
             "wsb_return_url": return_url,
             "wsb_cancel_return_url": cancel_url,
             "wsb_notify_url": notify_url,
             "wsb_invoice_item_name[0]": description,
-            "wsb_invoice_item_quantity[0]": 1,
-            "wsb_invoice_item_price[0]": amount,
-            "wsb_test": 1 if self.sandbox else 0
+            "wsb_invoice_item_quantity[0]": "1",
+            "wsb_invoice_item_price[0]": str(amount),
+            "wsb_test": "1" if self.sandbox else "0",
+            "wsb_signature": signature,
+            "wsb_version": "2"
         }
 
-        # Выполняем запрос на создание платежа
-        async with httpx.AsyncClient() as client:
+        # Выполняем запрос на создание платежа (form POST)
+        async with httpx.AsyncClient(follow_redirects=False) as client:
             response = await client.post(
-                f"{self.base_url}/api/v1/payment",
-                json=payload,
+                f"{self.base_url}/order/create",
+                data=payload,  # form-data вместо JSON
                 headers={
-                    "Authorization": f"Bearer {self.auth_token}",
-                    "Content-Type": "application/json"
+                    "Authorization": f"Bearer {self.auth_token}"
                 },
                 timeout=30.0
             )
-            response.raise_for_status()
-            data = response.json()
 
-            # Возвращаем URL для оплаты
-            return {
-                "invoiceUrl": data.get("data", {}).get("payment_url"),
-                "webpayInvoiceNumber": data.get("data", {}).get("order_id"),
-                "webpayInvoiceId": data.get("data", {}).get("transaction_id")
-            }
+            # Если редирект (302/303), то это успех - получаем URL оплаты
+            if response.status_code in (302, 303):
+                invoice_url = response.headers.get("Location")
+                return {
+                    "invoiceUrl": invoice_url,
+                    "webpayInvoiceNumber": order_id,
+                    "webpayInvoiceId": None
+                }
+
+            # Если 200, пробуем распарсить JSON ответ
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    return {
+                        "invoiceUrl": data.get("url") or data.get("payment_url") or data.get("invoiceUrl"),
+                        "webpayInvoiceNumber": data.get("invoice_number") or order_id,
+                        "webpayInvoiceId": data.get("invoice_id") or data.get("transaction_id")
+                    }
+                except Exception:
+                    # Если не JSON, возможно это HTML с формой
+                    pass
+
+            # Если ничего не сработало, поднимаем ошибку
+            response.raise_for_status()
+            raise ValueError(f"Неожиданный ответ от API: {response.text[:200]}")
 
     @staticmethod
     def verify_webhook_signature(params: dict, secret_key: str) -> bool:
