@@ -9,7 +9,7 @@ from db.models import User, UserRole, Payment
 from bot.state import ManagerFlow
 from bot.handlers.admin import is_admin
 from bot.services import BotServices
-from bot.webpay_utils import webpay_api
+from bot.webpay_utils import get_webpay_api
 import uuid
 
 router = Router()
@@ -250,6 +250,7 @@ async def test_webpay_payment(callback: types.CallbackQuery):
         await callback.message.answer("⏳ Создаю тестовый счет WebPay...")
 
         # Создаем счет
+        webpay_api = get_webpay_api()
         result = await webpay_api.create_invoice(
             order_id=order_id,
             amount=amount,

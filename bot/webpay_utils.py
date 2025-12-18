@@ -26,12 +26,6 @@ class WebPayAPI:
         else:
             self.base_url = "https://billing.webpay.by"
 
-        if not self.auth_token:
-            raise ValueError(
-                "WEBPAY_AUTH_TOKEN не найден в .env! "
-                "Запустите get_webpay_token.py для получения токена."
-            )
-
     async def _refresh_token(self):
         """Обновляет auth_token через API"""
         try:
@@ -85,6 +79,9 @@ class WebPayAPI:
         Returns:
             dict с redirectUrl для перенаправления пользователя на оплату
         """
+        # Обновляем токен перед каждым платежом
+        await self._refresh_token()
+
         # Генерируем seed (текущее время)
         seed = str(int(time.time()))
 
@@ -178,5 +175,13 @@ class WebPayAPI:
         return expected_signature == received_signature
 
 
-# Singleton instance
-webpay_api = WebPayAPI()
+# Lazy initialization - создаем только при первом использовании
+_webpay_instance = None
+
+
+def get_webpay_api() -> WebPayAPI:
+    """Возвращает экземпляр WebPayAPI (создает при первом вызове)"""
+    global _webpay_instance
+    if _webpay_instance is None:
+        _webpay_instance = WebPayAPI()
+    return _webpay_instance
