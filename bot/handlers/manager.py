@@ -233,16 +233,19 @@ async def test_webpay_payment(callback: types.CallbackQuery):
     """Тестовый платеж через WebPay"""
     try:
         await callback.answer()
+        
+        # Берем ID того, кто нажал кнопку
+        user_id = callback.from_user.id
 
-        # Генерируем уникальный ID заказа
-        order_id = f"TEST_{uuid.uuid4().hex[:16]}"
+        # Генерируем уникальный ID заказа с user_id
+        order_id = f"USER_{user_id}_test_{uuid.uuid4().hex[:8]}"
 
         # Параметры тестового платежа
         amount = 10.00  # 10 BYN
-        description = "Тестовый платеж FootageHub"
+        description = f"Тестовый платеж FootageHub (User: {user_id})"
 
-        # URL для вебхуков (нужно будет настроить на сервере)
-        base_url = "https://footage.com.by"  # TODO: заменить на реальный домен
+        # URL для вебхуков
+        base_url = "https://footage.com.by"
         return_url = f"{base_url}/payment/success"
         cancel_url = f"{base_url}/payment/cancel"
         notify_url = f"{base_url}/api/webpay/webhook"
@@ -270,10 +273,11 @@ async def test_webpay_payment(callback: types.CallbackQuery):
 
             await callback.message.answer(
                 f"✅ Тестовый счет создан!\n\n"
-                f"📋 Номер заказа: {order_id}\n"
-                f"📄 Номер счета: {invoice_number}\n"
+                f"👤 User ID: {user_id}\n"
+                f"📋 Order ID: {order_id}\n"
+                f"📄 Invoice: {invoice_number}\n"
                 f"💰 Сумма: {amount} BYN\n\n"
-                f"Нажмите кнопку ниже для оплаты:",
+                f"Нажмите кнопку для оплаты:",
                 reply_markup=keyboard
             )
         else:
