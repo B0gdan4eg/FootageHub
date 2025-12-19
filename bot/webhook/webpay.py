@@ -19,9 +19,27 @@ async def webpay_webhook(request: Request):
     Документация: https://docs.webpay.by/en/paymentIntegration/cardIntegration/paymentNotification/
     """
     try:
-        # Получаем JSON из запроса
-        params = await request.json()
-        print(f"💳 [WEBPAY] Получено уведомление: {params}")
+        # Читаем raw body для отладки
+        body = await request.body()
+        print(f"🔍 [WEBPAY] Raw body: {body}")
+        print(f"🔍 [WEBPAY] Content-Type: {request.headers.get('content-type')}")
+        
+        # Пробуем получить параметры
+        content_type = request.headers.get("content-type", "").lower()
+        
+        if "application/json" in content_type:
+            # Создаем новый request для повторного чтения
+            from starlette.requests import Request as StarletteRequest
+            new_request = StarletteRequest(request.scope, receive=lambda: {"type": "http.request", "body": body})
+            params = await new_request.json()
+            print(f"💳 [WEBPAY] Получено JSON: {params}")
+        else:
+            # Form-data
+            from starlette.requests import Request as StarletteRequest
+            new_request = StarletteRequest(request.scope, receive=lambda: {"type": "http.request", "body": body})
+            form_data = await new_request.form()
+            params = dict(form_data)
+            print(f"💳 [WEBPAY] Получено form-data: {params}")
 
         # Проверяем подпись
         webpay_api = get_webpay_api()
@@ -47,7 +65,7 @@ async def webpay_webhook(request: Request):
         async for session in get_session():
             # Извлекаем user_id из order_id (формат: USER_{user_id}_{plan_key})
             try:
-                if order_id.startswith('USER_'):
+                if order_id and order_id.startswith('USER_'):
                     parts = order_id.split('_', 2)
                     user_id = int(parts[1])
                     plan_key = parts[2] if len(parts) > 2 else None
