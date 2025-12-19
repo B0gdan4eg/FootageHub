@@ -142,13 +142,13 @@ class WebPayAPI:
             }
 
     @staticmethod
-    def verify_webhook_signature(params: dict, secret_key: str) -> bool:
+    def verify_webhook_signature(params: dict, secret_key: str = None) -> bool:
         """
         Проверяет подпись webhook уведомления
 
         Args:
             params: Параметры из POST запроса
-            secret_key: Secret key от WebPay
+            secret_key: Secret key от WebPay (не используется для notification)
 
         Returns:
             True если подпись верна
@@ -157,10 +157,9 @@ class WebPayAPI:
 
         # Формируем строку для проверки подписи
         # Для NOTIFICATION используется ДРУГОЙ порядок полей, чем для создания платежа!
-        # Согласно документации WebPay для notification:
-        # batch_timestamp + currency_id + amount + payment_method + order_id + site_order_id +
-        # transaction_id + payment_type + rrn + secret_key
-
+        # Порядок: batch_timestamp + currency_id + amount + payment_method + order_id +
+        # site_order_id + transaction_id + payment_type + rrn
+        # ВАЖНО: secret_key НЕ добавляется в конец!
         fields = [
             params.get('batch_timestamp', ''),
             params.get('currency_id', ''),
@@ -170,8 +169,7 @@ class WebPayAPI:
             params.get('site_order_id', ''),
             params.get('transaction_id', ''),
             params.get('payment_type', ''),
-            params.get('rrn', ''),
-            secret_key
+            params.get('rrn', '')
         ]
 
         string_to_sign = ''.join(str(f) for f in fields)
