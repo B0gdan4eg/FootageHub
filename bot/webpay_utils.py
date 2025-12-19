@@ -175,6 +175,13 @@ class WebPayAPI:
         # Вычисляем MD5
         expected_signature = hashlib.md5(string_to_sign.encode('utf-8')).hexdigest()
 
+        # Отладочная информация
+        print(f"[WEBPAY] Signature verification:")
+        print(f"  String to sign: {string_to_sign}")
+        print(f"  Expected: {expected_signature}")
+        print(f"  Received: {received_signature}")
+        print(f"  Match: {expected_signature == received_signature}")
+
         return expected_signature == received_signature
 
 
