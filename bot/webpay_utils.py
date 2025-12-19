@@ -156,17 +156,22 @@ class WebPayAPI:
         received_signature = params.get('wsb_signature', '')
 
         # Формируем строку для проверки подписи
-        # Порядок полей важен!
+        # Используем тот же порядок, что и при создании платежа:
+        # wsb_seed, wsb_storeid, wsb_order_num, wsb_test, wsb_currency_id, wsb_total, secret_key
+        # Но в webhook эти поля называются иначе
+
+        # Определяем test mode (1 для sandbox, 0 для production)
+        # Пока предполагаем на основе текущих настроек
+        # TODO: Возможно нужно сохранять test mode при создании платежа
+        test_mode = '1' if params.get('order_id', '').startswith('TEST') else '0'
+
         fields = [
-            params.get('batch_timestamp', ''),
-            params.get('currency_id', ''),
-            params.get('amount', ''),
-            params.get('payment_method', ''),
-            params.get('order_id', ''),
-            params.get('site_order_id', ''),
-            params.get('transaction_id', ''),
-            params.get('payment_type', ''),
-            params.get('rrn', ''),
+            params.get('batch_timestamp', ''),      # = wsb_seed
+            params.get('order_id', ''),              # = wsb_storeid (внутренний ID WebPay)
+            params.get('site_order_id', ''),         # = wsb_order_num (наш ID)
+            test_mode,                                # = wsb_test
+            params.get('currency_id', ''),           # = wsb_currency_id
+            params.get('amount', ''),                # = wsb_total
             secret_key
         ]
 
