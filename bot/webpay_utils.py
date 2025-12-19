@@ -70,7 +70,7 @@ class WebPayAPI:
 
         Args:
             order_id: Уникальный номер заказа
-            amount: Сумма платежа в BYN
+            amount: Сумма платежа в RUB (будет автоматически конвертирована в BYN)
             description: Описание платежа
             return_url: URL для возврата после успешной оплаты
             cancel_url: URL для возврата при отмене
@@ -85,13 +85,16 @@ class WebPayAPI:
         # Генерируем seed (текущее время)
         seed = str(int(time.time()))
 
+        # Конвертируем RUB в BYN (курс примерно 1 RUB = 0.033 BYN)
+        amount_byn = round(amount * 0.033, 2)
+
         # Форматируем amount для подписи: если .00, то без дробной части
-        amount_for_signature = str(int(amount)) if amount == int(amount) else str(amount)
+        amount_byn_for_signature = str(int(amount_byn)) if amount_byn == int(amount_byn) else str(amount_byn)
 
         # Вычисляем подпись
         # Формат: seed + storeid + order_num + test + currency_id + total + secret_key
         test_mode = 1 if self.sandbox else 0
-        signature_string = f"{seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_for_signature}{self.secret_key}"
+        signature_string = f"{seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_for_signature}{self.secret_key}"
         signature = hashlib.sha1(signature_string.encode('utf-8')).hexdigest()
 
         # Формируем payload
@@ -104,8 +107,8 @@ class WebPayAPI:
             "wsb_test": test_mode,
             "wsb_invoice_item_name": [description],
             "wsb_invoice_item_quantity": [1],
-            "wsb_invoice_item_price": [amount],
-            "wsb_total": amount,
+            "wsb_invoice_item_price": [amount_byn],
+            "wsb_total": amount_byn,
             "wsb_signature": signature,
             "wsb_return_url": return_url,
             "wsb_cancel_return_url": cancel_url,

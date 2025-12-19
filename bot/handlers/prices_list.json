@@ -2,7 +2,7 @@
     "subscription_plans": {
         "monthly_150": {
             "name": "Загрузки",
-            "price": 5.9,
+            "price": 590.00,
             "period_days": 30,
             "total_limit": 150,
             "daily_limit": null,
@@ -10,7 +10,7 @@
         },
         "daily_30": {
             "name": "Дневная подписка",
-            "price": 11.9,
+            "price": 1190.00,
             "period_days": 30,
             "total_limit": null,
             "daily_limit": 30,

@@ -82,20 +82,30 @@ async def show_stats(callback: types.CallbackQuery):
         )
         freepik_downloads_today = result.scalar()
 
-        # Общая сумма всех успешных платежей
+        # Общая сумма всех успешных платежей по валютам
         result = await session.execute(
-            select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == "success")
+            select(
+                Payment.currency,
+                func.coalesce(func.sum(Payment.amount), 0)
+            ).where(Payment.status == "success").group_by(Payment.currency)
         )
-        total_payment_sum = float(result.scalar())
+        total_payments_by_currency = result.all()
 
-        # Сумма платежей за сегодня
+        # Сумма платежей за сегодня по валютам
         result = await session.execute(
-            select(func.coalesce(func.sum(Payment.amount), 0)).where(
+            select(
+                Payment.currency,
+                func.coalesce(func.sum(Payment.amount), 0)
+            ).where(
                 Payment.status == "success",
                 Payment.created_at >= today_start
-            )
+            ).group_by(Payment.currency)
         )
-        payment_sum_today = float(result.scalar())
+        payments_today_by_currency = result.all()
+
+    # Форматируем суммы по валютам
+    total_payments_text = "\n".join([f"   • {currency}: {amount:.2f}" for currency, amount in total_payments_by_currency]) if total_payments_by_currency else "   • Нет платежей"
+    today_payments_text = "\n".join([f"   • {currency}: {amount:.2f}" for currency, amount in payments_today_by_currency]) if payments_today_by_currency else "   • Нет платежей"
 
     text = (
         f"📊 Статистика:\n\n"
@@ -106,8 +116,8 @@ async def show_stats(callback: types.CallbackQuery):
         f"📥 Сегодня: {downloads_today}\n"
         f"   • Envato: {envato_downloads_today}\n"
         f"   • Freepik: {freepik_downloads_today}\n\n"
-        f"💰 Всего платежей: {total_payment_sum:.2f}\n"
-        f"💵 Сегодня: {payment_sum_today:.2f}"
+        f"💰 Всего платежей:\n{total_payments_text}\n\n"
+        f"💵 Сегодня:\n{today_payments_text}"
     )
     await callback.message.edit_text(text)
 # ------------------------------------------------------------

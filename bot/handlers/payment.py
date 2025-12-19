@@ -2,8 +2,9 @@ import json
 import logging
 from aiogram import Router, types, F
 import os
+import uuid
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from services.crypto import create_crypto_invoice
+from bot.webpay_utils import get_webpay_api
 from services.json_reader import dict_to_namespace
 from pathlib import Path
 from bot.handlers.messages import SUB_PAYMENT_MONTHLY, SUB_PAYMENT_DAILY, ALREADY_HAS_SUBSCRIPTION
@@ -45,7 +46,7 @@ async def send_price_menu(message_or_callback):
             callback_data = f"select_plan_{key}"
             keyboard_buttons.append([
                 InlineKeyboardButton(
-                    text=f"{item.name} ({limits_text}) — {item.price} USDT",
+                    text=f"{item.name} ({limits_text}) — {item.price} RUB",
                     callback_data=callback_data
                 )
             ])
@@ -145,18 +146,34 @@ async def show_plan_details(callback_query: types.CallbackQuery):
     print(f"[PAYMENT] Creating invoice for user_id: {user_id}, amount: {plan.price}, plan_key: {plan_key}")
 
     try:
-        pay_url, invoice_id = await create_crypto_invoice(
-            user_id=user_id,
+        # Генерируем уникальный ID заказа формата: USER_{user_id}_{plan_key}_{uuid}
+        order_id = f"USER_{user_id}_{plan_key}_{uuid.uuid4().hex[:8]}"
+
+        # URL для вебхуков
+        base_url = "https://footage.com.by"
+        return_url = f"{base_url}/payment/success"
+        cancel_url = f"{base_url}/payment/cancel"
+        notify_url = f"{base_url}/api/webpay/webhook"
+
+        # Создаем счет через WebPay
+        webpay_api = get_webpay_api()
+        result = await webpay_api.create_invoice(
+            order_id=order_id,
             amount=plan.price,
-            plan_key=plan_key
+            description=f"Покупка подписки {plan.name}",
+            return_url=return_url,
+            cancel_url=cancel_url,
+            notify_url=notify_url
         )
+
+        pay_url = result.get('invoiceUrl')
     except Exception as e:
         print(f"[PAYMENT] ❌ Error creating invoice: {e}")
         await callback_query.message.answer("❌ Ошибка при создании инвойса. Попробуйте позже.")
         await callback_query.answer()
         return
 
-    if not pay_url or not invoice_id:
+    if not pay_url or not order_id:
         print(f"[PAYMENT] ❌ Invoice creation returned empty values")
         await callback_query.message.answer("❌ Ошибка при создании инвойса. Попробуйте позже.")
         await callback_query.answer()
@@ -179,9 +196,9 @@ async def show_plan_details(callback_query: types.CallbackQuery):
                 session=session,
                 user_id=user.id,
                 amount=plan.price,
-                currency="USDT",
+                currency="RUB",
                 plan_key=plan_key,
-                invoice_id=invoice_id
+                invoice_id=order_id
             )
             print(f"[PAYMENT] Payment created successfully")
         except Exception as e:
