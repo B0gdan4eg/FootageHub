@@ -31,7 +31,7 @@ class WebPayAPI:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    "https://sandbox.webpay.by/api/login",
+                    "https://billing.webpay.by/api/login",
                     json={
                         "merchantId": self.merchant_id,
                         "username": self.api_key,
@@ -118,7 +118,7 @@ class WebPayAPI:
         }
 
         # API URL
-        api_url = "https://securesandbox.webpay.by/api/v1/payment"
+        api_url = "https://payment.webpay.by/api/v1/payment"
 
         # Выполняем запрос на создание платежа
         async with httpx.AsyncClient() as client:
