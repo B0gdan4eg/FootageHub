@@ -44,6 +44,7 @@ class WebPayAPI:
                 if response.status_code in (200, 201):
                     data = response.json()
                     new_token = data.get("data", {}).get("auth_token")
+                    print(new_token)
                     if new_token:
                         self.auth_token = new_token
                         self._token_refresh_time = time.time()
