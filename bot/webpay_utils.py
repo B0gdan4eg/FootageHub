@@ -160,10 +160,21 @@ class WebPayAPI:
         # wsb_seed, wsb_storeid, wsb_order_num, wsb_test, wsb_currency_id, wsb_total, secret_key
         # Но в webhook эти поля называются иначе
 
-        # Определяем test mode (1 для sandbox, 0 для production)
-        # Пока предполагаем на основе текущих настроек
-        # TODO: Возможно нужно сохранять test mode при создании платежа
-        test_mode = '1' if params.get('order_id', '').startswith('TEST') else '0'
+        # Определяем test mode (1 для тестовой оплаты, 0 для реальной)
+        # Для sandbox всегда 1
+        from bot.config import WEBPAY_SANDBOX
+        test_mode = '1' if WEBPAY_SANDBOX else '0'
+
+        # Форматируем amount: если дробная часть .00, убираем её
+        amount_str = params.get('amount', '')
+        try:
+            amount_float = float(amount_str)
+            if amount_float == int(amount_float):
+                amount_for_signature = str(int(amount_float))
+            else:
+                amount_for_signature = amount_str
+        except (ValueError, TypeError):
+            amount_for_signature = amount_str
 
         fields = [
             params.get('batch_timestamp', ''),      # = wsb_seed
@@ -171,7 +182,7 @@ class WebPayAPI:
             params.get('site_order_id', ''),         # = wsb_order_num (наш ID)
             test_mode,                                # = wsb_test
             params.get('currency_id', ''),           # = wsb_currency_id
-            params.get('amount', ''),                # = wsb_total
+            amount_for_signature,                    # = wsb_total
             secret_key
         ]
 
