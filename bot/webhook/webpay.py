@@ -74,7 +74,7 @@ async def webpay_webhook(request: Request):
                 if order_id and order_id.startswith('USER_'):
                     parts = order_id.split('_')
                     user_id = int(parts[1])
-                    plan_key = parts[2] if len(parts) > 2 else None
+                    plan_key = "_".join(parts[2:-1]) if len(parts) > 3 else None
                 else:
                     logger.warning(f"⚠️ [WEBPAY] Некорректный формат order_id: {order_id}")
                     return Response(content='{"code": 200}', status_code=200)
