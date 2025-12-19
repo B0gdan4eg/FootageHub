@@ -172,17 +172,23 @@ class WebPayAPI:
 
         string_to_sign = ''.join(str(f) for f in fields)
 
-        # Вычисляем MD5
-        expected_signature = hashlib.md5(string_to_sign.encode('utf-8')).hexdigest()
+        # Вычисляем SHA1 (для версии 2) или MD5 (для версии 1)
+        # Проверяем оба варианта
+        expected_signature_md5 = hashlib.md5(string_to_sign.encode('utf-8')).hexdigest()
+        expected_signature_sha1 = hashlib.sha1(string_to_sign.encode('utf-8')).hexdigest()
+        expected_signature = expected_signature_sha1  # Пробуем SHA1 для версии 2
 
         # Отладочная информация
         print(f"[WEBPAY] Signature verification:")
         print(f"  String to sign: {string_to_sign}")
-        print(f"  Expected: {expected_signature}")
-        print(f"  Received: {received_signature}")
-        print(f"  Match: {expected_signature == received_signature}")
+        print(f"  Expected MD5:  {expected_signature_md5}")
+        print(f"  Expected SHA1: {expected_signature_sha1}")
+        print(f"  Received:      {received_signature}")
+        print(f"  Match SHA1: {expected_signature_sha1 == received_signature}")
+        print(f"  Match MD5:  {expected_signature_md5 == received_signature}")
 
-        return expected_signature == received_signature
+        # Проверяем оба варианта
+        return expected_signature == received_signature or expected_signature_md5 == received_signature
 
 
 # Lazy initialization - создаем только при первом использовании
