@@ -5,6 +5,7 @@ from db.session import get_session
 from db.user_crud import get_user_by_telegram_id
 from bot.services import BotServices
 from aiogram.enums.parse_mode import ParseMode
+from urllib.parse import parse_qs
 import logging
 
 router = APIRouter()
@@ -19,27 +20,16 @@ async def webpay_webhook(request: Request):
     Документация: https://docs.webpay.by/en/paymentIntegration/cardIntegration/paymentNotification/
     """
     try:
-        # Читаем raw body для отладки
+        # Читаем body и парсим URL-encoded данные
         body = await request.body()
-        print(f"🔍 [WEBPAY] Raw body: {body}")
-        print(f"🔍 [WEBPAY] Content-Type: {request.headers.get('content-type')}")
+        body_str = body.decode('utf-8')
         
-        # Пробуем получить параметры
-        content_type = request.headers.get("content-type", "").lower()
+        # Парсим URL-encoded данные
+        parsed = parse_qs(body_str)
+        # parse_qs возвращает списки значений, берем первый элемент
+        params = {k: v[0] if v else None for k, v in parsed.items()}
         
-        if "application/json" in content_type:
-            # Создаем новый request для повторного чтения
-            from starlette.requests import Request as StarletteRequest
-            new_request = StarletteRequest(request.scope, receive=lambda: {"type": "http.request", "body": body})
-            params = await new_request.json()
-            print(f"💳 [WEBPAY] Получено JSON: {params}")
-        else:
-            # Form-data
-            from starlette.requests import Request as StarletteRequest
-            new_request = StarletteRequest(request.scope, receive=lambda: {"type": "http.request", "body": body})
-            form_data = await new_request.form()
-            params = dict(form_data)
-            print(f"💳 [WEBPAY] Получено form-data: {params}")
+        print(f"💳 [WEBPAY] Получено уведомление: {params}")
 
         # Проверяем подпись
         webpay_api = get_webpay_api()
