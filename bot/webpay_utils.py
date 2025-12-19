@@ -156,55 +156,37 @@ class WebPayAPI:
         received_signature = params.get('wsb_signature', '')
 
         # Формируем строку для проверки подписи
-        # Используем тот же порядок, что и при создании платежа:
-        # wsb_seed, wsb_storeid, wsb_order_num, wsb_test, wsb_currency_id, wsb_total, secret_key
-        # Но в webhook эти поля называются иначе
-
-        # Определяем test mode (1 для тестовой оплаты, 0 для реальной)
-        # Для sandbox всегда 1
-        from bot.config import WEBPAY_SANDBOX
-        test_mode = '1' if WEBPAY_SANDBOX else '0'
-
-        # Форматируем amount: если дробная часть .00, убираем её
-        amount_str = params.get('amount', '')
-        try:
-            amount_float = float(amount_str)
-            if amount_float == int(amount_float):
-                amount_for_signature = str(int(amount_float))
-            else:
-                amount_for_signature = amount_str
-        except (ValueError, TypeError):
-            amount_for_signature = amount_str
+        # Для NOTIFICATION используется ДРУГОЙ порядок полей, чем для создания платежа!
+        # Согласно документации WebPay для notification:
+        # batch_timestamp + currency_id + amount + payment_method + order_id + site_order_id +
+        # transaction_id + payment_type + rrn + secret_key
 
         fields = [
-            params.get('batch_timestamp', ''),      # = wsb_seed
-            params.get('order_id', ''),              # = wsb_storeid (внутренний ID WebPay)
-            params.get('site_order_id', ''),         # = wsb_order_num (наш ID)
-            test_mode,                                # = wsb_test
-            params.get('currency_id', ''),           # = wsb_currency_id
-            amount_for_signature,                    # = wsb_total
+            params.get('batch_timestamp', ''),
+            params.get('currency_id', ''),
+            params.get('amount', ''),
+            params.get('payment_method', ''),
+            params.get('order_id', ''),
+            params.get('site_order_id', ''),
+            params.get('transaction_id', ''),
+            params.get('payment_type', ''),
+            params.get('rrn', ''),
             secret_key
         ]
 
         string_to_sign = ''.join(str(f) for f in fields)
 
-        # Вычисляем SHA1 (для версии 2) или MD5 (для версии 1)
-        # Проверяем оба варианта
-        expected_signature_md5 = hashlib.md5(string_to_sign.encode('utf-8')).hexdigest()
-        expected_signature_sha1 = hashlib.sha1(string_to_sign.encode('utf-8')).hexdigest()
-        expected_signature = expected_signature_sha1  # Пробуем SHA1 для версии 2
+        # Для notification всегда используется MD5 (независимо от версии)
+        expected_signature = hashlib.md5(string_to_sign.encode('utf-8')).hexdigest()
 
         # Отладочная информация
         print(f"[WEBPAY] Signature verification:")
         print(f"  String to sign: {string_to_sign}")
-        print(f"  Expected MD5:  {expected_signature_md5}")
-        print(f"  Expected SHA1: {expected_signature_sha1}")
-        print(f"  Received:      {received_signature}")
-        print(f"  Match SHA1: {expected_signature_sha1 == received_signature}")
-        print(f"  Match MD5:  {expected_signature_md5 == received_signature}")
+        print(f"  Expected MD5: {expected_signature}")
+        print(f"  Received:     {received_signature}")
+        print(f"  Match: {expected_signature == received_signature}")
 
-        # Проверяем оба варианта
-        return expected_signature == received_signature or expected_signature_md5 == received_signature
+        return expected_signature == received_signature
 
 
 # Lazy initialization - создаем только при первом использовании
