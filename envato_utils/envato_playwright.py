@@ -156,9 +156,19 @@ class EnvatoDownloader:
 
             # Click download button - новый или старый формат
             if redirected or "app.envato.com" in page.url:
-                # Новый формат кнопки на app.envato.com
-                await page.wait_for_selector("button[data-analytics-name='download']", state="visible", timeout=10000)
-                await page.click("button[data-analytics-name='download']", delay=0)
+                # Новый формат кнопки на app.envato.com - универсальный селектор
+                button_clicked = False
+                for selector in ["button:has-text('Скачать')", "button[data-analytics-name='download']"]:
+                    try:
+                        await page.wait_for_selector(selector, state="visible", timeout=5000)
+                        await page.click(selector, delay=0)
+                        button_clicked = True
+                        break
+                    except Exception:
+                        continue
+
+                if not button_clicked:
+                    raise Exception("Download button not found on app.envato.com")
             else:
                 # Старый формат кнопки на elements.envato.com
                 await page.wait_for_selector("button[data-testid='button-download']", state="visible", timeout=10000)

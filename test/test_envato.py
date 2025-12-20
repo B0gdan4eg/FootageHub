@@ -116,21 +116,41 @@ class EnvatoDownloader:
 
             print(f"[DEBUG] Final URL: {page.url}")
 
-            # Click download button - пробуем новый формат, если не получается - старый
+            # Click download button - универсальный селектор
             print("[DEBUG] Clicking download button...")
-            if redirected or "app.envato.com" in page.url:
-                # Новый формат кнопки на app.envato.com
-                await page.wait_for_selector("button[data-analytics-name='download']", state="visible", timeout=10000)
-                await page.click("button[data-analytics-name='download']", delay=0)
-                print("[DEBUG] Clicked NEW format button (data-analytics-name)")
-            else:
-                # Старый формат кнопки на elements.envato.com
-                await page.wait_for_selector("button[data-testid='button-download']", state="visible", timeout=10000)
-                await page.click("button[data-testid='button-download']", delay=0)
-                await asyncio.sleep(0.5)
-                # Кликаем "download without license"
-                await page.click("button[data-testid='download-without-license-button']", delay=0)
-                print("[DEBUG] Clicked OLD format buttons (data-testid)")
+
+            # Пробуем найти кнопку по разным селекторам
+            download_button_selectors = [
+                "button:has-text('Скачать')",  # Универсальный по тексту
+                "button[data-analytics-name='download']",  # Новый формат
+                "button[data-testid='button-download']"  # Старый формат
+            ]
+
+            button_clicked = False
+            for selector in download_button_selectors:
+                try:
+                    await page.wait_for_selector(selector, state="visible", timeout=3000)
+                    await page.click(selector, delay=0)
+                    print(f"[DEBUG] Clicked button with selector: {selector}")
+                    button_clicked = True
+                    break
+                except Exception as e:
+                    print(f"[DEBUG] Selector '{selector}' not found, trying next...")
+                    continue
+
+            if not button_clicked:
+                print("[DEBUG] ❌ No download button found with any known selector")
+                raise Exception("Download button not found")
+
+            # Для старого формата нужен дополнительный клик
+            if "elements.envato.com" in page.url:
+                try:
+                    await asyncio.sleep(0.5)
+                    await page.click("button[data-testid='download-without-license-button']", delay=0)
+                    print("[DEBUG] Clicked 'download without license' button")
+                except:
+                    pass
+
             print("[DEBUG] Button clicked, waiting for download event...")
 
             # Wait for download event with timeout
@@ -233,7 +253,7 @@ async def get_envato_direct_download_url(asset_url: str) -> str | None:
 # Test/debug functions
 async def test_single_url():
     """Test single URL download"""
-    test_url = "https://elements.envato.com/ru/financial-growth-scene-CZP362L"
+    test_url = "https://elements.envato.com/ru/smartphone-R8WRCX8"
     print("="*70)
     print("🚀 Получение прямой ссылки на скачивание")
     print("="*70)
