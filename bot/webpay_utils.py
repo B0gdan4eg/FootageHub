@@ -6,6 +6,7 @@ from bot.config import (
     WEBPAY_API_KEY,
     WEBPAY_AUTH_TOKEN,
     WEBPAY_SECRET_KEY,
+    WEBPAY_SIGNING_KEY,
     WEBPAY_SANDBOX
 )
 
@@ -16,7 +17,8 @@ class WebPayAPI:
     def __init__(self):
         self.merchant_id = WEBPAY_RESOURCE_ID
         self.auth_token = WEBPAY_AUTH_TOKEN  # Токен из .env
-        self.secret_key = WEBPAY_SECRET_KEY  # Для проверки webhook подписей
+        self.secret_key = WEBPAY_SECRET_KEY  # Password для логина (для авторизации)
+        self.signing_key = WEBPAY_SIGNING_KEY  # Secret key для подписи платежей
         self.api_key = WEBPAY_API_KEY  # Username для автоматического обновления токена
         self.sandbox = WEBPAY_SANDBOX
         self._token_refresh_time = time.time()  # Время последнего обновления токена
@@ -89,14 +91,28 @@ class WebPayAPI:
         # Конвертируем RUB в BYN (курс примерно 1 RUB = 0.033 BYN)
         amount_byn = round(amount * 0.033, 2)
 
-        # Форматируем amount для подписи: если .00, то без дробной части
-        amount_byn_for_signature = str(int(amount_byn)) if amount_byn == int(amount_byn) else str(amount_byn)
+        # Форматируем amount для подписи по документации WebPay:
+        # если поле содержит дробную часть (например, 1.00), используйте значение с нулями
+        # если поле не содержит дробную часть (например, 1), используйте значение без нулей
+        amount_byn_for_signature = f"{amount_byn:.2f}"
 
         # Вычисляем подпись
-        # Формат: seed + storeid + order_num + test + currency_id + total + secret_key
+        # Формат: seed + storeid + order_num + test + currency_id + total + signing_key
         test_mode = 1 if self.sandbox else 0
-        signature_string = f"{seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_for_signature}{self.secret_key}"
+        signature_string = f"{seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_for_signature}{self.signing_key}"
         signature = hashlib.sha1(signature_string.encode('utf-8')).hexdigest()
+
+        print(f"[WEBPAY] 🔐 Signature debug:")
+        print(f"  seed: {seed}")
+        print(f"  merchant_id: {self.merchant_id}")
+        print(f"  order_id: {order_id}")
+        print(f"  test_mode: {test_mode}")
+        print(f"  amount_byn: {amount_byn}")
+        print(f"  amount_byn_for_signature: {amount_byn_for_signature}")
+        print(f"  signing_key length: {len(self.signing_key)}")
+        print(f"  signing_key (first 10 chars): {self.signing_key[:10]}")
+        print(f"  signature_string length: {len(signature_string)}")
+        print(f"  signature: {signature}")
 
         # Формируем payload
         payload = {
@@ -133,6 +149,13 @@ class WebPayAPI:
                 },
                 timeout=30.0
             )
+
+            # Если ошибка, показываем тело ответа
+            if response.status_code >= 400:
+                error_body = response.text
+                print(f"[WEBPAY] ❌ Status: {response.status_code}")
+                print(f"[WEBPAY] ❌ Response body: {error_body}")
+
             response.raise_for_status()
             data = response.json()
 
