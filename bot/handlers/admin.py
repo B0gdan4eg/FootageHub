@@ -18,11 +18,9 @@ from pathlib import Path
 from aiogram.filters import Command
 from enum import Enum
 from datetime import datetime, timezone
+from bot.config import PRICE_LIST_PATH as PRICE_LIST
 
 router = Router()
-
-# УБРАТЬ!!!
-PRICE_LIST = Path(__file__).resolve().parent / "prices_list.json"
 
 
 # Метод проверки роли админа

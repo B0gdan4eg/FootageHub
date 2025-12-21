@@ -10,6 +10,16 @@ class DownloadFlow(StatesGroup):
 class ManagerFlow(StatesGroup):
     waiting_for_description = State()     # Выбор действия
     waiting_for_ref_code = State() # (если нужно по ID глянуть)
+    # NANO BANANA configuration states
+    waiting_for_prompt = State()
+    waiting_for_aspect_ratio = State()
+    waiting_for_resolution = State()
+    waiting_for_output_format = State()
+    # Kling video generation states
+    waiting_for_video_prompt = State()
+    waiting_for_video_aspect_ratio = State()
+    waiting_for_video_duration = State()
+    waiting_for_video_sound = State()
 
 class AdminStates(StatesGroup):
     waiting_for_user_id = State()

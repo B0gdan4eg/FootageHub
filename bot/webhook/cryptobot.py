@@ -8,13 +8,12 @@ from db.models import SubscriptionType, ServiceType
 from bot.handlers.messages import SUBSCRIPTION_ACTIVATED
 from bot.services import BotServices
 from aiogram.enums.parse_mode import ParseMode
-from pathlib import Path
 from datetime import datetime
 import json
 import os
+from bot.config import PRICE_LIST_PATH as PRICE_LIST
 
 router = APIRouter()
-PRICE_LIST = Path(__file__).resolve().parent.parent / "handlers" / "prices_list.json"
 
 
 @router.post("/webhook/cryptobot")

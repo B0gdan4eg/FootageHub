@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
 load_dotenv()
 
@@ -16,3 +17,15 @@ WEBPAY_SECRET_KEY = os.getenv("WEBPAY_SECRET_KEY")  # Password для логин
 WEBPAY_SIGNING_KEY = os.getenv("WEBPAY_SIGNING_KEY")  # Secret key для подписи платежей
 WEBPAY_AUTH_TOKEN = os.getenv("WEBPAY_AUTH_TOKEN")  # Auth token (получить через get_webpay_token.py)
 WEBPAY_SANDBOX = os.getenv("WEBPAY_SANDBOX", "false").lower() == "true"
+
+# Channel configuration
+CHANNEL_ID = os.getenv("CHANNEL_ID", "@footagehub_channel")
+CHANNEL_BONUS_CREDITS = int(os.getenv("CHANNEL_BONUS_CREDITS", "2"))
+
+# Kie.ai API configuration
+KIE_AI_API_KEY = os.getenv("KIE_AI_API_KEY")
+
+# File paths
+BOT_DIR = Path(__file__).resolve().parent
+HANDLERS_DIR = BOT_DIR / "handlers"
+PRICE_LIST_PATH = HANDLERS_DIR / "prices_list.json"

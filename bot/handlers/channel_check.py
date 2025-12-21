@@ -12,9 +12,7 @@ import os
 import json
 import aiofiles
 from sqlalchemy.ext.asyncio import AsyncSession
-
-# ID или @username канала УБРАТЬ!!!
-CHANNEL_ID = "@footagehub_channel"  # например, "@mycoolchannel"
+from bot.config import CHANNEL_ID, CHANNEL_BONUS_CREDITS
 
 router = Router()
 
@@ -80,9 +78,9 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                     bonus_given = await give_channel_bonus(user_id, CHANNEL_ID)
                     print(f"[DEBUG] Bonus given: {bonus_given}")
                     if bonus_given:
-                        user.credits += 2  # начисляем 2 кредита
+                        user.credits += CHANNEL_BONUS_CREDITS
                         await session.commit()
-                        text = f"{CHANEL_APPLY}\n💰 Вам начислено 2 кредита за подписку!"
+                        text = f"{CHANEL_APPLY}\n💰 Вам начислено {CHANNEL_BONUS_CREDITS} кредита за подписку!"
                     else:
                         text = f"{CHANEL_APPLY}\n❌ Бонус за подписку вы уже получали ранее."
 

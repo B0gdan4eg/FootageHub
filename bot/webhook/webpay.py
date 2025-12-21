@@ -10,14 +10,12 @@ from bot.handlers.messages import SUBSCRIPTION_ACTIVATED
 from bot.services import BotServices
 from aiogram.enums.parse_mode import ParseMode
 from urllib.parse import parse_qs
-from pathlib import Path
 import json
 import logging
+from bot.config import PRICE_LIST_PATH as PRICE_LIST
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-PRICE_LIST = Path(__file__).resolve().parent.parent / "handlers" / "prices_list.json"
 
 
 @router.post("/api/webpay/webhook")

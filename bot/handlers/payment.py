@@ -14,11 +14,10 @@ from db.user_crud import get_user_by_telegram_id
 from db.subscription_crud import get_active_subscription
 from aiogram.filters import Command
 from datetime import datetime
+from bot.config import PRICE_LIST_PATH as PRICE_LIST
 
 logger = logging.getLogger(__name__)
 router = Router()
-
-PRICE_LIST = Path(__file__).resolve().parent / "prices_list.json"
 
 
 async def send_price_menu(message_or_callback):
