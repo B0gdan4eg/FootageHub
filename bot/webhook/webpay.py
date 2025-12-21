@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Response
 from bot.webpay_utils import get_webpay_api
-from bot.config import WEBPAY_SECRET_KEY
+from bot.config import WEBPAY_SIGNING_KEY
 from db.session import get_session
 from db.user_crud import get_user_by_telegram_id
 from db.payment_crud import get_payment_by_invoice_id, mark_payment_success
@@ -41,7 +41,7 @@ async def webpay_webhook(request: Request):
 
         # Проверяем подпись
         webpay_api = get_webpay_api()
-        if not webpay_api.verify_webhook_signature(params, WEBPAY_SECRET_KEY):
+        if not webpay_api.verify_webhook_signature(params, WEBPAY_SIGNING_KEY):
             logger.warning(f"❌ [WEBPAY] Неверная подпись! Params: {params}")
             return Response(content='{"code": 400, "message": "Invalid signature"}', status_code=400)
 
