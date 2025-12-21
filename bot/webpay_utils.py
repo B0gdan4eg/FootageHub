@@ -102,17 +102,7 @@ class WebPayAPI:
         signature_string = f"{seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_for_signature}{self.signing_key}"
         signature = hashlib.sha1(signature_string.encode('utf-8')).hexdigest()
 
-        print(f"[WEBPAY] 🔐 Signature debug:")
-        print(f"  seed: {seed}")
-        print(f"  merchant_id: {self.merchant_id}")
-        print(f"  order_id: {order_id}")
-        print(f"  test_mode: {test_mode}")
-        print(f"  amount_byn: {amount_byn}")
-        print(f"  amount_byn_for_signature: {amount_byn_for_signature}")
-        print(f"  signing_key length: {len(self.signing_key)}")
-        print(f"  signing_key (first 10 chars): {self.signing_key[:10]}")
-        print(f"  signature_string length: {len(signature_string)}")
-        print(f"  signature: {signature}")
+        print(f"[WEBPAY] Creating invoice: order_id={order_id}, amount={amount_byn} BYN")
 
         # Формируем payload
         payload = {
@@ -172,7 +162,7 @@ class WebPayAPI:
 
         Args:
             params: Параметры из POST запроса
-            secret_key: Secret key от WebPay (не используется для notification)
+            secret_key: Secret key от WebPay (signing_key)
 
         Returns:
             True если подпись верна
@@ -180,10 +170,9 @@ class WebPayAPI:
         received_signature = params.get('wsb_signature', '')
 
         # Формируем строку для проверки подписи
-        # Для NOTIFICATION используется ДРУГОЙ порядок полей, чем для создания платежа!
-        # Порядок: batch_timestamp + currency_id + amount + payment_method + order_id +
-        # site_order_id + transaction_id + payment_type + rrn
-        # ВАЖНО: secret_key НЕ добавляется в конец!
+        # Для NOTIFICATION: batch_timestamp + currency_id + amount + payment_method +
+        # order_id + site_order_id + transaction_id + payment_type + rrn + SECRET_KEY
+        # ВАЖНО: В webhook используется signing_key в конце!
         fields = [
             params.get('batch_timestamp', ''),
             params.get('currency_id', ''),
@@ -196,19 +185,21 @@ class WebPayAPI:
             params.get('rrn', '')
         ]
 
-        string_to_sign = ''.join(str(f) for f in fields)
+        # Добавляем secret_key в конец
+        string_to_sign = ''.join(str(f) for f in fields) + (secret_key or '')
 
         # Для notification всегда используется MD5 (независимо от версии)
         expected_signature = hashlib.md5(string_to_sign.encode('utf-8')).hexdigest()
 
-        # Отладочная информация
-        print(f"[WEBPAY] Signature verification:")
-        print(f"  String to sign: {string_to_sign}")
-        print(f"  Expected MD5: {expected_signature}")
-        print(f"  Received:     {received_signature}")
-        print(f"  Match: {expected_signature == received_signature}")
+        match = expected_signature == received_signature
 
-        return expected_signature == received_signature
+        # Логируем только ошибки
+        if not match:
+            print(f"[WEBPAY] ❌ Signature mismatch!")
+            print(f"  Expected: {expected_signature}")
+            print(f"  Received: {received_signature}")
+
+        return match
 
 
 # Lazy initialization - создаем только при первом использовании
