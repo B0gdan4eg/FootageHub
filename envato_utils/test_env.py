@@ -3,6 +3,7 @@ import logging
 from typing import NamedTuple
 from envato_utils.envato_playwright import EnvatoDownloader
 from freepik_utils.freepik import FreepikDownloader
+from bot.config import BROWSER_RESTART_AFTER
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -22,12 +23,14 @@ class LinkProcessor:
     Supports both WITH and WITHOUT license downloads for Envato.
     """
 
-    def __init__(self, max_workers=5, restart_after=50):
+    def __init__(self, max_workers=5, restart_after=None):
         """
         Args:
             max_workers: Number of concurrent workers (default: 5, reduced from 10 to prevent resource exhaustion)
-            restart_after: Restart browser context after N requests to prevent memory leaks (default: 50)
+            restart_after: Restart browser context after N requests to prevent memory leaks (default: from config.BROWSER_RESTART_AFTER)
         """
+        if restart_after is None:
+            restart_after = BROWSER_RESTART_AFTER
         self.queue = asyncio.Queue()
         self.max_workers = max_workers
         self.restart_after = restart_after

@@ -8,13 +8,14 @@ from datetime import datetime
 import shutil
 import tempfile
 from pathlib import Path
+from bot.config import DAILY_FREE_CREDITS
 
 async def scheduler_job(bot: Bot):
     """Ежедневная выдача кредитов."""
     print("Ежедневное начисление!")
     async for session in get_session():
-        # Всем пользователям начисляем базовые 3 кредита
-        await session.execute(update(User).values(credits=3))
+        # Всем пользователям начисляем базовые бесплатные кредиты
+        await session.execute(update(User).values(credits=DAILY_FREE_CREDITS))
 
         # Получаем всех пользователей с активной дневной подпиской
         result = await session.execute(

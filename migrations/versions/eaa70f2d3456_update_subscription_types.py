@@ -20,9 +20,35 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Обновляем enum типы для subscriptiontype
-    op.execute("ALTER TYPE subscriptiontype RENAME VALUE 'MONTHLY_100' TO 'MONTHLY_150'")
-    op.execute("ALTER TYPE subscriptiontype RENAME VALUE 'DAILY_20' TO 'DAILY_30'")
+    from sqlalchemy import text
+    conn = op.get_bind()
+
+    # Проверяем существование старых значений перед переименованием
+    try:
+        result = conn.execute(text(
+            "SELECT EXISTS (SELECT 1 FROM pg_enum e "
+            "JOIN pg_type t ON e.enumtypid = t.oid "
+            "WHERE t.typname = 'subscriptiontype' AND e.enumlabel = 'MONTHLY_100')"
+        ))
+        if result.scalar():
+            op.execute("ALTER TYPE subscriptiontype RENAME VALUE 'MONTHLY_100' TO 'MONTHLY_150'")
+        else:
+            print("Info: MONTHLY_100 already renamed or doesn't exist")
+    except Exception as e:
+        print(f"Warning: Could not rename MONTHLY_100: {e}")
+
+    try:
+        result = conn.execute(text(
+            "SELECT EXISTS (SELECT 1 FROM pg_enum e "
+            "JOIN pg_type t ON e.enumtypid = t.oid "
+            "WHERE t.typname = 'subscriptiontype' AND e.enumlabel = 'DAILY_20')"
+        ))
+        if result.scalar():
+            op.execute("ALTER TYPE subscriptiontype RENAME VALUE 'DAILY_20' TO 'DAILY_30'")
+        else:
+            print("Info: DAILY_20 already renamed or doesn't exist")
+    except Exception as e:
+        print(f"Warning: Could not rename DAILY_20: {e}")
 
 
 def downgrade() -> None:

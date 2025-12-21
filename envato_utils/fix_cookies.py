@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
 """
-Скрипт для конвертации cookies в формат Playwright
-Читает из new_cookies.json и создаёт envato_cookies_N.json (где N - следующий номер)
-Исправляет проблемы с sameSite и другими полями
+Скрипт для конвертации Envato cookies в формат Playwright.
+Использует универсальную утилиту из utils.cookie_fixer.
+Читает из new_cookies.json и создаёт envato_cookies_N.json (где N - следующий номер).
 """
-import json
-import os
 from pathlib import Path
+import json
 import glob
+import sys
+
+# Добавляем корневую директорию в путь для импорта
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from utils.cookie_fixer import fix_cookies_file, print_cookie_stats
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 INPUT_COOKIE_FILE = SCRIPT_DIR / "new_cookies.json"
+
+# Важные cookies для Envato
+IMPORTANT_COOKIES = ['envatoid', 'elements.session.5', '_elements_session_4', 'envato_client_id']
+
 
 def get_next_cookie_number():
     """Находит следующий доступный номер для envato_cookies_N.json"""
@@ -27,15 +36,16 @@ def get_next_cookie_number():
             num_str = filename.replace("envato_cookies_", "").replace(".json", "")
             if num_str.isdigit():
                 numbers.append(int(num_str))
-        except:
+        except Exception:
             continue
 
     return max(numbers) + 1 if numbers else 1
 
-def fix_cookies():
-    print("="*70)
-    print("🔧 Конвертация cookies в формат Playwright")
-    print("="*70)
+
+def main():
+    print("=" * 70)
+    print("🔧 Конвертация Envato cookies в формат Playwright")
+    print("=" * 70)
 
     if not INPUT_COOKIE_FILE.exists():
         print(f"❌ Файл {INPUT_COOKIE_FILE.name} не найден!")
@@ -44,111 +54,41 @@ def fix_cookies():
 
     # Определяем номер для нового файла
     next_num = get_next_cookie_number()
-    OUTPUT_COOKIE_FILE = SCRIPT_DIR / f"envato_cookies_{next_num}.json"
-    BACKUP_FILE = SCRIPT_DIR / "new_cookies.backup.json"
+    output_file = SCRIPT_DIR / f"envato_cookies_{next_num}.json"
 
     print(f"📥 Входной файл: {INPUT_COOKIE_FILE.name}")
-    print(f"📤 Выходной файл: {OUTPUT_COOKIE_FILE.name}")
+    print(f"📤 Выходной файл: {output_file.name}")
 
-    # Создаем бэкап
     try:
-        with open(INPUT_COOKIE_FILE, "r", encoding="utf-8") as f:
-            original_cookies = json.load(f)
+        # Исправляем cookies с использованием универсальной утилиты
+        fixed_count, total_count = fix_cookies_file(
+            cookie_file=INPUT_COOKIE_FILE,
+            output_file=output_file,
+            backup=True,
+            default_domain=".elements.envato.com"
+        )
 
-        with open(BACKUP_FILE, "w", encoding="utf-8") as f:
-            json.dump(original_cookies, f, indent=4, ensure_ascii=False)
-        print(f"✅ Создан бэкап: {BACKUP_FILE.name}")
+        print(f"✅ Исправлено {fixed_count} из {total_count} cookies")
+        print(f"✅ Сохранено в {output_file.name}")
+
+        # Загружаем и показываем статистику
+        with open(output_file, "r", encoding="utf-8") as f:
+            cookies = json.load(f)
+
+        print_cookie_stats(cookies, IMPORTANT_COOKIES)
+
+        print("\n" + "=" * 70)
+        print(f"✅ Файл {output_file.name} готов к использованию!")
+        print("=" * 70)
+        print(f"\n💡 Совет: Обновите cookie_index.txt если используете ротацию")
+
+    except FileNotFoundError as e:
+        print(f"❌ Ошибка: {e}")
+    except json.JSONDecodeError as e:
+        print(f"❌ Ошибка парсинга JSON: {e}")
     except Exception as e:
-        print(f"❌ Ошибка чтения файла: {e}")
-        return
-
-    # Конвертируем cookies
-    fixed_cookies = []
-    for cookie in original_cookies:
-        if not isinstance(cookie, dict):
-            continue
-
-        # Создаем новый cookie с правильными полями
-        fixed_cookie = {
-            "name": cookie.get("name", ""),
-            "value": cookie.get("value", ""),
-            "domain": cookie.get("domain", ".elements.envato.com"),
-            "path": cookie.get("path", "/"),
-        }
-
-        # Исправляем sameSite
-        same_site = cookie.get("sameSite")
-        if same_site is None:
-            same_site = ""
-        else:
-            same_site = str(same_site).strip()
-
-        if same_site in ["Strict", "Lax", "None"]:
-            fixed_cookie["sameSite"] = same_site
-        elif same_site.lower() == "strict":
-            fixed_cookie["sameSite"] = "Strict"
-        elif same_site.lower() == "lax":
-            fixed_cookie["sameSite"] = "Lax"
-        elif same_site.lower() == "none" or same_site.lower() == "no_restriction":
-            fixed_cookie["sameSite"] = "None"
-        else:
-            # По умолчанию Lax если не указано
-            fixed_cookie["sameSite"] = "Lax"
-
-        # Добавляем expires (если есть)
-        if "expires" in cookie or "expirationDate" in cookie:
-            expires = cookie.get("expires") or cookie.get("expirationDate")
-            if expires and expires != -1:
-                # Playwright ожидает expires в секундах (Unix timestamp)
-                fixed_cookie["expires"] = int(expires) if expires > 0 else -1
-
-        # Добавляем httpOnly
-        if "httpOnly" in cookie:
-            fixed_cookie["httpOnly"] = bool(cookie["httpOnly"])
-
-        # Добавляем secure
-        if "secure" in cookie:
-            fixed_cookie["secure"] = bool(cookie["secure"])
-
-        fixed_cookies.append(fixed_cookie)
-
-    # Сохраняем исправленные cookies в новый файл
-    try:
-        with open(OUTPUT_COOKIE_FILE, "w", encoding="utf-8") as f:
-            json.dump(fixed_cookies, f, indent=4, ensure_ascii=False)
-        print(f"✅ Исправлено {len(fixed_cookies)} cookies")
-        print(f"✅ Сохранено в {OUTPUT_COOKIE_FILE.name}")
-    except Exception as e:
-        print(f"❌ Ошибка сохранения: {e}")
-        return
-
-    # Показываем статистику
-    print(f"\n📊 Статистика:")
-    same_site_stats = {}
-    for cookie in fixed_cookies:
-        ss = cookie.get("sameSite", "None")
-        same_site_stats[ss] = same_site_stats.get(ss, 0) + 1
-
-    for ss, count in same_site_stats.items():
-        print(f"   sameSite={ss}: {count} cookies")
-
-    # Проверяем важные cookies для Envato
-    important_names = ['envatoid', 'elements.session.5', '_elements_session_4', 'envato_client_id']
-    found_important = [c['name'] for c in fixed_cookies if c['name'] in important_names]
-
-    if found_important:
-        print(f"\n🔑 Важные cookies найдены:")
-        for name in found_important:
-            print(f"   ✅ {name}")
-    else:
-        print(f"\n⚠️  Важные cookies для Envato не найдены")
-        print(f"   Ожидаемые: {', '.join(important_names)}")
-
-    print("\n" + "="*70)
-    print(f"✅ Файл {OUTPUT_COOKIE_FILE.name} готов к использованию!")
-    print("="*70)
-    print(f"\n💡 Совет: Обновите cookie_index.txt если используете ротацию")
+        print(f"❌ Неожиданная ошибка: {e}")
 
 
 if __name__ == "__main__":
-    fix_cookies()
+    main()

@@ -29,3 +29,15 @@ KIE_AI_API_KEY = os.getenv("KIE_AI_API_KEY")
 BOT_DIR = Path(__file__).resolve().parent
 HANDLERS_DIR = BOT_DIR / "handlers"
 PRICE_LIST_PATH = HANDLERS_DIR / "prices_list.json"
+
+# Лимиты и таймауты
+MAX_CONCURRENT_DOWNLOADS = int(os.getenv("MAX_CONCURRENT_DOWNLOADS", "3"))
+BROWSER_RESTART_AFTER = int(os.getenv("BROWSER_RESTART_AFTER", "50"))
+DOWNLOAD_TIMEOUT_SECONDS = int(os.getenv("DOWNLOAD_TIMEOUT_SECONDS", "300"))
+
+# Бонусы и кредиты
+DAILY_FREE_CREDITS = int(os.getenv("DAILY_FREE_CREDITS", "3"))
+
+# Размеры браузера
+BROWSER_VIEWPORT_WIDTH = 1920
+BROWSER_VIEWPORT_HEIGHT = 1080
