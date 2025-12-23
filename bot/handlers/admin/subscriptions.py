@@ -61,7 +61,9 @@ async def receive_subscription_user_id(message: types.Message, state: FSMContext
 
     # Показываем выбор плана подписки
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📦 Monthly 50 (30 дней)", callback_data="sub_plan_monthly_50")],
         [InlineKeyboardButton(text="📦 Monthly 150 (30 дней)", callback_data="sub_plan_monthly_150")],
+        [InlineKeyboardButton(text="📦 Monthly 400 (30 дней)", callback_data="sub_plan_monthly_400")],
         [InlineKeyboardButton(text="⚡ Daily 30 (30 дней)", callback_data="sub_plan_daily_30")],
         [InlineKeyboardButton(text="♾️ Unlimited (30 дней)", callback_data="sub_plan_unlimited")],
         [InlineKeyboardButton(text="❌ Отмена", callback_data="sub_plan_cancel")],
