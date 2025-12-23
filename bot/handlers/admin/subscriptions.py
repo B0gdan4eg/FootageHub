@@ -100,11 +100,21 @@ async def create_subscription_for_user(callback: types.CallbackQuery, state: FSM
     # Определяем параметры подписки по выбранному плану
     plan_key = callback.data.replace("sub_plan_", "")
 
-    if plan_key == "monthly_150":
+    if plan_key == "monthly_50":
+        subscription_type = SubscriptionType.MONTHLY_50
+        total_limit = 50
+        daily_limit = None
+        plan_name = "Lite"
+    elif plan_key == "monthly_150":
         subscription_type = SubscriptionType.MONTHLY_150
         total_limit = 150
         daily_limit = None
-        plan_name = "Monthly 150"
+        plan_name = "Standard"
+    elif plan_key == "monthly_400":
+        subscription_type = SubscriptionType.MONTHLY_400
+        total_limit = 400
+        daily_limit = None
+        plan_name = "Pro"
     elif plan_key == "daily_30":
         subscription_type = SubscriptionType.DAILY_30
         total_limit = None
