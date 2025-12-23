@@ -63,8 +63,8 @@ async def check_freepik_auth():
                         print(f"\n✅ LOGGED IN! Found profile element: {selector}")
                         profile_found = True
                         break
-                except:
-                    continue
+                except TimeoutError:
+                    continue  # Try next selector
 
             if not profile_found:
                 # Check if login button exists (means NOT logged in)
@@ -73,8 +73,8 @@ async def check_freepik_auth():
                     if login_btn:
                         print("\n❌ NOT LOGGED IN - Login button found")
                         print("   You need to login and save cookies again")
-                except:
-                    pass
+                except TimeoutError:
+                    pass  # Login button not found
 
             # Try JavaScript check
             is_logged_in = await page.evaluate("""

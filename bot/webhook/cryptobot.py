@@ -10,8 +10,10 @@ from bot.services import BotServices
 from aiogram.enums.parse_mode import ParseMode
 from datetime import datetime
 import json
-import os
-from bot.config import PRICE_LIST_PATH as PRICE_LIST
+import logging
+from bot.utils.price_loader import load_subscription_plans
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -38,12 +40,11 @@ async def webhook(request: Request):
 
     print(f"💰 Invoice #{invoice_id}: {amount} {currency}, Payload: {user_payload}")
 
-    if not os.path.exists(PRICE_LIST):
-        print(f"❌ Файл {PRICE_LIST} не найден.")
+    try:
+        plans = load_subscription_plans()
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.error(f"Failed to load subscription plans: {e}")
         return JSONResponse(content={"error": "Price list not found"}, status_code=500)
-
-    with open(PRICE_LIST, "r", encoding="utf-8") as f:
-        plans = json.load(f)
 
     try:
         user_id, plan_key = parse_payload(user_payload)
@@ -71,7 +72,7 @@ async def webhook(request: Request):
                 return JSONResponse(content={"status": "ok"}, status_code=200)
 
             # Получаем план из JSON
-            plan_data = plans["subscription_plans"].get(plan_key)
+            plan_data = plans.get(plan_key)
             if not plan_data:
                 print(f"⚠️ План {plan_key} не найден в конфигурации, игнорируем")
                 return JSONResponse(content={"status": "ok"}, status_code=200)

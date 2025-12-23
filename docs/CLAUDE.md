@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important Rules
+
+**NEVER CREATE GIT COMMITS** - The user manages all git operations. Do not run `git commit`, `git add`, or any git commands that modify the repository state. Only perform code changes and testing.
+
 ## Project Overview
 
 FootageHub is a production Telegram bot that downloads media from Envato Elements and Freepik, with WebPay payment integration, subscription management, and a referral system. Built with Python 3.11, aiogram 3.x, SQLAlchemy 2.x, and Playwright for browser automation.

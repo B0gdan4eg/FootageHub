@@ -10,32 +10,34 @@ from db.models import User
 from sqlalchemy import select
 import os
 import json
+import logging
 import aiofiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.config import CHANNEL_ID, CHANNEL_BONUS_CREDITS
 
+logger = logging.getLogger(__name__)
 router = Router()
 
 # Метод проверки подписки на канал
 # ------------------------------------------------------------
 async def is_subscribed(bot: Bot, tg_user_id: int) -> bool:
     try:
-        print(f"[DEBUG] Checking subscription for user {tg_user_id} in channel {CHANNEL_ID}")
+        logger.debug(f"Checking subscription for user {tg_user_id} in channel {CHANNEL_ID}")
         member = await bot.get_chat_member(
             chat_id=CHANNEL_ID,
             user_id=tg_user_id
         )
-        print(f"[DEBUG] Member status: {member.status}")
+        logger.debug(f"Member status: {member.status}")
         return member.status in (
             ChatMemberStatus.MEMBER,
             ChatMemberStatus.ADMINISTRATOR,
             ChatMemberStatus.CREATOR
         )
     except TelegramForbiddenError as e:
-        print(f"[DEBUG] TelegramForbiddenError: {e}")
+        logger.debug(f"TelegramForbiddenError: {e}")
         return False
     except Exception as e:
-        print(f"[DEBUG] Ошибка при проверке подписки: {type(e).__name__}: {e}")
+        logger.debug(f"Ошибка при проверке подписки: {type(e).__name__}: {e}")
         return False
 # ------------------------------------------------------------
 
@@ -45,9 +47,9 @@ async def is_subscribed(bot: Bot, tg_user_id: int) -> bool:
 @router.callback_query(lambda c: c.data == "check_subscription")
 async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
     user_id = callback.from_user.id
-    print(f"[DEBUG] check_subscription callback triggered for user {user_id}")
+    logger.debug(f"check_subscription callback triggered for user {user_id}")
     subscribed = await is_subscribed(bot, user_id)
-    print(f"[DEBUG] User {user_id} subscription status: {subscribed}")
+    logger.debug(f"User {user_id} subscription status: {subscribed}")
 
     if not subscribed:
         # Пользователь не подписан — клавиатура для подписки
@@ -69,14 +71,14 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
             if "message is not modified" not in str(e):
                 raise
     else:
-        print(f"[DEBUG] User {user_id} is subscribed!")
+        logger.debug(f"User {user_id} is subscribed!")
         try:
             async for session in get_session():
                 user = await session.scalar(select(User).where(User.tg_id == user_id))
-                print(f"[DEBUG] User found in DB: {user is not None}")
+                logger.debug(f"User found in DB: {user is not None}")
                 if user:
                     bonus_given = await give_channel_bonus(user_id, CHANNEL_ID)
-                    print(f"[DEBUG] Bonus given: {bonus_given}")
+                    logger.debug(f"Bonus given: {bonus_given}")
                     if bonus_given:
                         user.credits += CHANNEL_BONUS_CREDITS
                         await session.commit()
@@ -90,19 +92,19 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                             parse_mode=ParseMode.HTML,
                             disable_web_page_preview=True,
                         )
-                        print(f"[DEBUG] Message edited successfully")
+                        logger.debug(f"Message edited successfully")
                     except TelegramBadRequest as e:
                         # Игнорируем ошибку, если сообщение не изменилось
                         if "message is not modified" not in str(e):
-                            print(f"[DEBUG] TelegramBadRequest: {e}")
+                            logger.debug(f"TelegramBadRequest: {e}")
                             raise
         except Exception as e:
-            print(f"[DEBUG] Error in subscription success branch: {type(e).__name__}: {e}")
+            logger.debug(f"Error in subscription success branch: {type(e).__name__}: {e}")
             import traceback
             traceback.print_exc()
 
     await callback.answer()  # убирает "часики"
-    print(f"[DEBUG] Callback answered")
+    logger.debug(f"Callback answered")
 
     # ------------------------------------------------------------
     

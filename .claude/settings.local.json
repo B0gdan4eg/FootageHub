@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree test -L 2:*)"
+    ]
+  }
+}

@@ -12,7 +12,7 @@ from aiogram.enums.parse_mode import ParseMode
 from urllib.parse import parse_qs
 import json
 import logging
-from bot.config import PRICE_LIST_PATH as PRICE_LIST
+from bot.utils.price_loader import load_subscription_plans
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -58,12 +58,11 @@ async def webpay_webhook(request: Request):
         print(f"💰 [WEBPAY] Успешный платеж! Order: {order_id}, Amount: {amount} {currency}, TX: {transaction_id}")
 
         # Загружаем конфигурацию планов
-        if not PRICE_LIST.exists():
-            logger.error(f"❌ [WEBPAY] Файл {PRICE_LIST} не найден")
+        try:
+            plans = load_subscription_plans()
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logger.error(f"❌ [WEBPAY] Failed to load subscription plans: {e}")
             return Response(content='{"error": "Price list not found"}', status_code=500)
-
-        with open(PRICE_LIST, "r", encoding="utf-8") as f:
-            plans = json.load(f)
 
         # Обрабатываем платеж
         async for session in get_session():
@@ -98,7 +97,7 @@ async def webpay_webhook(request: Request):
                 return Response(content='{"code": 200}', status_code=200)
 
             # Получаем план из JSON
-            plan_data = plans["subscription_plans"].get(plan_key)
+            plan_data = plans.get(plan_key)
             if not plan_data:
                 logger.warning(f"⚠️ [WEBPAY] План {plan_key} не найден в конфигурации")
                 return Response(content='{"code": 200}', status_code=200)

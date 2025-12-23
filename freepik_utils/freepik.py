@@ -36,7 +36,8 @@ def get_next_cookie_file():
         try:
             with open(COOKIE_INDEX_FILE, "r") as f:
                 current_index = int(f.read().strip())
-        except:
+        except (ValueError, IOError) as e:
+            print(f"[COOKIE] Failed to read cookie index, using 0: {e}")
             current_index = 0
 
     # Выбираем следующий файл (с оборачиванием)
@@ -181,7 +182,8 @@ class FreepikDownloader:
                     os.makedirs(screenshot_dir, exist_ok=True)
                     screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
                     await page.screenshot(path=screenshot_path, full_page=False)
-                except:
+                except Exception as e:
+                    print(f"[FREEPIK] Failed to save screenshot: {e}")
                     screenshot_path = None
 
             await logger.error(
@@ -226,7 +228,7 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
     try:
         from bot.services import BotServices
         semaphore = BotServices.download_semaphore
-    except:
+    except (ImportError, AttributeError):
         # Если запускается не из бота (тесты), семафор не нужен
         semaphore = None
 

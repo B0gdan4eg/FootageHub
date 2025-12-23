@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import time
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 from freepik_utils.logger import logger
 
 COOKIE_DIR = os.path.dirname(__file__)
@@ -36,7 +36,8 @@ def get_next_cookie_file():
         try:
             with open(COOKIE_INDEX_FILE, "r") as f:
                 current_index = int(f.read().strip())
-        except:
+        except (ValueError, IOError) as e:
+            print(f"[COOKIE] Failed to read cookie index, using 0: {e}")
             current_index = 0
 
     # Выбираем следующий файл (с оборачиванием)
@@ -151,12 +152,13 @@ class EnvatoDownloader:
                 try:
                     await page.wait_for_url("**/app.envato.com/**", timeout=1500)
                     redirected = True
-                except:
-                    pass  # No redirect, staying on old format
+                except Exception:
+                    # No redirect happened - staying on old format (elements.envato.com)
+                    redirected = False
 
-            # Click download button - новый или старый формат
+            # Click download button - универсальный подход для обоих форматов
             if redirected or "app.envato.com" in page.url:
-                # Новый формат кнопки на app.envato.com - универсальный селектор
+                # Новый формат на app.envato.com - только кнопка скачивания
                 button_clicked = False
                 for selector in ["button:has-text('Скачать')", "button[data-analytics-name='download']"]:
                     try:
@@ -170,9 +172,24 @@ class EnvatoDownloader:
                 if not button_clicked:
                     raise Exception("Download button not found on app.envato.com")
             else:
-                # Старый формат кнопки на elements.envato.com
-                await page.wait_for_selector("button[data-testid='button-download']", state="visible", timeout=10000)
-                await page.click("button[data-testid='button-download']", delay=0)
+                # Старый формат на elements.envato.com - пробуем универсальные селекторы и старые
+                button_clicked = False
+                for selector in [
+                    "button:has-text('Скачать')",
+                    "button[data-analytics-name='download']",
+                    "button[data-testid='button-download']"
+                ]:
+                    try:
+                        await page.wait_for_selector(selector, state="visible", timeout=5000)
+                        await page.click(selector, delay=0)
+                        button_clicked = True
+                        break
+                    except Exception:
+                        continue
+
+                if not button_clicked:
+                    raise Exception("Download button not found on elements.envato.com")
+
                 await asyncio.sleep(0.5)
                 # Кликаем "download without license"
                 await page.click("button[data-testid='download-without-license-button']", delay=0)
@@ -228,7 +245,8 @@ class EnvatoDownloader:
                     os.makedirs(screenshot_dir, exist_ok=True)
                     screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
                     await page.screenshot(path=screenshot_path, full_page=False)
-                except:
+                except Exception as e:
+                    print(f"[ENVATO] Failed to save screenshot: {e}")
                     screenshot_path = None
 
             await logger.error(
@@ -289,7 +307,7 @@ class EnvatoDownloader:
                 await page.wait_for_selector("#CybotCookiebotDialog", timeout=3000)
                 await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=2000)
                 await asyncio.sleep(0.5)
-            except:
+            except (PlaywrightTimeoutError, TimeoutError):
                 pass  # Cookie banner not found, continue
 
             # Step 1: Click download button to open modal
@@ -335,7 +353,8 @@ class EnvatoDownloader:
                     os.makedirs(screenshot_dir, exist_ok=True)
                     screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
                     await page.screenshot(path=screenshot_path, full_page=False)
-                except:
+                except Exception as e:
+                    print(f"[ENVATO] Failed to save screenshot: {e}")
                     screenshot_path = None
 
             await logger.error(
@@ -384,8 +403,8 @@ class EnvatoDownloader:
                     url = data.get("data", {}).get("attributes", {}).get("downloadUrl")
                     if url:
                         return url
-                except:
-                    continue
+                except (json.JSONDecodeError, KeyError, Exception):
+                    continue  # Try next response
             await asyncio.sleep(0.1)
         return None
     
@@ -444,7 +463,7 @@ async def get_envato_direct_download_url(asset_url: str, with_license: bool = Fa
     try:
         from bot.services import BotServices
         semaphore = BotServices.download_semaphore
-    except:
+    except (ImportError, AttributeError):
         # Если запускается не из бота (тесты), семафор не нужен
         semaphore = None
 
