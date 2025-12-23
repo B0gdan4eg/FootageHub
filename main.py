@@ -83,7 +83,7 @@ async def main():
     # 3. Планировщик
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
     # Еженедельное начисление бесплатных кредитов (каждый понедельник в 03:00)
-    scheduler.add_job(scheduler_job, "cron", day_of_week="mon", hour=3, minute=0, args=[bot])
+    scheduler.add_job(scheduler_job, "cron", day_of_week="wed", hour=3, minute=0, args=[bot])
     # Обработка месячных подписок (MONTHLY_50, MONTHLY_150, MONTHLY_400) в 03:05
     scheduler.add_job(process_monthly_subscriptions, "cron", hour=3, minute=5, args=[bot])
     # Проверка истекших подписок в 03:10
