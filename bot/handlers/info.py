@@ -62,15 +62,15 @@ async def info(message: types.Message):
             sub_limits = "—"
 
         INFO_MASSEGE = (
-            f"👤 <b>Информация о вашем аккаунте</b>\n\n"
-            f"🎁 <b>Бесплатные загрузки:</b> {'❗️0' if user.credits == 0 else user.credits}\n"
-            f"💼 <b>Подписка:</b> {sub_status}\n"
-            f"📅 <b>Действует до:</b> {sub_until}\n"
-            f"📊 <b>Лимиты подписки:</b> {sub_limits}\n"
-            f"📥 <b>Ваших скачиваний:</b> {downloads_count}\n\n"
-            f"{'─' * 16}\n\n"
-            f"📈 <b>Статистика сервиса за 24 часа</b>\n"
-            f"🔥 Скачано файлов: <b>{downloads_24h}</b>\n"
+            f"👤 <b>Ваш профиль</b>\n\n"
+            f"🎁 Бесплатно: <b>{user.credits if user.credits > 0 else '0 ❗️'}</b>\n"
+            f"💼 Статус: {sub_status}\n"
+            f"⏰ До: {sub_until}\n"
+            f"📊 Доступно: {sub_limits}\n"
+            f"✅ Скачано: <b>{downloads_count}</b>\n\n"
+            f"{'─' * 30}\n\n"
+            f"📊 <b>Сегодня в FootageHub</b>\n"
+            f"⚡️ Загрузок за 24ч: <b>{downloads_24h}</b>\n"
         )
 
         # Создаём кнопку увеличения лимитов

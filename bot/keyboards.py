@@ -7,6 +7,9 @@ main_menu_kb = ReplyKeyboardMarkup(
             KeyboardButton(text="Скачать Freepik"),
         ],
         [
+            KeyboardButton(text="Скачать Motion Array"),
+        ],
+        [
             KeyboardButton(text="Информация"),
             KeyboardButton(text="Увеличить лимиты 💳"),
         ]

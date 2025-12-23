@@ -9,6 +9,7 @@ downloads/
 .env.*
 .idea/
 .vscode/
+.cursor/
 node_modules/
 .json
 github-actions-key
@@ -34,4 +35,3 @@ backups/
 *.dump
 *.sh
 *.png
-motion_utils/motion.py

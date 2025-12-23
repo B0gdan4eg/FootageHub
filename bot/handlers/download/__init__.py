@@ -1,7 +1,7 @@
 """
 Download handlers module.
 
-This module combines download functionality for Envato and Freepik.
+This module combines download functionality for Envato, Freepik, and Motion Array.
 """
 
 from aiogram import Router
@@ -10,6 +10,7 @@ from aiogram import Router
 from bot.handlers.download import validators
 from bot.handlers.download import envato
 from bot.handlers.download import freepik
+from bot.handlers.download import motion
 
 # Re-export commonly used functions
 from bot.handlers.download.validators import auto_delete_download_link, check_user_eligibility
@@ -19,11 +20,17 @@ from bot.handlers.download.freepik import (
     handle_freepik_link,
     download_more_freepik,
 )
+from bot.handlers.download.motion import (
+    ask_for_motion_link,
+    handle_motion_link,
+    download_more_motion,
+)
 
 # Combine all routers into one
 router = Router()
 router.include_router(envato.router)
 router.include_router(freepik.router)
+router.include_router(motion.router)
 
 __all__ = [
     "router",
@@ -35,4 +42,7 @@ __all__ = [
     "ask_for_freepik_link",
     "handle_freepik_link",
     "download_more_freepik",
+    "ask_for_motion_link",
+    "handle_motion_link",
+    "download_more_motion",
 ]

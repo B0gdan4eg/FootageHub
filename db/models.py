@@ -14,15 +14,18 @@ class UserRole(enum.Enum):
     PARTNER = "partner"
 
 class SubscriptionType(enum.Enum):
-    MONTHLY_150 = "monthly_150"  # 150 скачиваний на месяц
+    MONTHLY_50 = "monthly_50"    # 50 скачиваний на месяц (Lite)
+    MONTHLY_150 = "monthly_150"  # 150 скачиваний на месяц (Standard)
+    MONTHLY_400 = "monthly_400"  # 400 скачиваний на месяц (Pro)
     DAILY_30 = "daily_30"        # 30 скачиваний каждый день
     UNLIMITED = "unlimited"       # без лимитов
     CUSTOM = "custom"             # кастомные условия
 
 class ServiceType(enum.Enum):
-    ENVATO = "envato"
-    FREEPIK = "freepik"
-    ALL = "all"  # доступ ко всем сервисам
+    ENVATO = "ENVATO"
+    FREEPIK = "FREEPIK"
+    MOTION_ARRAY = "MOTION_ARRAY"
+    ALL = "ALL"  # доступ ко всем сервисам
 
 class ReferralRewardStatus(enum.Enum):
     PENDING = "pending"      # ожидает выполнения условий

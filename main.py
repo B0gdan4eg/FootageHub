@@ -30,10 +30,11 @@ if sys.platform == "win32":
 async def set_bot_commands(bot: Bot):
     """Устанавливает список команд бота, чтобы меню отображалось на всех устройствах."""
     commands = [
+        BotCommand(command="menu", description="Меню"),
         BotCommand(command="envato", description="Скачать Envato"),
         BotCommand(command="freepik", description="Скачать Freepik"),
+        BotCommand(command="motion", description="Скачать Motion Array"),
         BotCommand(command="info", description="Информация"),
-        BotCommand(command="menu", description="Меню"),
         BotCommand(command="pay", description="Увеличить лимиты"),
     ]
     await bot.set_my_commands(commands)
@@ -81,9 +82,9 @@ async def main():
 
     # 3. Планировщик
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-    # Ежедневное начисление кредитов в 03:00
-    scheduler.add_job(scheduler_job, "cron", hour=3, minute=0, args=[bot])
-    # Обработка месячных подписок (MONTHLY_150) в 03:05
+    # Еженедельное начисление бесплатных кредитов (каждый понедельник в 03:00)
+    scheduler.add_job(scheduler_job, "cron", day_of_week="mon", hour=3, minute=0, args=[bot])
+    # Обработка месячных подписок (MONTHLY_50, MONTHLY_150, MONTHLY_400) в 03:05
     scheduler.add_job(process_monthly_subscriptions, "cron", hour=3, minute=5, args=[bot])
     # Проверка истекших подписок в 03:10
     scheduler.add_job(check_expired_subscriptions, "cron", hour=3, minute=10, args=[bot])
@@ -93,11 +94,11 @@ async def main():
     scheduler.add_job(cleanup_playwright_cache, "interval", hours=1)
     scheduler.start()
     print("[INFO] ✅ Scheduler started:")
-    print("  - Daily credits: 03:00")
-    print("  - MONTHLY_150 processing: 03:05")
-    print("  - Expired subscriptions check: 03:10")
-    print("  - Daily backup: every 4 hours")
-    print("  - Playwright cleanup: every 2 hours")
+    print("  - Weekly free credits: Every Monday at 03:00")
+    print("  - Monthly subscriptions processing: Daily at 03:05")
+    print("  - Expired subscriptions check: Daily at 03:10")
+    print("  - Database backup: Every 4 hours")
+    print("  - Playwright cleanup: Every hour")
 
     try:
         # 4. Запуск сервера и бота параллельно

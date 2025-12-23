@@ -42,6 +42,7 @@ async def manager_command(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="👥 Просмотреть всех рефералов", callback_data="manager_view_referrals")],
         [InlineKeyboardButton(text="🔄 Рестарт Envato", callback_data="manager_restart_envato")],
         [InlineKeyboardButton(text="🔄 Рестарт Freepik", callback_data="manager_restart_freepik")],
+        [InlineKeyboardButton(text="🔄 Рестарт Motion Array", callback_data="manager_restart_motion")],
         [InlineKeyboardButton(text="💳 Тест WebPay", callback_data="manager_test_webpay")],
         [InlineKeyboardButton(text="🍌 Тест NANO BANANA", callback_data="manager_test_nano_banana")],
         [InlineKeyboardButton(text="🎬 Тест Kling Video", callback_data="manager_test_kling")]
@@ -228,6 +229,46 @@ async def restart_freepik_browser(callback: types.CallbackQuery):
         await callback.message.answer(f"❌ Ошибка при рестарте браузера Freepik:\n{e}")
         await callback.answer("❌ Ошибка!", show_alert=True)
         print(f"[MANAGER] Ошибка рестарта браузера Freepik: {e}")
+
+
+@router.callback_query(lambda c: c.data == "manager_restart_motion")
+async def restart_motion_browser(callback: types.CallbackQuery):
+    """Принудительный рестарт браузера Motion Array через LinkProcessor"""
+    try:
+        # Получаем LinkProcessor из BotServices
+        link_processor = BotServices.link_processor
+
+        if not link_processor or not link_processor.motion_downloader:
+            await callback.answer("⚠️ Браузер Motion Array не запущен", show_alert=True)
+            return
+
+        await callback.message.answer("🔄 Начинаю рестарт браузера Motion Array...")
+
+        # Принудительно запускаем рестарт браузера
+        async with link_processor._motion_restart_lock:
+            # Текущее количество запросов
+            current_requests = link_processor.motion_request_count
+
+            # Закрываем старый браузер
+            if link_processor.motion_downloader:
+                await link_processor.motion_downloader.__aexit__(None, None, None)
+
+            # Создаем новый браузер
+            from motion_utils.motion import MotionDownloader
+            link_processor.motion_downloader = await MotionDownloader().__aenter__()
+            link_processor.motion_request_count = 0
+
+        await callback.message.answer(
+            f"✅ Браузер Motion Array перезапущен!\n\n"
+            f"📊 Обработано запросов до рестарта: {current_requests}\n"
+            f"🔄 Счетчик сброшен: 0/{link_processor.restart_after}"
+        )
+        await callback.answer("✅ Рестарт завершен!")
+
+    except Exception as e:
+        await callback.message.answer(f"❌ Ошибка при рестарте браузера Motion Array:\n{e}")
+        await callback.answer("❌ Ошибка!", show_alert=True)
+        print(f"[MANAGER] Ошибка рестарта браузера Motion Array: {e}")
 
 
 @router.callback_query(lambda c: c.data == "manager_test_webpay")

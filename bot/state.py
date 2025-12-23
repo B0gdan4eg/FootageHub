@@ -4,6 +4,7 @@ from aiogram.fsm.state import StatesGroup, State
 class DownloadFlow(StatesGroup):
     waiting_for_link = State()       # Ждём ссылку Envato
     waiting_for_freepik_link = State()  # Ждём ссылку Freepik
+    waiting_for_motion_link = State()  # Ждём ссылку Motion Array
     waiting_for_payment = State()    # Предложено оплатить
     waiting_for_confirmation = State()  # Ждём подтверждение оплаты (вебхук или вручную)
 

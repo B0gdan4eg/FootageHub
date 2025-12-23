@@ -6,9 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **NEVER CREATE GIT COMMITS** - The user manages all git operations. Do not run `git commit`, `git add`, or any git commands that modify the repository state. Only perform code changes and testing.
 
+**ALWAYS ASK BEFORE CREATING DOCUMENTATION** - Before creating any text documents (README.md, .txt, .md files, documentation), always ask the user for permission first. Only create documentation if explicitly requested.
+
 ## Project Overview
 
-FootageHub is a production Telegram bot that downloads media from Envato Elements and Freepik, with WebPay payment integration, subscription management, and a referral system. Built with Python 3.11, aiogram 3.x, SQLAlchemy 2.x, and Playwright for browser automation.
+FootageHub is a production Telegram bot that downloads media from Envato Elements, Freepik, and Motion Array, with WebPay payment integration, subscription management, and a referral system. Built with Python 3.11, aiogram 3.x, SQLAlchemy 2.x, and Playwright for browser automation.
 
 ## Development Commands
 
@@ -53,6 +55,9 @@ python envato_utils/test_env.py
 # Test Freepik downloader
 python freepik_utils/freepik.py
 
+# Test Motion Array downloader
+python test/test_motion.py
+
 # Test LinkProcessor (queue-based worker pool)
 python test/test_link_processor.py
 
@@ -68,6 +73,12 @@ python test/get_webpay_token.py
 # Convert exported cookies to Playwright format
 python freepik_utils/convert_cookies.py
 python envato_utils/convert_cookies.py
+python motion_utils/convert_cookies.py
+
+# Save cookies interactively (login in browser)
+python envato_utils/cookie_save.py envato 1
+python envato_utils/cookie_save.py freepik 1
+python envato_utils/cookie_save.py motion 1
 
 # Check authentication status
 python freepik_utils/check_auth.py
@@ -92,7 +103,7 @@ python freepik_utils/check_cookies.py
 
 **3. Download System (Playwright + Queue Architecture)**
 - **LinkProcessor** (`envato_utils/test_env.py`): Queue-based worker pool (5 workers)
-  - Handles both Envato and Freepik downloads concurrently
+  - Handles Envato, Freepik, and Motion Array downloads concurrently
   - Returns results via asyncio Futures
   - Restarts browsers every 50 requests (memory leak prevention)
 
@@ -105,6 +116,13 @@ python freepik_utils/check_cookies.py
   - Requires Xvfb virtual display on servers (Freepik blocks headless browsers)
   - Cookie rotation with index tracking
   - URL interception for direct download links
+
+- **MotionDownloader** (`motion_utils/motion.py`):
+  - CDP network interception for `/download/direct` API endpoint
+  - Cookie rotation across multiple accounts (`motion_cookies_1.json`, `motion_cookies_2.json`, etc.)
+  - Stealth mode: disables `navigator.webdriver`, adds `window.chrome` object
+  - Automatic button click detection (finds first visible `span:has-text('Download')`)
+  - Returns direct download URL from JSON response: `data["downloadUrls"][0]`
 
 **4. Payment Integration**
 - **WebPay API** (`bot/webpay_utils.py`):
@@ -134,8 +152,8 @@ python freepik_utils/check_cookies.py
 - APScheduler AsyncIOScheduler
 
 **Subscription System:**
-- Types: MONTHLY_150 (150 downloads/month), DAILY_30 (30/day), UNLIMITED, CUSTOM
-- Service scopes: ENVATO, FREEPIK, ALL
+- Types: MONTHLY_50 (Lite - 50 downloads/month), MONTHLY_150 (Standard - 150 downloads/month), MONTHLY_400 (Pro - 400 downloads/month), DAILY_30 (30/day), UNLIMITED, CUSTOM
+- Service scopes: ENVATO, FREEPIK, MOTION_ARRAY, ALL
 - Usage tracked per subscription (total and daily counters)
 - Automatic deactivation when limits exhausted or expiration date reached
 - See `docs/SUBSCRIPTIONS_AND_REFERRALS.md` for detailed logic
@@ -214,6 +232,24 @@ Freepik blocks headless browsers, so on production servers:
 - See `SERVER_SETUP.md` for Xvfb systemd service setup
 - Dockerfile includes Xvfb client configuration
 
+### Motion Array Implementation Details
+Motion Array uses API-based download system with anti-bot protection:
+- **API Endpoint**: `/proxy/download/v1/download/direct` returns JSON with `downloadUrls` array
+- **Stealth Mode**: Required to bypass Cloudflare protection
+  - `--disable-blink-features=AutomationControlled` browser arg
+  - `Object.defineProperty(navigator, 'webdriver', {get: () => undefined})`
+  - `window.chrome = {runtime: {}}` to mimic real Chrome
+- **Button Detection**: Finds first visible `span:has-text('Download')` element
+  - Multiple buttons may exist (fake/hidden ones), uses `is_visible()` check
+  - Clicks with `delay=0` for fastest response
+- **Network Interception**: CDP monitors all responses for `/download/direct`
+  - Parses JSON: `data.get("downloadUrls")[0]` contains signed CDN URL
+  - Timeout: 5 seconds (50 checks × 0.1s intervals)
+- **Timeouts**: Optimized for speed (similar to Envato)
+  - `goto`: 30s with `domcontentloaded` event
+  - `networkidle`: 1.5s (not critical, can fail)
+  - Post-load wait: 1s before button search
+
 ### Database Session Management
 Always use async context manager:
 ```python
@@ -267,25 +303,54 @@ CRYPTO_BOT_API_KEY=
 CRYPTO_BOT_WEBHOOK=
 ```
 
+### Cookie Files Structure
+Download providers use numbered cookie files for rotation:
+```
+envato_utils/
+  ├── envato_cookies_1.json
+  ├── envato_cookies_2.json
+  ├── envato_cookies_3.json
+  └── cookie_index.txt           # Tracks current rotation position
+
+freepik_utils/
+  ├── freepik_cookies_1.json
+  └── cookie_index.txt
+
+motion_utils/
+  ├── motion_cookies_1.json
+  ├── motion_cookies_2.json
+  └── motion_cookie_index.txt
+```
+
+Fallback: If no numbered files exist, uses legacy single file (`envato_cookies.json`, `freepik_cookies.json`, `motion_cookies.json`)
+
 ### Subscription Plans (bot/handlers/prices_list.json)
 ```json
 {
   "subscription_plans": {
+    "monthly_50": {
+      "name": "Lite",
+      "price": 399.00,              // RUB (converted to BYN in API)
+      "period_days": 30,
+      "total_limit": 50,
+      "daily_limit": null,
+      "subscription_type": "MONTHLY_50"
+    },
     "monthly_150": {
-      "name": "150 Загрузки",
-      "price": 590.00,              // RUB (converted to BYN in API)
+      "name": "Standard",
+      "price": 899.00,
       "period_days": 30,
       "total_limit": 150,
       "daily_limit": null,
       "subscription_type": "MONTHLY_150"
     },
-    "daily_30": {
-      "name": "30 Загрузок в день",
-      "price": 1190.00,
+    "monthly_400": {
+      "name": "Pro",
+      "price": 1790.00,
       "period_days": 30,
-      "total_limit": null,
-      "daily_limit": 30,
-      "subscription_type": "DAILY_30"
+      "total_limit": 400,
+      "daily_limit": null,
+      "subscription_type": "MONTHLY_400"
     }
   }
 }
@@ -294,12 +359,22 @@ CRYPTO_BOT_WEBHOOK=
 ## Common Development Tasks
 
 ### Adding New Download Provider
-1. Create `provider_utils/provider_playwright.py` similar to `envato_playwright.py`
+1. Create `provider_utils/provider_playwright.py` similar to `envato_playwright.py` or `motion_utils/motion.py`
 2. Implement cookie rotation and URL interception
-3. Add handler in `bot/handlers/download.py`
-4. Add FSM state in `bot/state.py`
-5. Update LinkProcessor in `envato_utils/test_env.py` to support new provider
-6. Add service type to `ServiceType` enum in `db/models.py`
+3. Create converter: `provider_utils/convert_cookies.py` for cookie export from browser extensions
+4. Add test script: `test/test_provider.py` for standalone testing
+5. Add handler in `bot/handlers/download.py`
+6. Add FSM state in `bot/state.py`
+7. Update LinkProcessor in `envato_utils/test_env.py` to support new provider
+8. Add service type to `ServiceType` enum in `db/models.py`
+
+**Example**: Motion Array implementation (`motion_utils/motion.py`) demonstrates:
+- CDP network interception for API endpoints
+- Stealth mode configuration
+- Cookie rotation with index tracking
+- Automatic visible button detection
+- Clean class-based structure with `__aenter__`/`__aexit__`
+- Statistics tracking (success/fail counts, timing)
 
 ### Modifying Payment Plans
 1. Update `bot/handlers/prices_list.json` with new plan
@@ -309,11 +384,20 @@ CRYPTO_BOT_WEBHOOK=
 5. Update webhook parsing in `bot/webhook/webpay.py` if plan_key format changes
 
 ### Debugging Download Issues
-1. Check browser screenshots in `envato_utils/debug_screenshots/` or `freepik_utils/debug_screenshots/`
-2. Run standalone tests: `python envato_utils/test_env.py` or `python freepik_utils/freepik.py`
-3. Verify cookies are valid: `python freepik_utils/check_auth.py`
-4. Check if site selectors changed (common with Envato/Freepik redesigns)
+1. Check browser screenshots in `envato_utils/debug_screenshots/`, `freepik_utils/debug_screenshots/`, or `motion_utils/debug_screenshots/`
+2. Run standalone tests: 
+   - `python envato_utils/test_env.py`
+   - `python freepik_utils/freepik.py`
+   - `python test/test_motion.py`
+3. Verify cookies are valid: 
+   - `python freepik_utils/check_auth.py`
+   - For Motion Array: open browser with `python envato_utils/cookie_save.py motion 1` and verify login
+4. Check if site selectors changed (common with Envato/Freepik/Motion Array redesigns)
 5. For Freepik: ensure Xvfb is running and `DISPLAY=:99` is set
+6. For Motion Array: 
+   - Verify `/download/direct` endpoint is being intercepted
+   - Check that button selector `span:has-text('Download')` finds visible elements
+   - Ensure stealth mode is working (no `navigator.webdriver` detection)
 
 ### Updating WebPay Integration
 - Payment signature uses `WEBPAY_SIGNING_KEY`, not `WEBPAY_SECRET_KEY`
@@ -332,6 +416,12 @@ CRYPTO_BOT_WEBHOOK=
 - Order IDs for payments always follow format: `USER_{user_id}_{plan_key}_{uuid}`
 - Currency displayed to users: RUB; currency sent to WebPay: BYN (conversion factor in code)
 - **Configuration centralization**: Always import constants from `bot/config.py` (PRICE_LIST_PATH, CHANNEL_ID, etc.), never hardcode paths or values in handlers
+- **Download providers**: Use consistent structure across providers (Envato, Freepik, Motion Array):
+  - Class-based with `__aenter__`/`__aexit__` for resource management
+  - Cookie rotation with `get_next_cookie_file()` and index tracking
+  - Statistics tracking (`success_count`, `fail_count`, `total_time`)
+  - Main API function format: `get_{provider}_direct_download_url(url)`
+  - Emojis for output: 🚀 (start), ✅ (success), ❌ (failure), ⚠️ (warning), 🔄 (rotation), ⏱️ (time), 📊 (statistics)
 
 ## Troubleshooting
 
@@ -351,8 +441,9 @@ CRYPTO_BOT_WEBHOOK=
 
 **Download fails with "button not found"**
 - Site redesign changed selectors
-- Check current selector in `envato_playwright.py` or `freepik.py`
-- Update to universal selector (e.g., `button:has-text('Скачать')` or `button:has-text('Download')`)
+- Check current selector in `envato_playwright.py`, `freepik.py`, or `motion.py`
+- Update to universal selector (e.g., `button:has-text('Скачать')`, `button:has-text('Download')`, or `span:has-text('Download')`)
+- For Motion Array: use `span:has-text('Download')` as button contains icon + span
 
 **Subscription not created after payment**
 - Check webhook logs for signature validation errors

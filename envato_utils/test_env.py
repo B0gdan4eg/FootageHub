@@ -3,6 +3,7 @@ import logging
 from typing import NamedTuple
 from envato_utils.envato_playwright import EnvatoDownloader
 from freepik_utils.freepik import FreepikDownloader
+from motion_utils.motion import MotionDownloader
 from bot.config import BROWSER_RESTART_AFTER
 
 # Setup logging
@@ -19,7 +20,7 @@ class LinkTask(NamedTuple):
 class LinkProcessor:
     """
     Queue-based link processor for handling multiple download requests efficiently.
-    Uses a pool of workers to process both Envato and Freepik URLs concurrently.
+    Uses a pool of workers to process Envato, Freepik, and Motion Array URLs concurrently.
     Supports both WITH and WITHOUT license downloads for Envato.
     """
 
@@ -36,21 +37,25 @@ class LinkProcessor:
         self.restart_after = restart_after
         self.envato_request_count = 0
         self.freepik_request_count = 0
+        self.motion_request_count = 0
         self.envato_downloader = None
         self.freepik_downloader = None
+        self.motion_downloader = None
         self.workers = []
         self._envato_restart_lock = asyncio.Lock()
         self._freepik_restart_lock = asyncio.Lock()
+        self._motion_restart_lock = asyncio.Lock()
 
     async def start(self):
         """Initialize browsers and start worker pool"""
         try:
-            print(f"[LinkProcessor] Starting with {self.max_workers} workers (Envato + Freepik)...")
-            logger.info(f"Starting LinkProcessor with {self.max_workers} workers (Envato + Freepik)...")
+            print(f"[LinkProcessor] Starting with {self.max_workers} workers (Envato + Freepik + Motion Array)...")
+            logger.info(f"Starting LinkProcessor with {self.max_workers} workers (Envato + Freepik + Motion Array)...")
 
-            # Initialize both downloaders
+            # Initialize all downloaders
             self.envato_downloader = await EnvatoDownloader().__aenter__()
             self.freepik_downloader = await FreepikDownloader().__aenter__()
+            self.motion_downloader = await MotionDownloader().__aenter__()
 
             self.workers = [asyncio.create_task(self.worker(i)) for i in range(self.max_workers)]
             print(f"[LinkProcessor] Started successfully! Workers: {len(self.workers)}")
@@ -67,6 +72,8 @@ class LinkProcessor:
             await self.envato_downloader.__aexit__(None, None, None)
         if self.freepik_downloader:
             await self.freepik_downloader.__aexit__(None, None, None)
+        if self.motion_downloader:
+            await self.motion_downloader.__aexit__(None, None, None)
         for w in self.workers:
             w.cancel()
         await asyncio.gather(*self.workers, return_exceptions=True)
@@ -108,6 +115,24 @@ class LinkProcessor:
                 print(f"[LinkProcessor] Freepik browser restarted successfully")
                 logger.info("Freepik browser context restarted successfully")
 
+    async def _restart_motion_browser_if_needed(self):
+        """Restart Motion Array browser context if request limit reached to prevent memory leaks"""
+        async with self._motion_restart_lock:
+            if self.motion_request_count >= self.restart_after:
+                print(f"[LinkProcessor] Restarting Motion Array browser after {self.motion_request_count} requests...")
+                logger.info(f"Restarting Motion Array browser context after {self.motion_request_count} requests")
+
+                # Close old downloader
+                if self.motion_downloader:
+                    await self.motion_downloader.__aexit__(None, None, None)
+
+                # Create new downloader
+                self.motion_downloader = await MotionDownloader().__aenter__()
+                self.motion_request_count = 0
+
+                print(f"[LinkProcessor] Motion Array browser restarted successfully")
+                logger.info("Motion Array browser context restarted successfully")
+
     async def worker(self, idx):
         """Worker coroutine that processes tasks from queue"""
         print(f"[Worker {idx}] Started")
@@ -127,6 +152,13 @@ class LinkProcessor:
                         # Get Freepik download URL
                         result = await self.freepik_downloader.get_download_url(task.url)
                         self.freepik_request_count += 1
+
+                    elif task.platform == "motion":
+                        # Check if Motion Array browser needs restart
+                        await self._restart_motion_browser_if_needed()
+                        # Get Motion Array download URL
+                        result = await self.motion_downloader.get_download_url(task.url)
+                        self.motion_request_count += 1
 
                     else:  # envato
                         # Check if Envato browser needs restart
@@ -166,9 +198,9 @@ class LinkProcessor:
         Submit a URL for processing and wait for result.
 
         Args:
-            url: URL to process (Envato or Freepik)
+            url: URL to process (Envato, Freepik, or Motion Array)
             with_license: If True, downloads WITH license (only for Envato)
-            platform: "envato" or "freepik" (default: "envato")
+            platform: "envato", "freepik", or "motion" (default: "envato")
 
         Returns:
             Direct download URL or None if failed

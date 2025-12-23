@@ -56,6 +56,15 @@ async def show_stats(callback: types.CallbackQuery):
         )
         freepik_downloads_today = result.scalar()
 
+        # Загрузки с Motion Array за сегодня
+        result = await session.execute(
+            select(func.count(Download.id)).where(
+                Download.downloaded_at >= today_start,
+                Download.service_type == ServiceType.MOTION_ARRAY
+            )
+        )
+        motion_downloads_today = result.scalar()
+
         # Общая сумма всех успешных платежей по валютам
         result = await session.execute(
             select(
@@ -77,6 +86,14 @@ async def show_stats(callback: types.CallbackQuery):
         )
         payments_today_by_currency = result.all()
 
+        # Количество созданных платежей сегодня (всех статусов)
+        result = await session.execute(
+            select(func.count(Payment.id)).where(
+                Payment.created_at >= today_start
+            )
+        )
+        payments_created_today = result.scalar()
+
     # Форматируем суммы по валютам
     total_payments_text = "\n".join([f"   • {currency}: {amount:.2f}" for currency, amount in total_payments_by_currency]) if total_payments_by_currency else "   • Нет платежей"
     today_payments_text = "\n".join([f"   • {currency}: {amount:.2f}" for currency, amount in payments_today_by_currency]) if payments_today_by_currency else "   • Нет платежей"
@@ -89,8 +106,10 @@ async def show_stats(callback: types.CallbackQuery):
         f"⬇️ Всего скачиваний: {total_downloads}\n"
         f"📥 Сегодня: {downloads_today}\n"
         f"   • Envato: {envato_downloads_today}\n"
-        f"   • Freepik: {freepik_downloads_today}\n\n"
+        f"   • Freepik: {freepik_downloads_today}\n"
+        f"   • Motion Array: {motion_downloads_today}\n\n"
         f"💰 Всего платежей:\n{total_payments_text}\n\n"
-        f"💵 Сегодня:\n{today_payments_text}"
+        f"💵 Сегодня:\n{today_payments_text}\n"
+        f"📋 Создано платежей сегодня: {payments_created_today}"
     )
     await callback.message.edit_text(text)

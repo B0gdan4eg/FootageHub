@@ -7,7 +7,13 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.webpay_utils import get_webpay_api
 from services.json_reader import dict_to_namespace
 from pathlib import Path
-from bot.handlers.messages import SUB_PAYMENT_MONTHLY, SUB_PAYMENT_DAILY, ALREADY_HAS_SUBSCRIPTION
+from bot.handlers.messages import (
+    SUB_PAYMENT_MONTHLY_50,
+    SUB_PAYMENT_MONTHLY_150,
+    SUB_PAYMENT_MONTHLY_400,
+    SUB_PAYMENT_DAILY,
+    ALREADY_HAS_SUBSCRIPTION
+)
 from db.session import get_session
 from db.payment_crud import create_payment
 from db.user_crud import get_user_by_telegram_id
@@ -91,12 +97,16 @@ async def show_plan_details(callback_query: types.CallbackQuery):
         return
 
     # Выбираем правильное сообщение в зависимости от плана
-    if plan_key == "monthly_150":
-        message_template = SUB_PAYMENT_MONTHLY
+    if plan_key == "monthly_50":
+        message_template = SUB_PAYMENT_MONTHLY_50
+    elif plan_key == "monthly_150":
+        message_template = SUB_PAYMENT_MONTHLY_150
+    elif plan_key == "monthly_400":
+        message_template = SUB_PAYMENT_MONTHLY_400
     elif plan_key == "daily_30":
         message_template = SUB_PAYMENT_DAILY
     else:
-        message_template = SUB_PAYMENT_MONTHLY  # По умолчанию
+        message_template = SUB_PAYMENT_MONTHLY_150  # По умолчанию
 
     # Проверяем наличие активной подписки
     user_id = callback_query.from_user.id

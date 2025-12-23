@@ -131,10 +131,10 @@ class FreepikDownloader:
             page.on("download", handle_download)
 
             # Navigate to asset page
-            await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
+            await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
 
             # Click download button
-            await page.click("button[data-cy='download-button']", timeout=15000)
+            await page.click("button[data-cy='download-button']", timeout=10000)
 
             # Ждём download event (увеличено до 5 секунд для надежности)
             await asyncio.sleep(5)

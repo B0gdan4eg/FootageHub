@@ -11,11 +11,15 @@ from pathlib import Path
 from bot.config import DAILY_FREE_CREDITS
 
 async def scheduler_job(bot: Bot):
-    """Ежедневная выдача кредитов."""
-    print("Ежедневное начисление!")
+    """Еженедельная выдача бесплатных кредитов."""
+    print("🎁 Еженедельное начисление бесплатных кредитов!")
     async for session in get_session():
         # Всем пользователям начисляем базовые бесплатные кредиты
         await session.execute(update(User).values(credits=DAILY_FREE_CREDITS))
+
+        result = await session.execute(select(User))
+        total_users = len(result.scalars().all())
+        print(f"✅ Начислено {DAILY_FREE_CREDITS} бесплатных кредитов {total_users} пользователям")
 
         # Получаем всех пользователей с активной дневной подпиской
         result = await session.execute(
@@ -42,14 +46,18 @@ async def scheduler_job(bot: Bot):
         # await add_daily_credits(session, bot)
 
 async def process_monthly_subscriptions(bot: Bot):
-    """Обработка месячных подписок MONTHLY_150 - начисление остатка и деактивация при исчерпании."""
-    print("🔄 Обработка месячных подписок MONTHLY_150...")
+    """Обработка месячных подписок (MONTHLY_50, MONTHLY_150, MONTHLY_400) - начисление остатка и деактивация при исчерпании."""
+    print("🔄 Обработка месячных подписок (MONTHLY_50, MONTHLY_150, MONTHLY_400)...")
     async for session in get_session():
-        # Получаем активные месячные подписки
+        # Получаем активные месячные подписки всех типов
         result = await session.execute(
             select(Subscription).where(
                 and_(
-                    Subscription.subscription_type == SubscriptionType.MONTHLY_150,
+                    Subscription.subscription_type.in_([
+                        SubscriptionType.MONTHLY_50,
+                        SubscriptionType.MONTHLY_150,
+                        SubscriptionType.MONTHLY_400
+                    ]),
                     Subscription.is_active == True,
                     Subscription.end_date > datetime.utcnow()
                 )
@@ -79,7 +87,7 @@ async def process_monthly_subscriptions(bot: Bot):
                 user = result.scalar_one_or_none()
                 if user:
                     user.credits += remaining_credits
-                    print(f"✅ Начислено {remaining_credits} кредитов пользователю {subscription.user_id} (MONTHLY_150)")
+                    print(f"✅ Начислено {remaining_credits} кредитов пользователю {subscription.user_id} ({subscription.subscription_type.value})")
                     processed_count += 1
             else:
                 # Лимит исчерпан - деактивируем подписку
@@ -94,9 +102,9 @@ async def process_monthly_subscriptions(bot: Bot):
         await session.commit()
 
         if processed_count > 0 or deactivated_count > 0:
-            print(f"✅ Обработка MONTHLY_150 завершена: начислено {processed_count}, деактивировано {deactivated_count}")
+            print(f"✅ Обработка месячных подписок завершена: начислено {processed_count}, деактивировано {deactivated_count}")
         else:
-            print("✅ Нет активных подписок MONTHLY_150 для обработки")
+            print("✅ Нет активных месячных подписок для обработки")
 
 async def check_expired_subscriptions(bot: Bot):
     """Проверка и деактивация истекших подписок."""
