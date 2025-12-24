@@ -162,7 +162,7 @@ class EnvatoDownloader:
                 button_clicked = False
                 for selector in ["button:has-text('Скачать')", "button[data-analytics-name='download']"]:
                     try:
-                        await page.wait_for_selector(selector, state="visible", timeout=3000)
+                        await page.wait_for_selector(selector, state="visible", timeout=2000)
                         await page.click(selector, delay=0)
                         button_clicked = True
                         break
@@ -180,7 +180,7 @@ class EnvatoDownloader:
                     "button[data-testid='button-download']"
                 ]:
                     try:
-                        await page.wait_for_selector(selector, state="visible", timeout=3000)
+                        await page.wait_for_selector(selector, state="visible", timeout=2000)
                         await page.click(selector, delay=0)
                         button_clicked = True
                         break
@@ -304,7 +304,7 @@ class EnvatoDownloader:
             # Close cookie banner if it appears - click "Reject All"
             try:
                 # Wait for cookie dialog and click reject button
-                await page.wait_for_selector("#CybotCookiebotDialog", timeout=3000)
+                await page.wait_for_selector("#CybotCookiebotDialog", timeout=1000)
                 await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=1000)
                 await asyncio.sleep(0.2)
             except (PlaywrightTimeoutError, TimeoutError):

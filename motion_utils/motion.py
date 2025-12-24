@@ -7,6 +7,7 @@ import json
 import os
 import time
 from playwright.async_api import async_playwright
+from freepik_utils.logger import logger
 
 COOKIE_DIR = os.path.dirname(__file__)
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "motion_cookie_index.txt")
@@ -219,6 +220,13 @@ class MotionDownloader:
                 os.makedirs(screenshot_dir, exist_ok=True)
                 screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
                 await page.screenshot(path=screenshot_path, full_page=False)
+                
+                # ← ДОБАВЬ ЭТО:
+                await logger.error(
+                    f"❌ [MOTION] Download URL не получен\n"
+                    f"URL: {asset_url}",
+                    screenshot_path=screenshot_path
+                )
 
             return download_url
 
@@ -229,7 +237,7 @@ class MotionDownloader:
             print(f"   ❌ Ошибка: {e}")
             print(f"   ⏱️  {elapsed:.2f} сек")
 
-            # Делаем скриншот при ошибке, если страница доступна
+            # Скриншот
             screenshot_path = None
             if page:
                 try:
@@ -240,6 +248,14 @@ class MotionDownloader:
                 except Exception as screenshot_error:
                     print(f"[MOTION] Failed to save screenshot: {screenshot_error}")
                     screenshot_path = None
+            
+            # ← ДОБАВЬ ЭТО:
+            await logger.error(
+                f"❌ [MOTION] Ошибка при скачивании\n"
+                f"URL: {asset_url}\n"
+                f"Ошибка: {e}",
+                screenshot_path=screenshot_path
+            )
 
             return None
 
