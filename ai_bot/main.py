@@ -9,8 +9,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from config import config
-from handlers import setup_handlers
+from ai_bot.config import config
+from ai_bot.handlers import setup_handlers
 
 # Configure logging
 logging.basicConfig(
