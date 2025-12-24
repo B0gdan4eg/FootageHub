@@ -181,7 +181,7 @@ class MotionDownloader:
                 selector = "span:has-text('Download')"
                 
                 # ДОБАВЬ эту строку:
-                await page.wait_for_selector(selector, state="visible", timeout=5000)
+                await page.wait_for_selector(selector, state="visible", timeout=10000)
                 
                 elements = await page.query_selector_all(selector)
                 
