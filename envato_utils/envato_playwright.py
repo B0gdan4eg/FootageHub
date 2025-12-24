@@ -156,43 +156,33 @@ class EnvatoDownloader:
                     # No redirect happened - staying on old format (elements.envato.com)
                     redirected = False
 
-            # Click download button - универсальный подход для обоих форматов
-            if redirected or "app.envato.com" in page.url:
-                # Новый формат на app.envato.com - только кнопка скачивания
-                button_clicked = False
-                for selector in ["button:has-text('Скачать')", "button[data-analytics-name='download']"]:
-                    try:
-                        await page.wait_for_selector(selector, state="visible", timeout=2000)
-                        await page.click(selector, delay=0)
-                        button_clicked = True
-                        break
-                    except Exception:
-                        continue
+            # Click download button - универсальный селектор для обоих форматов
+            download_button_selectors = [
+                "button:has-text('Скачать')",  # Универсальный по тексту
+                "button[data-analytics-name='download']",  # Новый формат
+                "button[data-testid='button-download']"  # Старый формат
+            ]
 
-                if not button_clicked:
-                    raise Exception("Download button not found on app.envato.com")
-            else:
-                # Старый формат на elements.envato.com - пробуем универсальные селекторы и старые
-                button_clicked = False
-                for selector in [
-                    "button:has-text('Скачать')",
-                    "button[data-analytics-name='download']",
-                    "button[data-testid='button-download']"
-                ]:
-                    try:
-                        await page.wait_for_selector(selector, state="visible", timeout=2000)
-                        await page.click(selector, delay=0)
-                        button_clicked = True
-                        break
-                    except Exception:
-                        continue
+            button_clicked = False
+            for selector in download_button_selectors:
+                try:
+                    await page.wait_for_selector(selector, state="visible", timeout=2000)
+                    await page.click(selector, delay=0)
+                    button_clicked = True
+                    break
+                except Exception:
+                    continue
 
-                if not button_clicked:
-                    raise Exception("Download button not found on elements.envato.com")
+            if not button_clicked:
+                raise Exception("Download button not found")
 
-                await asyncio.sleep(0.5)
-                # Кликаем "download without license"
-                await page.click("button[data-testid='download-without-license-button']", delay=0)
+            # Для старого формата нужен дополнительный клик
+            if "elements.envato.com" in page.url:
+                try:
+                    await asyncio.sleep(0.5)
+                    await page.click("button[data-testid='download-without-license-button']", delay=0)
+                except:
+                    pass
 
             # Wait for download event with timeout
             max_wait = 5
