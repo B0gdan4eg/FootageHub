@@ -176,25 +176,71 @@ class MotionDownloader:
             
             # Кликаем на Download
             button_clicked = False
-            
+
             try:
                 selector = "span:has-text('Download')"
-                
+
                 elements = await page.query_selector_all(selector)
-                
+
                 for element in elements:
                     is_visible = await element.is_visible()
                     if is_visible:
                         await element.click(delay=0)
                         button_clicked = True
                         break
-                        
+
             except Exception as e:
                 print(f"[MOTION] ⚠️ Error in click handler: {e}")
-            
+
             if not button_clicked:
                 raise Exception("Download button not found")
-            
+
+            # Ждем появления модалки с выбором качества
+            await asyncio.sleep(0.5)
+
+            # Ищем и кликаем на кнопку качества (4K или HD)
+            try:
+                quality_buttons = await page.query_selector_all('button')
+                found_4k = False
+                found_hd = False
+                hd_button = None
+
+                # Сначала ищем 4K
+                for btn in quality_buttons:
+                    try:
+                        text_content = await btn.text_content()
+                        if text_content:
+                            text_content = text_content.strip()
+
+                            if "4K" in text_content or "4k" in text_content:
+                                is_visible = await btn.is_visible()
+                                if is_visible:
+                                    await btn.click(delay=50)
+                                    found_4k = True
+                                    print(f"[MOTION] 🎬 Clicked 4K quality")
+                                    break
+
+                            # Запоминаем HD кнопку на случай если 4K нет
+                            if "HD" in text_content and not hd_button:
+                                is_visible = await btn.is_visible()
+                                if is_visible:
+                                    hd_button = btn
+                                    found_hd = True
+                    except Exception:
+                        continue
+
+                # Если 4K не найден, но есть HD - кликаем HD
+                if not found_4k and found_hd and hd_button:
+                    await hd_button.click(delay=50)
+                    print(f"[MOTION] 🎬 Clicked HD quality")
+
+                # Небольшая пауза после выбора качества
+                if found_4k or found_hd:
+                    await asyncio.sleep(0.3)
+
+            except Exception as e:
+                print(f"[MOTION] ⚠️ Error selecting quality: {e}")
+
             # Ждем ответа от API
             max_wait = 5
             for _ in range(max_wait * 10):
