@@ -88,7 +88,7 @@ class WebPayAPI:
         seed = str(int(time.time()))
 
         # Конвертируем RUB в BYN (курс примерно 1 RUB = 0.033 BYN)
-        amount_byn = round(amount * 0.035, 2)
+        amount_byn = round(amount * 0.037, 2)
 
         # Форматируем amount для подписи по документации WebPay:
         # если поле содержит дробную часть (например, 1.00), используйте значение с нулями

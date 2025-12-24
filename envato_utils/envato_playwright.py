@@ -144,13 +144,13 @@ class EnvatoDownloader:
             page.on("download", handle_download)
 
             # Navigate to asset page
-            await page.goto(asset_url, wait_until="load", timeout=30000)
+            await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
 
             # Wait for redirect to app.envato.com if needed
             redirected = False
             if "elements.envato.com" in page.url:
                 try:
-                    await page.wait_for_url("**/app.envato.com/**", timeout=1500)
+                    await page.wait_for_url("**/app.envato.com/**", timeout=1000)
                     redirected = True
                 except Exception:
                     # No redirect happened - staying on old format (elements.envato.com)
@@ -162,7 +162,7 @@ class EnvatoDownloader:
                 button_clicked = False
                 for selector in ["button:has-text('Скачать')", "button[data-analytics-name='download']"]:
                     try:
-                        await page.wait_for_selector(selector, state="visible", timeout=5000)
+                        await page.wait_for_selector(selector, state="visible", timeout=2000)
                         await page.click(selector, delay=0)
                         button_clicked = True
                         break
@@ -180,7 +180,7 @@ class EnvatoDownloader:
                     "button[data-testid='button-download']"
                 ]:
                     try:
-                        await page.wait_for_selector(selector, state="visible", timeout=5000)
+                        await page.wait_for_selector(selector, state="visible", timeout=2000)
                         await page.click(selector, delay=0)
                         button_clicked = True
                         break
@@ -299,30 +299,30 @@ class EnvatoDownloader:
             client.on("Network.responseReceived", on_response)
 
             # Navigate to asset page
-            await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
+            await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
 
             # Close cookie banner if it appears - click "Reject All"
             try:
                 # Wait for cookie dialog and click reject button
-                await page.wait_for_selector("#CybotCookiebotDialog", timeout=3000)
-                await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=2000)
-                await asyncio.sleep(0.5)
+                await page.wait_for_selector("#CybotCookiebotDialog", timeout=1000)
+                await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=1000)
+                await asyncio.sleep(0.2)
             except (PlaywrightTimeoutError, TimeoutError):
                 pass  # Cookie banner not found, continue
 
             # Step 1: Click download button to open modal
-            await page.click("button[data-testid='button-download']", timeout=15000)
+            await page.click("button[data-testid='button-download']", timeout=10000)
             await asyncio.sleep(1)  # Wait for modal to appear
 
             # Step 2: Click radio button to select project (from recorded_actions.json)
-            await page.click("input[type='radio'][name='project-list-radio-button-item']", timeout=15000)
+            await page.click("input[type='radio'][name='project-list-radio-button-item']", timeout=10000)
             await asyncio.sleep(0.5)  # Wait for button to become enabled
 
             # Step 3: Click "Download with license" button (from recorded_actions.json)
-            await page.click("button[data-testid='add-download-button']", timeout=15000)
+            await page.click("button[data-testid='add-download-button']", timeout=10000)
 
             # Step 4: Wait for download URL from intercepted network responses
-            download_url = await self._wait_for_download_url(client, captured_responses, timeout=10)
+            download_url = await self._wait_for_download_url(client, captured_responses, timeout=5)
 
             elapsed = time.time() - start_time
             self.total_time += elapsed
@@ -381,7 +381,7 @@ class EnvatoDownloader:
                     pass
 
 
-    async def _wait_for_download_url(self, client, captured_responses, timeout=10) -> str | None:
+    async def _wait_for_download_url(self, client, captured_responses, timeout=5) -> str | None:
         """
         Wait for download URL to appear in intercepted network responses.
         Non-blocking approach using asyncio.sleep instead of time.sleep.
@@ -408,7 +408,7 @@ class EnvatoDownloader:
             await asyncio.sleep(0.1)
         return None
     
-    async def _wait_for_download_url_from_license(self, client, captured_responses, timeout=10) -> str | None:
+    async def _wait_for_download_url_from_license(self, client, captured_responses, timeout=5) -> str | None:
         """
         Wait for download URL to appear in intercepted network responses.
         Specifically looks for download_and_license API response.

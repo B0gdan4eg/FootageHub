@@ -68,8 +68,8 @@ async def send_price_menu(message_or_callback):
 
 # Хендлер для callback "buy_subscription"
 @router.message(Command("pay"))
-@router.message(lambda message: message.text == "Увеличить лимиты 💳")
-@router.callback_query(lambda c: c.data == "buy_subscription")
+@router.message(F.text == "Увеличить лимиты 💳")
+@router.callback_query(F.data == "buy_subscription")
 async def choose_plan_callback(callback_query: types.CallbackQuery):
     await send_price_menu(callback_query)
 
@@ -237,11 +237,3 @@ async def show_plan_details(callback_query: types.CallbackQuery):
         logger.info("Message edited successfully")
     except Exception as e:
         logger.error(f"Error editing message: {e}")
-
-
-# Добавляем универсальный хендлер для отладки всех callback
-@router.callback_query()
-async def catch_all_callbacks(callback_query: types.CallbackQuery):
-    """Ловит все необработанные callback для отладки."""
-    logger.warning(f"Unhandled callback: {callback_query.data} from user {callback_query.from_user.id}")
-    await callback_query.answer("⚠️ Неизвестная команда")
