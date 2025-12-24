@@ -1,6 +1,8 @@
 services:
+  # MediaBot - Main bot for Envato/Freepik downloads
   bot:
     image: ghcr.io/b0gdan4eg/footagehub:latest
+    container_name: footagehub-media-bot
     restart: always
     env_file: .env
     depends_on:
@@ -17,9 +19,40 @@ services:
     # Убрали SSL сертификаты - их обрабатывает Nginx
     - ./backups:/app/backups
     - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    networks:
+      - footagehub-network
+
+  # AIBot - AI content generation (isolated)
+  ai-bot:
+    image: ghcr.io/b0gdan4eg/footagehub-ai:latest
+    container_name: footagehub-ai-bot
+    restart: always
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      AI_BOT_TOKEN: ${AI_BOT_TOKEN}
+      KIE_AI_API_KEY: ${KIE_AI_API_KEY}
+      ADMIN: ${ADMIN}
+      CHANNEL_ID: ${CHANNEL_ID}
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./ai_generations:/app/ai_generations
+    networks:
+      - footagehub-network
+    # Health check for AI bot
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import sys; sys.exit(0)'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   db:
     image: postgres:15
+    container_name: footagehub-db
     restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -29,11 +62,17 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:15432:5432"
+    networks:
+      - footagehub-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+networks:
+  footagehub-network:
+    driver: bridge
 
 volumes:
   pgdata:

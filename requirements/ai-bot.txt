@@ -1,0 +1,8 @@
+# AI Bot specific dependencies
+
+# Include base requirements
+-r base.txt
+
+# No additional dependencies needed yet
+# Future: openai, anthropic, or other AI SDKs if needed
+# For now, all AI API calls will be made via httpx (from base.txt)
