@@ -12,7 +12,8 @@ on:
       - '.github/workflows/deploy-ai-bot.yml'
 
 jobs:
-  deploy-ai-bot:
+  build:
+    name: Build AI Bot Docker Image
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +28,12 @@ jobs:
         docker build -f docker/ai-bot.Dockerfile -t ghcr.io/b0gdan4eg/footagehub-ai:latest .
         docker push ghcr.io/b0gdan4eg/footagehub-ai:latest
 
+  deploy:
+    name: Deploy AI Bot to VPS
+    runs-on: ubuntu-latest
+    needs: build  # Ждем успешного завершения build job
+
+    steps:
     - name: Set up SSH
       run: |
         mkdir -p ~/.ssh
