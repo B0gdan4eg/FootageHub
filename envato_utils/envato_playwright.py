@@ -144,7 +144,7 @@ class EnvatoDownloader:
             page.on("download", handle_download)
 
             # Navigate to asset page
-            await page.goto(asset_url, wait_until="load", timeout=30000)
+            await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
 
             # Wait for redirect to app.envato.com if needed
             redirected = False
@@ -299,7 +299,7 @@ class EnvatoDownloader:
             client.on("Network.responseReceived", on_response)
 
             # Navigate to asset page
-            await page.goto(asset_url, wait_until="domcontentloaded", timeout=30000)
+            await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
 
             # Close cookie banner if it appears - click "Reject All"
             try:
