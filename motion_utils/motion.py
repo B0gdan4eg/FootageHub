@@ -171,27 +171,21 @@ class MotionDownloader:
             # Открываем страницу
             await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
             
-            # Ждем загрузки
-            try:
-                await page.wait_for_load_state("networkidle", timeout=1500)
-            except:
-                pass
-            
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             
             # Кликаем на Download
             button_clicked = False
             
             try:
-                # Ищем span с текстом Download (берём первый видимый элемент)
                 selector = "span:has-text('Download')"
                 
-                # Получаем все элементы и кликаем на первый видимый
+                # ДОБАВЬ эту строку:
+                await page.wait_for_selector(selector, state="visible", timeout=3000)
+                
                 elements = await page.query_selector_all(selector)
                 
                 for element in elements:
                     is_visible = await element.is_visible()
-                    
                     if is_visible:
                         await element.click(delay=0)
                         button_clicked = True
