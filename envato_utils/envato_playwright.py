@@ -144,7 +144,7 @@ class EnvatoDownloader:
             page.on("download", handle_download)
 
             # Navigate to asset page
-            await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
+            await page.goto(asset_url, wait_until="load", timeout=15000)
 
             # Wait for redirect to app.envato.com if needed
             redirected = False
