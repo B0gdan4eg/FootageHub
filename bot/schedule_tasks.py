@@ -73,14 +73,14 @@ async def process_monthly_subscriptions(bot: Bot):
             remaining_credits = subscription.total_limit - subscription.used_total
 
             if remaining_credits > 0:
-                # Начисляем оставшиеся кредиты
+                # Обновляем кредиты до оставшегося количества
                 result = await session.execute(
                     select(User).where(User.id == subscription.user_id)
                 )
                 user = result.scalar_one_or_none()
                 if user:
-                    user.credits += remaining_credits
-                    print(f"✅ Начислено {remaining_credits} кредитов пользователю {subscription.user_id} ({subscription.subscription_type.value})")
+                    user.credits = remaining_credits
+                    print(f"✅ Обновлены кредиты до {remaining_credits} для пользователя {subscription.user_id} ({subscription.subscription_type.value})")
                     processed_count += 1
             else:
                 # Лимит исчерпан - деактивируем подписку
