@@ -53,13 +53,13 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
 
     # Проверяем, нужна ли лицензия (точка перед URL)
     with_license = False
-    if url.startswith(".https://elements.envato.com/"):
+    if url.startswith(".https://elements.envato.com/") or url.startswith(".https://app.envato.com/"):
         url = url[1:]  # Remove leading dot
         with_license = True
         print(f"[DOWNLOAD] 🔐 Лицензия запрошена для: {url[:60]}...")
 
-    # Проверяем формат ссылки
-    if not url.startswith("https://elements.envato.com/"):
+    # Проверяем формат ссылки (поддерживаем оба формата)
+    if not (url.startswith("https://elements.envato.com/") or url.startswith("https://app.envato.com/")):
         await message.answer(
             BAD_URL,
             parse_mode=ParseMode.HTML,

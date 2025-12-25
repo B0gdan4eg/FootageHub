@@ -150,7 +150,7 @@ class EnvatoDownloader:
             redirected = False
             if "elements.envato.com" in page.url:
                 try:
-                    await page.wait_for_url("**/app.envato.com/**", timeout=1000)
+                    await page.wait_for_url("**/app.envato.com/**", timeout=3000)
                     redirected = True
                 except Exception:
                     # No redirect happened - staying on old format (elements.envato.com)
