@@ -43,6 +43,10 @@ class User(Base):
     # Бесплатные кредиты (начисляются ежедневно всем пользователям)
     credits = Column(Integer, default=0)
 
+    # AI Credits для AI Bot
+    ai_credits = Column(Integer, default=0, nullable=False)
+    ai_credits_used = Column(Integer, default=0, nullable=False)
+
     # Реферальная система
     referral_code = Column(String, unique=True, nullable=True)
 

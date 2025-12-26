@@ -1,5 +1,6 @@
 from aiogram import Router, types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.fsm.context import FSMContext
 from db.session import get_session
 from db.user_crud import get_user_by_telegram_id, get_all_users
 from db.downloaded_file_crud import count_downloads_by_user
@@ -15,7 +16,8 @@ router = Router()
 @router.message(Command("info"))
 @router.callback_query(lambda c: c.data == "user_info")
 @router.message(lambda message: message.text == "Информация")
-async def info(message: types.Message):
+async def info(message: types.Message, state: FSMContext):
+    await state.clear()
     telegram_id = message.from_user.id
 
     async for session in get_session():
@@ -75,7 +77,7 @@ async def info(message: types.Message):
 
         # Создаём кнопку увеличения лимитов
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💳 Увеличить лимиты", callback_data="buy_subscription")]
+            [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="buy_subscription")]
         ])
 
         await message.answer(

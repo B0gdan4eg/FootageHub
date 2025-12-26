@@ -68,9 +68,14 @@ async def send_price_menu(message_or_callback):
 
 # Хендлер для callback "buy_subscription"
 @router.message(Command("pay"))
-@router.message(F.text == "Увеличить лимиты 💳")
+@router.message(F.text == "Оформить подписку 💳")
+async def choose_plan_message(message: types.Message, state):
+    await state.clear()
+    await send_price_menu(message)
+
 @router.callback_query(F.data == "buy_subscription")
-async def choose_plan_callback(callback_query: types.CallbackQuery):
+async def choose_plan_callback(callback_query: types.CallbackQuery, state):
+    await state.clear()
     await send_price_menu(callback_query)
 
 @router.callback_query(F.data.startswith("select_plan_"))

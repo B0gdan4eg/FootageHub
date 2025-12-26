@@ -27,6 +27,7 @@ async def is_manager(user_id: int) -> bool:
 
 @router.message(Command("manager"))
 async def manager_command(message: types.Message, state: FSMContext):
+    await state.clear()
     is_mgr = await is_manager(message.from_user.id)
     is_adm = await is_admin(message.from_user.id)
     access = is_mgr or is_adm
@@ -34,7 +35,7 @@ async def manager_command(message: types.Message, state: FSMContext):
     if not access:
         await message.answer("🚫 У вас нет прав для этой команды.")
         return
-        
+
     manager_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
         [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],

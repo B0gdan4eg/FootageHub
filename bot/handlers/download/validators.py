@@ -79,7 +79,7 @@ async def check_user_eligibility(message: types.Message, bot: Bot, session) -> t
 
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="💳 Увеличить лимиты", callback_data="buy_subscription")]
+                [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="buy_subscription")]
             ]
         )
         await message.answer(

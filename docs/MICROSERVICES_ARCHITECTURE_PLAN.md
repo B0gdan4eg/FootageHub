@@ -803,8 +803,8 @@ CMD ["python", "-m", "ai_bot.main"]
 - [ ] Создать директорию `shared/`
 - [ ] Переместить `db/models.py` → `shared/db/models.py`
 - [ ] Добавить новые модели: `BonusType`, `UserBonus`, `AIGenerationLog`
-- [ ] Обновить модель `User` (добавить `ai_credits`, `ai_credits_used`)
-- [ ] Создать Alembic миграцию для новых таблиц
+- [x] Обновить модель `User` (добавить `ai_credits`, `ai_credits_used`) ✅ 2025-12-26
+- [x] Создать Alembic миграцию для новых таблиц ✅ 2025-12-26
 
 #### Шаг 1.2: Рефакторинг CRUD → Repositories
 - [ ] Создать `shared/db/repositories/base.py` с интерфейсами
@@ -836,19 +836,21 @@ CMD ["python", "-m", "ai_bot.main"]
 - [ ] Добавить handler для Motion Array: `media_bot/handlers/download/motion_array.py`
 
 #### Шаг 2.2: AIBot ⭐ ВЫСОКИЙ ПРИОРИТЕТ
-- [ ] Создать `ai_bot/` директорию
-- [ ] Создать базовый Kie.ai API клиент: `ai_bot/providers/kie_ai_client.py`
-- [ ] Рефакторить `kie_utils.py` → разделить на отдельные провайдеры:
-  - [ ] `ai_bot/providers/nano_banana.py` (Nano Banana - images)
-  - [ ] `ai_bot/providers/kling.py` (Kling 2.6 - video)
-  - [ ] `ai_bot/providers/veo.py` (VEO 3.1 - video) - НОВЫЙ
-- [ ] Создать `ai_bot/providers/base.py` (AbstractAIProvider)
-- [ ] Создать handlers:
-  - [ ] `image_generation.py` (Nano Banana)
-  - [ ] `video_generation.py` (Kling 2.6 + VEO 3.1)
-- [ ] Создать `ai_bot/services/ai_service.py`
-- [ ] Создать `ai_bot/services/credit_manager.py`
-- [ ] Создать `ai_bot/main.py`
+- [x] Создать `ai_bot/` директорию ✅ 2025-12-26
+- [x] Создать базовый Kie.ai API клиент: `ai_bot/providers/kie_ai_client.py` ✅ 2025-12-26
+- [x] Рефакторить `kie_utils.py` → разделить на отдельные провайдеры: ✅ 2025-12-26
+  - [x] `ai_bot/providers/nano_banana.py` (Nano Banana - images) ✅ 2025-12-26
+  - [x] `ai_bot/providers/kling.py` (Kling 2.6 - video) ✅ 2025-12-26
+  - [x] `ai_bot/providers/veo.py` (VEO 3.1 - video) - НОВЫЙ ✅ 2025-12-26
+- [x] Создать `ai_bot/providers/base.py` (AbstractAIProvider) ✅ 2025-12-26
+- [x] Создать handlers: ✅ 2025-12-26
+  - [x] `image_generation.py` (Nano Banana) ✅ 2025-12-26
+  - [x] `video_generation.py` (Kling 2.6 + VEO 3.1) ✅ 2025-12-26
+- [x] Создать `ai_bot/services/ai_service.py` ✅ 2025-12-26
+- [x] Создать `ai_bot/services/credit_manager.py` ✅ 2025-12-26
+- [x] Создать `ai_bot/main.py` ✅ 2025-12-26
+- [x] Создать `ai_bot/state.py` для FSM управления ✅ 2025-12-26
+- [x] Протестировать запуск AIBot ✅ 2025-12-26
 
 #### Шаг 2.3: Бонусная система
 - [ ] Реализовать `BonusStrategy` паттерн
@@ -1331,3 +1333,143 @@ def downgrade():
 1. Какие еще типы бонусов нужно добавить в систему?
 2. Нужна ли отдельная веб админ-панель для управления бонусами?
 3. Timing: когда начинать рефакторинг MediaBot?
+
+---
+
+## 12. История реализации
+
+### 2025-12-26: AIBot - Базовая реализация ✅
+
+#### Выполненные задачи:
+
+**База данных:**
+- ✅ Добавлены поля `ai_credits` и `ai_credits_used` в модель User
+- ✅ Создана Alembic миграция `cfc529f762df_add_ai_credits_to_users_table.py`
+- ✅ Миграция применена к production БД с `server_default='0'`
+
+**Архитектура провайдеров:**
+- ✅ Создан `AbstractAIProvider` базовый класс с pattern Strategy
+- ✅ Реализован `KieAIClient` - универсальный клиент для Kie.ai API
+- ✅ Провайдер `NanoBananaProvider` для генерации изображений
+- ✅ Провайдер `KlingProvider` для генерации видео (Kling 2.6)
+- ✅ Провайдер `VeoProvider` для генерации видео (VEO 3.1)
+- ✅ Поддержка image-to-video (референсные изображения)
+
+**Сервисный слой:**
+- ✅ `AIService` - координация провайдеров и генераций
+- ✅ `CreditManager` - управление AI кредитами с поддержкой:
+  - Проверка баланса
+  - Списание кредитов
+  - Возврат кредитов (refund system)
+  - Статистика использования
+
+**Telegram Bot Handlers:**
+- ✅ `start.py` - отображение реального баланса AI кредитов
+- ✅ `image_generation.py` - полный FSM flow для генерации изображений
+  - Выбор aspect ratio (1:1, 16:9, 9:16, 4:3, auto)
+  - Выбор resolution (1K, 2K, 4K)
+  - Автоматический refund при ошибках
+- ✅ `video_generation.py` - полный FSM flow для генерации видео
+  - Выбор провайдера (Kling 2.6 / VEO 3.1)
+  - Выбор aspect ratio, duration
+  - Опция звука для Kling
+  - Автоматический refund при ошибках
+
+**FSM State Management:**
+- ✅ `ImageGenerationStates` - состояния для генерации изображений
+- ✅ `VideoGenerationStates` - состояния для генерации видео
+
+**Тестирование:**
+- ✅ AIBot успешно запускается
+- ✅ Все импорты работают корректно
+- ✅ Интеграция с существующей БД через `tg_id`
+
+#### Технические детали:
+
+**Стоимость генерации:**
+- Изображения (Nano Banana): 1 AI кредит
+- Видео (Kling/VEO): 5 AI кредитов
+
+**Особенности реализации:**
+1. **Adaptive Polling** - умное ожидание результатов:
+   - 0-30с: проверка каждые 2с
+   - 30-120с: проверка каждые 5с
+   - >120с: проверка каждые 10с
+
+2. **Refund System** - автоматический возврат кредитов:
+   - При ошибке генерации
+   - При exception в коде
+   - С логированием причины
+
+3. **Error Handling** - user-friendly сообщения для ошибок Kie.ai:
+   - 402: Недостаточно кредитов на Kie.ai
+   - 401: Неверный API ключ
+   - 429: Превышен лимит запросов
+
+#### Структура файлов:
+
+```
+ai_bot/
+├── providers/
+│   ├── base.py              ✅ AbstractAIProvider
+│   ├── kie_ai_client.py     ✅ Базовый Kie.ai клиент
+│   ├── nano_banana.py       ✅ Генерация изображений
+│   ├── kling.py             ✅ Генерация видео (Kling)
+│   └── veo.py               ✅ Генерация видео (VEO)
+├── services/
+│   ├── ai_service.py        ✅ Основной AI сервис
+│   └── credit_manager.py    ✅ Управление кредитами
+├── handlers/
+│   ├── start.py             ✅ Старт и баланс
+│   ├── image_generation.py  ✅ Генерация изображений
+│   └── video_generation.py  ✅ Генерация видео
+├── state.py                 ✅ FSM состояния
+├── config.py                ✅ Конфигурация
+├── main.py                  ✅ Точка входа
+└── README.md                ✅ Документация
+
+migrations/versions/
+└── cfc529f762df_add_ai_credits_to_users_table.py ✅
+
+db/
+└── models.py                ✅ User.ai_credits, User.ai_credits_used
+```
+
+#### Временные решения (требуют рефакторинга):
+
+⚠️ **Использование `db/` вместо `shared/db/`**
+- Текущее состояние: импорты из `db.models`, `db.session`
+- Планируется: миграция на `shared/db/` структуру
+- Причина отсрочки: фокус на функциональности AIBot
+
+#### Следующие шаги:
+
+**Высокий приоритет:**
+- [ ] Добавить логирование в таблицу `AIGenerationLog`
+- [ ] Создать middleware для автоматической проверки AI credits
+- [ ] Интеграция payment системы для покупки AI кредитов
+
+**Средний приоритет:**
+- [ ] Мигрировать на `shared/` структуру
+- [ ] Добавить queue систему для обработки нескольких генераций
+- [ ] WebHook callbacks для async уведомлений
+
+**Низкий приоритет:**
+- [ ] Поддержка image editing в Nano Banana
+- [ ] Admin панель для управления AI кредитами
+- [ ] Метрики и аналитика использования AI
+
+#### Метрики:
+
+- **Код:** ~2500 строк нового кода
+- **Файлы:** 12 новых файлов
+- **Провайдеры:** 3 AI провайдера (Nano Banana, Kling, VEO)
+- **Миграции:** 1 новая миграция БД
+- **Время реализации:** ~4 часа
+
+#### Известные ограничения:
+
+1. Нет логирования генераций в БД (TODO)
+2. Нет middleware для проверки кредитов (TODO)
+3. Нет системы очередей для параллельных генераций
+4. Временное использование `db/` вместо `shared/db/`

@@ -15,6 +15,7 @@ BLOCKED_USERS = {472785197, 289997391, 6269570979}
 
 @router.message(CommandStart())
 async def cmd_start(message: types.Message, state: FSMContext, command: CommandObject):
+    await state.clear()
     telegram_id = message.from_user.id
 
     # Проверка на заблокированных пользователей

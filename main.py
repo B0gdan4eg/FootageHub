@@ -35,7 +35,7 @@ async def set_bot_commands(bot: Bot):
         BotCommand(command="freepik", description="Скачать Freepik"),
         BotCommand(command="motion", description="Скачать Motion Array"),
         BotCommand(command="info", description="Информация"),
-        BotCommand(command="pay", description="Увеличить лимиты"),
+        BotCommand(command="pay", description="Оформить подписку"),
     ]
     await bot.set_my_commands(commands)
 
@@ -51,14 +51,15 @@ BotServices.link_processor = LinkProcessor(max_workers=5)
 logger.set_bot(bot)
 
 # Роутеры бота
-dp.include_router(start.router)
-dp.include_router(admin.router)
-dp.include_router(manager.router)
-dp.include_router(menu.router)
-dp.include_router(info.router)
-dp.include_router(channel_check.router)
-dp.include_router(download.router)
-dp.include_router(payment.router)
+# Порядок важен! Сначала роутеры с FSM состояниями, потом общие команды
+dp.include_router(admin.router)          # Админ-панель с FSM состояниями
+dp.include_router(manager.router)        # Менеджер-панель с FSM состояниями
+dp.include_router(download.router)       # Скачивание с FSM состояниями (waiting_for_link)
+dp.include_router(payment.router)        # Платежи (могут быть FSM состояния)
+dp.include_router(channel_check.router)  # Проверка подписки на канал
+dp.include_router(menu.router)           # Главное меню (сбрасывает состояния)
+dp.include_router(info.router)           # Информация (сбрасывает состояния)
+dp.include_router(start.router)          # /start должен быть последним (сбрасывает состояния)
 #dp.include_router(group_st.router)
 
 async def start_bot():

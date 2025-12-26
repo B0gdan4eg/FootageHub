@@ -114,7 +114,7 @@ async def handle_motion_link(message: types.Message, state: FSMContext, bot: Bot
         if user.credits <= 0:
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="💳 Увеличить лимиты", callback_data="buy_subscription")]
+                    [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="buy_subscription")]
                 ]
             )
             await message.answer(

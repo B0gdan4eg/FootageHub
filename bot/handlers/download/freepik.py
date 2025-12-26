@@ -111,7 +111,7 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
         if user.credits <= 0:
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="💳 Увеличить лимиты", callback_data="buy_subscription")]
+                    [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="buy_subscription")]
                 ]
             )
             await message.answer(

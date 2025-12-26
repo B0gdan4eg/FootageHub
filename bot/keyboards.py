@@ -11,7 +11,7 @@ main_menu_kb = ReplyKeyboardMarkup(
         ],
         [
             KeyboardButton(text="Информация"),
-            KeyboardButton(text="Увеличить лимиты 💳"),
+            KeyboardButton(text="Оформить подписку 💳"),
         ]
     ],
     resize_keyboard=True,

@@ -256,7 +256,8 @@ async def delete_all_subs_confirmed(callback: types.CallbackQuery):
 
 
 @router.callback_query(lambda c: c.data == "admin_cancel_delete_subscriptions")
-async def cancel_delete_subscriptions(callback: types.CallbackQuery):
+async def cancel_delete_subscriptions(callback: types.CallbackQuery, state):
     """Отмена удаления подписок"""
+    await state.clear()
     await callback.message.edit_text("❌ Удаление подписок отменено.")
     await callback.answer()
