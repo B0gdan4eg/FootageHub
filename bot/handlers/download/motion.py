@@ -38,10 +38,16 @@ async def ask_for_motion_link(message: types.Message, state: FSMContext, bot: Bo
         if not is_eligible:
             return
 
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]
+            ]
+        )
         await message.answer(
             APPLY_DOWNLOAD_MOTION.format(credit=user.credits),
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=keyboard
         )
         await state.set_state(DownloadFlow.waiting_for_motion_link)
 
@@ -53,10 +59,16 @@ async def handle_motion_link(message: types.Message, state: FSMContext, bot: Bot
 
     # Проверяем формат ссылки
     if not url.startswith("https://motionarray.com/"):
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]
+            ]
+        )
         await message.answer(
             BAD_URL_MOTION,
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=keyboard
         )
         return
 
@@ -217,10 +229,16 @@ async def download_more_motion(callback: CallbackQuery, state: FSMContext, bot: 
                 await callback.answer()
                 return
 
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]
+            ]
+        )
         await callback.message.answer(
             APPLY_DOWNLOAD_MOTION.format(credit=user.credits),
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=keyboard
         )
         await state.set_state(DownloadFlow.waiting_for_motion_link)
         await callback.answer()

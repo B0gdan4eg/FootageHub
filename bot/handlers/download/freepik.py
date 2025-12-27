@@ -38,10 +38,16 @@ async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: B
         if not is_eligible:
             return
 
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]
+            ]
+        )
         await message.answer(
             APPLY_DOWNLOAD_FREEPIK.format(credit=user.credits),
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=keyboard
         )
         await state.set_state(DownloadFlow.waiting_for_freepik_link)
 
@@ -51,10 +57,16 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
     """Обработка ссылки на Freepik файл"""
     url = message.text.strip()
     if not "freepik.com" in url.lower():
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]
+            ]
+        )
         await message.answer(
             BAD_URL_FREEPIK,
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
+            reply_markup=keyboard
         )
         return
 
@@ -214,10 +226,16 @@ async def download_more_freepik(callback: CallbackQuery, state: FSMContext, bot:
                 await callback.answer()
                 return
 
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]
+            ]
+        )
         await callback.message.answer(
             APPLY_DOWNLOAD_FREEPIK.format(credit=user.credits),
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=keyboard
         )
         await state.set_state(DownloadFlow.waiting_for_freepik_link)
         await callback.answer()

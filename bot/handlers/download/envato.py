@@ -38,10 +38,16 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
         if not is_eligible:
             return
 
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]
+            ]
+        )
         await message.answer(
             APPLY_DOWNLOAD.format(credit=user.credits),
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=keyboard
         )
         await state.set_state(DownloadFlow.waiting_for_link)
 
@@ -60,10 +66,16 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
 
     # Проверяем формат ссылки (поддерживаем оба формата)
     if not (url.startswith("https://elements.envato.com/") or url.startswith("https://app.envato.com/")):
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]
+            ]
+        )
         await message.answer(
             BAD_URL,
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=keyboard
         )
         return
 
@@ -224,10 +236,16 @@ async def download_more(callback: CallbackQuery, state: FSMContext, bot: Bot):
                 await callback.answer()
                 return
 
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]
+            ]
+        )
         await callback.message.answer(
             APPLY_DOWNLOAD.format(credit=user.credits),
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=keyboard
         )
         await state.set_state(DownloadFlow.waiting_for_link)
         await callback.answer()
