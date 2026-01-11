@@ -22,6 +22,7 @@ router = Router()
 
 # Setup logger
 logger = get_logger(__name__)
+logger.info("DATABASE HANDLER MODULE LOADED - LOGGER ACTIVE")
 
 
 async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int):

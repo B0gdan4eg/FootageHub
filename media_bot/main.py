@@ -8,7 +8,7 @@ from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from envato_utils.test_env import LinkProcessor
-from freepik_utils.logger import logger
+from freepik_utils.logger import logger as error_logger
 from media_bot.config import BOT_TOKEN
 from media_bot.handlers import (
     admin,
@@ -30,17 +30,14 @@ from media_bot.schedule_tasks import (
 )
 from media_bot.services import BotServices
 from media_bot.webhook.server_start import start_server
+from shared.core.logger import get_logger
 from shared.db.base import create_tables, run_migrations
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("bot.log", encoding="utf-8"),  # Save to file
-        logging.StreamHandler(),  # Also print to console
-    ],
-)
+# Setup centralized logging
+logger = get_logger("media_bot", level=logging.INFO)
+logger.info("=" * 60)
+logger.info("MEDIA BOT STARTING - CENTRALIZED LOGGER ACTIVE")
+logger.info("=" * 60)
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -69,7 +66,7 @@ BotServices.bot = bot
 BotServices.link_processor = LinkProcessor(max_workers=5)
 
 # Initialize universal logger for error reporting
-logger.set_bot(bot)
+error_logger.set_bot(bot)
 
 # Роутеры бота
 # Порядок важен! Сначала роутеры с FSM состояниями, потом общие команды
@@ -94,14 +91,14 @@ async def main():
     try:
         await run_migrations()
     except Exception as e:
-        print(f"[WARN] Миграции не выполнены: {e}")
-        print("[INFO] Создаю таблицы напрямую...")
+        logger.warning(f"Миграции не выполнены: {e}")
+        logger.info("Создаю таблицы напрямую...")
         await create_tables()
 
     await set_bot_commands(bot)
 
     # 2. Запуск LinkProcessor для Envato и Freepik
-    print("[INFO] Запуск LinkProcessor (Envato + Freepik)...")
+    logger.info("Запуск LinkProcessor (Envato + Freepik)...")
     await BotServices.link_processor.start()
 
     # 3. Планировщик
@@ -117,19 +114,19 @@ async def main():
     # Очистка Playwright кэша каждые 2 часа
     scheduler.add_job(cleanup_playwright_cache, "interval", hours=1)
     scheduler.start()
-    print("[INFO] ✅ Scheduler started:")
-    print("  - Weekly free credits: Every Monday at 03:00")
-    print("  - Monthly subscriptions processing: Daily at 03:05")
-    print("  - Expired subscriptions check: Daily at 03:10")
-    print("  - Database backup: Every 4 hours")
-    print("  - Playwright cleanup: Every hour")
+    logger.info("✅ Scheduler started:")
+    logger.info("  - Weekly free credits: Every Monday at 03:00")
+    logger.info("  - Monthly subscriptions processing: Daily at 03:05")
+    logger.info("  - Expired subscriptions check: Daily at 03:10")
+    logger.info("  - Database backup: Every 4 hours")
+    logger.info("  - Playwright cleanup: Every hour")
 
     try:
         # 4. Запуск сервера и бота параллельно
         await asyncio.gather(start_server(), start_bot())
     finally:
         # Остановка LinkProcessor при завершении
-        print("[INFO] Остановка LinkProcessor...")
+        logger.info("Остановка LinkProcessor...")
         await BotServices.link_processor.stop()
 
 
