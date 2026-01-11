@@ -24,10 +24,6 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation \
     fonts-noto-color-emoji \
     fonts-unifont \
-    # Display server
-    xvfb \
-    x11vnc \
-    fluxbox \
     # PostgreSQL client
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
@@ -56,13 +52,9 @@ COPY alembic.ini /app/alembic.ini
 # Copy scripts (for seeding, etc.)
 COPY scripts/ /app/scripts/
 
-# Setup Xvfb for headless Playwright
-COPY docker/xvfb-run.sh /usr/local/bin/xvfb-run.sh
-RUN chmod +x /usr/local/bin/xvfb-run.sh
-
 # Environment
 ENV PYTHONPATH=/app
 ENV DISPLAY=:99
 ENV PYTHONIOENCODING=utf-8
 
-CMD ["/usr/local/bin/xvfb-run.sh", "python", "-m", "media_bot.main"]
+CMD ["python", "-m", "media_bot.main"]
