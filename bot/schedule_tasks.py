@@ -1,14 +1,17 @@
-from db.session import get_session
-from db.user_crud import add_daily_credits
-from db.base import backup_database
-from aiogram import Bot
-from db.models import User, Subscription, SubscriptionType
-from sqlalchemy import update, select, and_
-from datetime import datetime
 import shutil
 import tempfile
+from datetime import datetime
 from pathlib import Path
+
+from aiogram import Bot
+from sqlalchemy import and_, select, update
+
 from bot.config import DAILY_FREE_CREDITS
+from db.base import backup_database
+from db.models import Subscription, SubscriptionType, User
+from db.session import get_session
+from db.user_crud import add_daily_credits
+
 
 async def scheduler_job(bot: Bot):
     """Еженедельная выдача бесплатных кредитов."""
@@ -23,11 +26,13 @@ async def scheduler_job(bot: Bot):
 
         # Получаем всех пользователей с активной дневной подпиской
         result = await session.execute(
-            select(User.id).join(Subscription).where(
+            select(User.id)
+            .join(Subscription)
+            .where(
                 and_(
                     Subscription.subscription_type == SubscriptionType.DAILY_30,
                     Subscription.is_active == True,
-                    Subscription.end_date > datetime.utcnow()
+                    Subscription.end_date > datetime.utcnow(),
                 )
             )
         )
@@ -36,14 +41,15 @@ async def scheduler_job(bot: Bot):
         # Начисляем 30 кредитов пользователям с дневной подпиской
         if daily_sub_users:
             await session.execute(
-                update(User)
-                .where(User.id.in_(daily_sub_users))
-                .values(credits=30)
+                update(User).where(User.id.in_(daily_sub_users)).values(credits=30)
             )
-            print(f"✅ Начислено 30 кредитов {len(daily_sub_users)} пользователям с дневной подпиской")
+            print(
+                f"✅ Начислено 30 кредитов {len(daily_sub_users)} пользователям с дневной подпиской"
+            )
 
         await session.commit()
         # await add_daily_credits(session, bot)
+
 
 async def process_monthly_subscriptions(bot: Bot):
     """Обработка месячных подписок (MONTHLY_50, MONTHLY_150, MONTHLY_400) - начисление остатка и деактивация при исчерпании."""
@@ -53,13 +59,15 @@ async def process_monthly_subscriptions(bot: Bot):
         result = await session.execute(
             select(Subscription).where(
                 and_(
-                    Subscription.subscription_type.in_([
-                        SubscriptionType.MONTHLY_50,
-                        SubscriptionType.MONTHLY_150,
-                        SubscriptionType.MONTHLY_400
-                    ]),
+                    Subscription.subscription_type.in_(
+                        [
+                            SubscriptionType.MONTHLY_50,
+                            SubscriptionType.MONTHLY_150,
+                            SubscriptionType.MONTHLY_400,
+                        ]
+                    ),
                     Subscription.is_active == True,
-                    Subscription.end_date > datetime.utcnow()
+                    Subscription.end_date > datetime.utcnow(),
                 )
             )
         )
@@ -74,19 +82,21 @@ async def process_monthly_subscriptions(bot: Bot):
 
             if remaining_credits > 0:
                 # Обновляем кредиты до оставшегося количества
-                result = await session.execute(
-                    select(User).where(User.id == subscription.user_id)
-                )
+                result = await session.execute(select(User).where(User.id == subscription.user_id))
                 user = result.scalar_one_or_none()
                 if user:
                     user.credits = remaining_credits
-                    print(f"✅ Обновлены кредиты до {remaining_credits} для пользователя {subscription.user_id} ({subscription.subscription_type.value})")
+                    print(
+                        f"✅ Обновлены кредиты до {remaining_credits} для пользователя {subscription.user_id} ({subscription.subscription_type.value})"
+                    )
                     processed_count += 1
             else:
                 # Лимит исчерпан - деактивируем подписку
                 subscription.is_active = False
                 subscription.updated_at = datetime.utcnow()
-                print(f"⚠️ Подписка #{subscription.id} деактивирована (лимит исчерпан, пользователь {subscription.user_id})")
+                print(
+                    f"⚠️ Подписка #{subscription.id} деактивирована (лимит исчерпан, пользователь {subscription.user_id})"
+                )
                 deactivated_count += 1
 
             # Сбрасываем used_today в любом случае
@@ -95,9 +105,12 @@ async def process_monthly_subscriptions(bot: Bot):
         await session.commit()
 
         if processed_count > 0 or deactivated_count > 0:
-            print(f"✅ Обработка месячных подписок завершена: начислено {processed_count}, деактивировано {deactivated_count}")
+            print(
+                f"✅ Обработка месячных подписок завершена: начислено {processed_count}, деактивировано {deactivated_count}"
+            )
         else:
             print("✅ Нет активных месячных подписок для обработки")
+
 
 async def check_expired_subscriptions(bot: Bot):
     """Проверка и деактивация истекших подписок."""
@@ -106,10 +119,7 @@ async def check_expired_subscriptions(bot: Bot):
         # Находим все активные подписки, срок которых истек
         result = await session.execute(
             select(Subscription).where(
-                and_(
-                    Subscription.is_active == True,
-                    Subscription.end_date <= datetime.utcnow()
-                )
+                and_(Subscription.is_active == True, Subscription.end_date <= datetime.utcnow())
             )
         )
         expired_subscriptions = result.scalars().all()
@@ -132,6 +142,7 @@ async def check_expired_subscriptions(bot: Bot):
         else:
             print("✅ Нет истекших подписок")
 
+
 async def daily_backup_job():
     """Ежедневный бэкап базы данных."""
     print("🔄 Starting daily database backup...")
@@ -140,6 +151,7 @@ async def daily_backup_job():
         print("✅ Daily backup completed successfully")
     except Exception as e:
         print(f"❌ Daily backup failed: {e}")
+
 
 def cleanup_playwright_cache():
     """Очистка временных файлов Playwright для освобождения места на диске."""
@@ -155,7 +167,9 @@ def cleanup_playwright_cache():
         for dir_path in temp_dir.glob(pattern):
             try:
                 # Calculate size
-                size_mb = sum(f.stat().st_size for f in dir_path.rglob('*') if f.is_file()) / (1024 * 1024)
+                size_mb = sum(f.stat().st_size for f in dir_path.rglob("*") if f.is_file()) / (
+                    1024 * 1024
+                )
                 total_size += size_mb
 
                 # Remove directory

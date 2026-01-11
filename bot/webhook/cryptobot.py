@@ -1,17 +1,19 @@
-from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
-from db.session import get_session
-from db.user_crud import get_user_by_telegram_id
-from db.payment_crud import get_payment_by_invoice_id, mark_payment_success
-from db.subscription_crud import create_subscription
-from db.models import SubscriptionType, ServiceType
-from bot.handlers.messages import SUBSCRIPTION_ACTIVATED
-from bot.services import BotServices
-from aiogram.enums.parse_mode import ParseMode
-from datetime import datetime
 import json
 import logging
+from datetime import datetime
+
+from aiogram.enums.parse_mode import ParseMode
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
+
+from bot.handlers.messages import SUBSCRIPTION_ACTIVATED
+from bot.services import BotServices
 from bot.utils.price_loader import load_subscription_plans
+from db.models import ServiceType, SubscriptionType
+from db.payment_crud import get_payment_by_invoice_id, mark_payment_success
+from db.session import get_session
+from db.subscription_crud import create_subscription
+from db.user_crud import get_user_by_telegram_id
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +26,9 @@ async def webhook(request: Request):
         data = await request.json()
     except json.JSONDecodeError:
         print("❌ Invalid JSON in webhook")
-        return JSONResponse(content={"status": "ok"}, status_code=200)  # Возвращаем 200 чтобы не повторяли
+        return JSONResponse(
+            content={"status": "ok"}, status_code=200
+        )  # Возвращаем 200 чтобы не повторяли
 
     update_type = data.get("update_type")
 
@@ -91,13 +95,15 @@ async def webhook(request: Request):
                 total_limit=total_limit,
                 daily_limit=daily_limit,
                 days=period_days,
-                payment_id=payment.id
+                payment_id=payment.id,
             )
 
             # Помечаем платеж как успешный
             await mark_payment_success(session, str(invoice_id))
 
-            print(f"✅ Подписка {plan_key} создана: user={user_id}, period={period_days}д, limits=(total={total_limit}, daily={daily_limit})")
+            print(
+                f"✅ Подписка {plan_key} создана: user={user_id}, period={period_days}д, limits=(total={total_limit}, daily={daily_limit})"
+            )
 
             # Отправляем уведомление пользователю
             if BotServices.bot:
@@ -113,7 +119,7 @@ async def webhook(request: Request):
                         subscription_type=plan_data["name"],
                         period_days=period_days,
                         credits=user.credits,
-                        end_date=end_date
+                        end_date=end_date,
                     )
 
                     # Отправляем сообщение пользователю
@@ -121,7 +127,7 @@ async def webhook(request: Request):
                         chat_id=user_id,
                         text=message,
                         parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True
+                        disable_web_page_preview=True,
                     )
                     print(f"✅ Уведомление отправлено пользователю {user_id}")
                 except Exception as e:
@@ -132,6 +138,7 @@ async def webhook(request: Request):
     except Exception as e:
         print(f"❌ Ошибка при обработке платежа {invoice_id}: {e}")
         import traceback
+
         traceback.print_exc()
         # Возвращаем 200 чтобы CryptoBot не повторял запрос, но логируем ошибку
         return JSONResponse(content={"status": "ok"}, status_code=200)
@@ -154,4 +161,6 @@ def parse_payload(payload: str):
         user_id = int(user_id_str)
         return user_id, plan_key
     except ValueError as e:
-        raise ValueError(f"Некорректный payload: {payload}. Ожидается формат 'user_id:plan_key'. Ошибка: {e}")
+        raise ValueError(
+            f"Некорректный payload: {payload}. Ожидается формат 'user_id:plan_key'. Ошибка: {e}"
+        )

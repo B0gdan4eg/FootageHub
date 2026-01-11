@@ -3,16 +3,16 @@ Video Generation Handlers
 
 Handlers for AI video generation using Kling 2.6 and VEO 3.1
 """
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from ai_bot.state import VideoGenerationStates
-from ai_bot.services import AIService, CreditManager, PricingService
 from ai_bot.config import config
-from db.session import AsyncSessionLocal
+from ai_bot.services import AIService, CreditManager, PricingService
+from ai_bot.state import VideoGenerationStates
+from shared.db.session import AsyncSessionLocal
 
 router = Router()
 
@@ -60,7 +60,9 @@ async def cmd_generate_video(event, state: FSMContext):
     await message.answer(text, reply_markup=builder.as_markup())
 
 
-@router.callback_query(VideoGenerationStates.waiting_for_provider_choice, F.data.startswith("provider_"))
+@router.callback_query(
+    VideoGenerationStates.waiting_for_provider_choice, F.data.startswith("provider_")
+)
 async def handle_provider_choice(callback: CallbackQuery, state: FSMContext):
     """Handle provider selection"""
     provider = callback.data.replace("provider_", "")
@@ -100,10 +102,7 @@ async def handle_video_prompt(message: Message, state: FSMContext):
     builder.adjust(1)
 
     await state.set_state(VideoGenerationStates.waiting_for_aspect_ratio)
-    await message.answer(
-        "📐 Выберите соотношение сторон:",
-        reply_markup=builder.as_markup()
-    )
+    await message.answer("📐 Выберите соотношение сторон:", reply_markup=builder.as_markup())
 
 
 @router.callback_query(VideoGenerationStates.waiting_for_aspect_ratio, F.data.startswith("var_"))
@@ -120,9 +119,8 @@ async def handle_video_aspect_ratio(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(VideoGenerationStates.waiting_for_duration)
     await callback.message.edit_text(
-        f"✅ Соотношение: {aspect_ratio}\n\n"
-        "⏱ Выберите длительность:",
-        reply_markup=builder.as_markup()
+        f"✅ Соотношение: {aspect_ratio}\n\n" "⏱ Выберите длительность:",
+        reply_markup=builder.as_markup(),
     )
     await callback.answer()
 
@@ -145,9 +143,8 @@ async def handle_video_duration(callback: CallbackQuery, state: FSMContext):
 
         await state.set_state(VideoGenerationStates.waiting_for_sound_option)
         await callback.message.edit_text(
-            f"✅ Длительность: {duration}с\n\n"
-            "🔊 Генерировать со звуком?",
-            reply_markup=builder.as_markup()
+            f"✅ Длительность: {duration}с\n\n" "🔊 Генерировать со звуком?",
+            reply_markup=builder.as_markup(),
         )
     else:
         # VEO doesn't have sound option, start generation
@@ -191,10 +188,7 @@ async def start_video_generation(callback: CallbackQuery, state: FSMContext, sou
         credit_manager = CreditManager(session)
 
         # Check credits
-        has_credits = await credit_manager.has_enough_credits(
-            user_id,
-            config.VIDEO_GENERATION_COST
-        )
+        has_credits = await credit_manager.has_enough_credits(user_id, config.VIDEO_GENERATION_COST)
 
         if not has_credits:
             await callback.message.answer(
@@ -218,7 +212,7 @@ async def start_video_generation(callback: CallbackQuery, state: FSMContext, sou
                 sound=sound,
                 aspect_ratio=aspect_ratio,
                 duration=duration,
-                timeout=600
+                timeout=600,
             )
 
             if result["success"]:
@@ -234,19 +228,14 @@ async def start_video_generation(callback: CallbackQuery, state: FSMContext, sou
                     f"💎 Потрачено: {result['credits_spent']} AI кредитов"
                 )
 
-                await callback.message.answer_video(
-                    video=result["result_url"],
-                    caption=caption
-                )
+                await callback.message.answer_video(video=result["result_url"], caption=caption)
 
                 # Log generation (TODO: add to AIGenerationLog)
 
             else:
                 # Refund credits on failure
                 await credit_manager.refund_credits(
-                    user_id,
-                    config.VIDEO_GENERATION_COST,
-                    reason="Generation failed"
+                    user_id, config.VIDEO_GENERATION_COST, reason="Generation failed"
                 )
 
                 await callback.message.answer(
@@ -258,15 +247,11 @@ async def start_video_generation(callback: CallbackQuery, state: FSMContext, sou
         except Exception as e:
             # Refund credits on exception
             await credit_manager.refund_credits(
-                user_id,
-                config.VIDEO_GENERATION_COST,
-                reason=f"Exception: {str(e)}"
+                user_id, config.VIDEO_GENERATION_COST, reason=f"Exception: {str(e)}"
             )
 
             await callback.message.answer(
-                f"❌ <b>Произошла ошибка</b>\n\n"
-                f"{str(e)}\n\n"
-                f"💎 Кредиты возвращены на ваш счёт"
+                f"❌ <b>Произошла ошибка</b>\n\n" f"{str(e)}\n\n" f"💎 Кредиты возвращены на ваш счёт"
             )
 
     await state.clear()

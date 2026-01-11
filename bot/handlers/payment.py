@@ -1,26 +1,28 @@
 import json
 import logging
-from aiogram import Router, types, F
 import os
 import uuid
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from bot.webpay_utils import get_webpay_api
-from services.json_reader import dict_to_namespace
+from datetime import datetime
 from pathlib import Path
+
+from aiogram import F, Router, types
+from aiogram.filters import Command
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
 from bot.handlers.messages import (
+    ALREADY_HAS_SUBSCRIPTION,
+    SUB_PAYMENT_DAILY,
     SUB_PAYMENT_MONTHLY_50,
     SUB_PAYMENT_MONTHLY_150,
     SUB_PAYMENT_MONTHLY_400,
-    SUB_PAYMENT_DAILY,
-    ALREADY_HAS_SUBSCRIPTION
 )
-from db.session import get_session
-from db.payment_crud import create_payment
-from db.user_crud import get_user_by_telegram_id
-from db.subscription_crud import get_active_subscription
-from aiogram.filters import Command
-from datetime import datetime
 from bot.utils.price_loader import load_subscription_plans
+from bot.webpay_utils import get_webpay_api
+from db.payment_crud import create_payment
+from db.session import get_session
+from db.subscription_crud import get_active_subscription
+from db.user_crud import get_user_by_telegram_id
+from services.json_reader import dict_to_namespace
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -49,12 +51,14 @@ async def send_price_menu(message_or_callback):
                 limits_text = f"{item.daily_limit}/день"
 
             callback_data = f"select_plan_{key}"
-            keyboard_buttons.append([
-                InlineKeyboardButton(
-                    text=f"{item.name} ({limits_text}) — {item.price} RUB",
-                    callback_data=callback_data
-                )
-            ])
+            keyboard_buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text=f"{item.name} ({limits_text}) — {item.price} RUB",
+                        callback_data=callback_data,
+                    )
+                ]
+            )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
@@ -73,10 +77,12 @@ async def choose_plan_message(message: types.Message, state):
     await state.clear()
     await send_price_menu(message)
 
+
 @router.callback_query(F.data == "buy_subscription")
 async def choose_plan_callback(callback_query: types.CallbackQuery, state):
     await state.clear()
     await send_price_menu(callback_query)
+
 
 @router.callback_query(F.data.startswith("select_plan_"))
 async def show_plan_details(callback_query: types.CallbackQuery):
@@ -132,9 +138,7 @@ async def show_plan_details(callback_query: types.CallbackQuery):
             end_date = active_subscription.end_date.strftime("%d.%m.%Y %H:%M")
 
             message = ALREADY_HAS_SUBSCRIPTION.format(
-                subscription_type=subscription_type_name,
-                end_date=end_date,
-                credits=user.credits
+                subscription_type=subscription_type_name, end_date=end_date, credits=user.credits
             )
 
             keyboard = InlineKeyboardMarkup(
@@ -143,12 +147,11 @@ async def show_plan_details(callback_query: types.CallbackQuery):
                 ]
             )
 
-            logger.warning(f"User {user_id} already has active subscription: {subscription_type_name}")
+            logger.warning(
+                f"User {user_id} already has active subscription: {subscription_type_name}"
+            )
             await callback_query.message.edit_text(
-                message,
-                reply_markup=keyboard,
-                parse_mode="HTML",
-                disable_web_page_preview=True
+                message, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True
             )
             await callback_query.answer()
             return
@@ -157,7 +160,9 @@ async def show_plan_details(callback_query: types.CallbackQuery):
     description = message_template.format(_price=plan.price)
 
     # Создаем инвойс сразу
-    logger.info(f"Creating invoice for user_id: {user_id}, amount: {plan.price}, plan_key: {plan_key}")
+    logger.info(
+        f"Creating invoice for user_id: {user_id}, amount: {plan.price}, plan_key: {plan_key}"
+    )
 
     try:
         # Генерируем уникальный ID заказа формата: USER_{user_id}_{plan_key}_{uuid}
@@ -177,10 +182,10 @@ async def show_plan_details(callback_query: types.CallbackQuery):
             description=f"Покупка подписки {plan.name}",
             return_url=return_url,
             cancel_url=cancel_url,
-            notify_url=notify_url
+            notify_url=notify_url,
         )
 
-        pay_url = result.get('invoiceUrl')
+        pay_url = result.get("invoiceUrl")
     except Exception as e:
         logger.error(f"Error creating invoice: {e}")
         await callback_query.message.answer("❌ Ошибка при создании инвойса. Попробуйте позже.")
@@ -212,14 +217,17 @@ async def show_plan_details(callback_query: types.CallbackQuery):
                 amount=plan.price,
                 currency="RUB",
                 plan_key=plan_key,
-                invoice_id=order_id
+                invoice_id=order_id,
             )
             logger.info("Payment created successfully")
         except Exception as e:
             logger.error(f"Error creating payment in DB: {e}", exc_info=True)
             import traceback
+
             traceback.print_exc()
-            await callback_query.message.answer("❌ Ошибка при сохранении платежа. Попробуйте позже.")
+            await callback_query.message.answer(
+                "❌ Ошибка при сохранении платежа. Попробуйте позже."
+            )
             await callback_query.answer()
             return
 
@@ -227,16 +235,14 @@ async def show_plan_details(callback_query: types.CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="💳 Оплатить", url=pay_url)],
-            [InlineKeyboardButton(text="⬅️ Назад к выбору", callback_data="buy_subscription")]
+            [InlineKeyboardButton(text="⬅️ Назад к выбору", callback_data="buy_subscription")],
         ]
     )
 
     logger.debug("Editing message with payment details")
     try:
         await callback_query.message.edit_text(
-            description,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            description, reply_markup=keyboard, parse_mode="HTML"
         )
         await callback_query.answer()
         logger.info("Message edited successfully")

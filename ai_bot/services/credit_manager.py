@@ -4,17 +4,31 @@ Credit Manager
 Service for managing AI credits
 """
 from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
 
-from db.models import User
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+try:
+    from shared.db.models import User
+except ImportError:
+    from shared.db.models import User
+
+from shared.db.repositories.user_repository import UserRepository
+from shared.services.credit_service import CreditService
 
 
 class CreditManager:
     """Manager for AI credits operations"""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(
+        self,
+        session: AsyncSession,
+        user_repo: Optional[UserRepository] = None,
+        credit_service: Optional[CreditService] = None,
+    ):
         self.session = session
+        self._user_repo = user_repo
+        self._credit_service = credit_service
 
     async def get_user_credits(self, user_id: int) -> Optional[int]:
         """
@@ -26,9 +40,7 @@ class CreditManager:
         Returns:
             Number of AI credits or None if user not found
         """
-        result = await self.session.execute(
-            select(User.ai_credits).where(User.tg_id == user_id)
-        )
+        result = await self.session.execute(select(User.ai_credits).where(User.tg_id == user_id))
         credits = result.scalar_one_or_none()
         return credits
 
@@ -49,6 +61,26 @@ class CreditManager:
             return False
 
         return current_credits >= required_credits
+
+    async def has_sufficient_credits(self, user_id: int, required_credits: int) -> bool:
+        """
+        Alias for has_enough_credits (for compatibility with tests)
+
+        Args:
+            user_id: Internal user ID (not Telegram ID)
+            required_credits: Required amount of credits
+
+        Returns:
+            True if user has enough credits
+        """
+        if self._credit_service:
+            # Use credit service if available (preferred for tests)
+            return await self._credit_service.has_sufficient_credits(
+                user_id, required_credits, "ai_credits"
+            )
+
+        # Fall back to legacy method
+        return await self.has_enough_credits(user_id, required_credits)
 
     async def deduct_credits(self, user_id: int, amount: int) -> bool:
         """
@@ -76,8 +108,7 @@ class CreditManager:
             update(User)
             .where(User.tg_id == user_id)
             .values(
-                ai_credits=User.ai_credits - amount,
-                ai_credits_used=User.ai_credits_used + amount
+                ai_credits=User.ai_credits - amount, ai_credits_used=User.ai_credits_used + amount
             )
         )
 
@@ -102,9 +133,7 @@ class CreditManager:
             raise ValueError("Amount must be positive")
 
         await self.session.execute(
-            update(User)
-            .where(User.tg_id == user_id)
-            .values(ai_credits=User.ai_credits + amount)
+            update(User).where(User.tg_id == user_id).values(ai_credits=User.ai_credits + amount)
         )
 
         await self.session.commit()
@@ -121,8 +150,7 @@ class CreditManager:
             Dict with credits statistics or None if user not found
         """
         result = await self.session.execute(
-            select(User.ai_credits, User.ai_credits_used)
-            .where(User.tg_id == user_id)
+            select(User.ai_credits, User.ai_credits_used).where(User.tg_id == user_id)
         )
         row = result.first()
 
@@ -132,7 +160,7 @@ class CreditManager:
         return {
             "ai_credits": row.ai_credits,
             "ai_credits_used": row.ai_credits_used,
-            "total_received": row.ai_credits + row.ai_credits_used
+            "total_received": row.ai_credits + row.ai_credits_used,
         }
 
     async def refund_credits(self, user_id: int, amount: int, reason: str = "") -> bool:
@@ -154,8 +182,7 @@ class CreditManager:
             update(User)
             .where(User.tg_id == user_id)
             .values(
-                ai_credits=User.ai_credits + amount,
-                ai_credits_used=User.ai_credits_used - amount
+                ai_credits=User.ai_credits + amount, ai_credits_used=User.ai_credits_used - amount
             )
         )
 

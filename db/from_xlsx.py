@@ -3,18 +3,26 @@
 Использование: python -m db.from_xlsx
 """
 import asyncio
-import openpyxl
 from datetime import datetime
 from pathlib import Path
+
+import openpyxl
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from db.session import get_session
 from db.models import (
-    User, UserRole, Media, Download, Payment,
-    Subscription, SubscriptionType, ServiceType,
-    ReferralReward, ReferralRewardStatus
+    Download,
+    Media,
+    Payment,
+    ReferralReward,
+    ReferralRewardStatus,
+    ServiceType,
+    Subscription,
+    SubscriptionType,
+    User,
+    UserRole,
 )
+from db.session import get_session
 
 
 async def import_users(sheet, session):
@@ -37,9 +45,7 @@ async def import_users(sheet, session):
             continue
 
         # Проверяем существование пользователя ТОЛЬКО по tg_id
-        existing = await session.scalar(
-            select(User).where(User.tg_id == tg_id)
-        )
+        existing = await session.scalar(select(User).where(User.tg_id == tg_id))
 
         if existing:
             skipped += 1
@@ -62,7 +68,6 @@ async def import_users(sheet, session):
     print(f"   OK: Добавлено: {added}, Пропущено: {skipped}")
 
 
-
 async def import_media(sheet, session):
     """Импорт медиа из листа Media"""
     print("\n[IMPORT] Импорт медиа...")
@@ -78,19 +83,17 @@ async def import_media(sheet, session):
         data = dict(zip(headers, row))
 
         # Проверяем существование по URL
-        existing = await session.scalar(
-            select(Media).where(Media.url == data['url'])
-        )
+        existing = await session.scalar(select(Media).where(Media.url == data["url"]))
 
         if existing:
             skipped += 1
             continue
 
         media = Media(
-            id=data['id'],
-            url=data['url'],
-            file_type=data.get('file_type'),
-            created_at=data.get('created_at') or datetime.utcnow()
+            id=data["id"],
+            url=data["url"],
+            file_type=data.get("file_type"),
+            created_at=data.get("created_at") or datetime.utcnow(),
         )
 
         session.add(media)
@@ -115,22 +118,20 @@ async def import_downloads(sheet, session):
         data = dict(zip(headers, row))
 
         # Проверяем существование
-        existing = await session.scalar(
-            select(Download).where(Download.id == data['id'])
-        )
+        existing = await session.scalar(select(Download).where(Download.id == data["id"]))
 
         if existing:
             skipped += 1
             continue
 
         download = Download(
-            id=data['id'],
-            user_id=data['user_id'],
-            media_id=data['media_id'],
-            subscription_id=data.get('subscription_id'),
-            downloaded_at=data.get('downloaded_at') or datetime.utcnow(),
-            paid=bool(data.get('paid', False)),
-            service_type=ServiceType(data['service_type']) if data.get('service_type') else None
+            id=data["id"],
+            user_id=data["user_id"],
+            media_id=data["media_id"],
+            subscription_id=data.get("subscription_id"),
+            downloaded_at=data.get("downloaded_at") or datetime.utcnow(),
+            paid=bool(data.get("paid", False)),
+            service_type=ServiceType(data["service_type"]) if data.get("service_type") else None,
         )
 
         session.add(download)
@@ -155,23 +156,23 @@ async def import_payments(sheet, session):
         data = dict(zip(headers, row))
 
         # Проверяем по invoice_id
-        if data.get('invoice_id'):
+        if data.get("invoice_id"):
             existing = await session.scalar(
-                select(Payment).where(Payment.invoice_id == data['invoice_id'])
+                select(Payment).where(Payment.invoice_id == data["invoice_id"])
             )
             if existing:
                 skipped += 1
                 continue
 
         payment = Payment(
-            id=data['id'],
-            user_id=data['user_id'],
-            amount=data['amount'],
-            currency=data.get('currency', 'USDT'),
-            status=data.get('status', 'pending'),
-            invoice_id=data.get('invoice_id'),
-            plan_key=data['plan_key'],
-            created_at=data.get('created_at') or datetime.utcnow()
+            id=data["id"],
+            user_id=data["user_id"],
+            amount=data["amount"],
+            currency=data.get("currency", "USDT"),
+            status=data.get("status", "pending"),
+            invoice_id=data.get("invoice_id"),
+            plan_key=data["plan_key"],
+            created_at=data.get("created_at") or datetime.utcnow(),
         )
 
         session.add(payment)
@@ -196,30 +197,30 @@ async def import_subscriptions(sheet, session):
         data = dict(zip(headers, row))
 
         # Проверяем существование
-        existing = await session.scalar(
-            select(Subscription).where(Subscription.id == data['id'])
-        )
+        existing = await session.scalar(select(Subscription).where(Subscription.id == data["id"]))
 
         if existing:
             skipped += 1
             continue
 
         subscription = Subscription(
-            id=data['id'],
-            user_id=data['user_id'],
-            subscription_type=SubscriptionType(data['subscription_type']),
-            service_type=ServiceType(data['service_type']) if data.get('service_type') else ServiceType.ALL,
-            total_limit=data.get('total_limit'),
-            daily_limit=data.get('daily_limit'),
-            used_total=data.get('used_total', 0) or 0,
-            used_today=data.get('used_today', 0) or 0,
-            last_reset_date=data.get('last_reset_date'),
-            start_date=data.get('start_date') or datetime.utcnow(),
-            end_date=data['end_date'],
-            is_active=bool(data.get('is_active', True)),
-            payment_id=data.get('payment_id'),
-            created_at=data.get('created_at') or datetime.utcnow(),
-            updated_at=data.get('updated_at') or datetime.utcnow()
+            id=data["id"],
+            user_id=data["user_id"],
+            subscription_type=SubscriptionType(data["subscription_type"]),
+            service_type=ServiceType(data["service_type"])
+            if data.get("service_type")
+            else ServiceType.ALL,
+            total_limit=data.get("total_limit"),
+            daily_limit=data.get("daily_limit"),
+            used_total=data.get("used_total", 0) or 0,
+            used_today=data.get("used_today", 0) or 0,
+            last_reset_date=data.get("last_reset_date"),
+            start_date=data.get("start_date") or datetime.utcnow(),
+            end_date=data["end_date"],
+            is_active=bool(data.get("is_active", True)),
+            payment_id=data.get("payment_id"),
+            created_at=data.get("created_at") or datetime.utcnow(),
+            updated_at=data.get("updated_at") or datetime.utcnow(),
         )
 
         session.add(subscription)
@@ -245,7 +246,7 @@ async def import_referral_rewards(sheet, session):
 
         # Проверяем существование
         existing = await session.scalar(
-            select(ReferralReward).where(ReferralReward.id == data['id'])
+            select(ReferralReward).where(ReferralReward.id == data["id"])
         )
 
         if existing:
@@ -253,16 +254,18 @@ async def import_referral_rewards(sheet, session):
             continue
 
         reward = ReferralReward(
-            id=data['id'],
-            referrer_id=data['referrer_id'],
-            referred_id=data['referred_id'],
-            reward_type=data['reward_type'],
-            reward_value=data.get('reward_value'),
-            status=ReferralRewardStatus(data['status']) if data.get('status') else ReferralRewardStatus.PENDING,
-            condition_met=bool(data.get('condition_met', False)),
-            condition_date=data.get('condition_date'),
-            created_at=data.get('created_at') or datetime.utcnow(),
-            rewarded_at=data.get('rewarded_at')
+            id=data["id"],
+            referrer_id=data["referrer_id"],
+            referred_id=data["referred_id"],
+            reward_type=data["reward_type"],
+            reward_value=data.get("reward_value"),
+            status=ReferralRewardStatus(data["status"])
+            if data.get("status")
+            else ReferralRewardStatus.PENDING,
+            condition_met=bool(data.get("condition_met", False)),
+            condition_date=data.get("condition_date"),
+            created_at=data.get("created_at") or datetime.utcnow(),
+            rewarded_at=data.get("rewarded_at"),
         )
 
         session.add(reward)
@@ -330,5 +333,6 @@ async def restore_database(xlsx_path: str):
         except Exception as e:
             print(f"\n[ERROR] Ошибка при импорте: {e}")
             import traceback
+
             traceback.print_exc()
             await session.rollback()

@@ -1,10 +1,12 @@
 """CRUD операции для реферальной системы"""
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
-from datetime import datetime
-from db.models import ReferralReward, ReferralRewardStatus, User
 import secrets
 import string
+from datetime import datetime
+
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.models import ReferralReward, ReferralRewardStatus, User
 
 
 def generate_referral_code(length: int = 8) -> str:
@@ -18,13 +20,10 @@ def generate_referral_code(length: int = 8) -> str:
         Реферальный код
     """
     alphabet = string.ascii_uppercase + string.digits
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
-async def create_referral_code(
-    session: AsyncSession,
-    user_id: int
-) -> str:
+async def create_referral_code(session: AsyncSession, user_id: int) -> str:
     """
     Создаёт реферальный код для пользователя
 
@@ -35,9 +34,7 @@ async def create_referral_code(
     Returns:
         Реферальный код
     """
-    result = await session.execute(
-        select(User).where(User.id == user_id)
-    )
+    result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -49,9 +46,7 @@ async def create_referral_code(
     # Генерируем уникальный код
     while True:
         code = generate_referral_code()
-        existing = await session.execute(
-            select(User).where(User.referral_code == code)
-        )
+        existing = await session.execute(select(User).where(User.referral_code == code))
         if not existing.scalar_one_or_none():
             break
 
@@ -63,9 +58,7 @@ async def create_referral_code(
 
 
 async def apply_referral_code(
-    session: AsyncSession,
-    referred_user_id: int,
-    referral_code: str
+    session: AsyncSession, referred_user_id: int, referral_code: str
 ) -> bool:
     """
     Применяет реферальный код к новому пользователю
@@ -79,9 +72,7 @@ async def apply_referral_code(
         True если успешно, False если не найден
     """
     # Находим пользователя с таким кодом
-    result = await session.execute(
-        select(User).where(User.referral_code == referral_code)
-    )
+    result = await session.execute(select(User).where(User.referral_code == referral_code))
     referrer = result.scalar_one_or_none()
 
     if not referrer:
@@ -104,7 +95,7 @@ async def apply_referral_code(
         referrer_id=referrer.id,
         referred_id=referred_user_id,
         reward_type="credits",
-        reward_value=5  # Например, 5 кредитов за регистрацию
+        reward_value=5,  # Например, 5 кредитов за регистрацию
     )
 
     return True
@@ -116,7 +107,7 @@ async def create_referral_reward(
     referred_id: int,
     reward_type: str,
     reward_value: int = None,
-    status: ReferralRewardStatus = ReferralRewardStatus.PENDING
+    status: ReferralRewardStatus = ReferralRewardStatus.PENDING,
 ) -> ReferralReward:
     """
     Создаёт запись о вознаграждении за реферала
@@ -137,7 +128,7 @@ async def create_referral_reward(
         referred_id=referred_id,
         reward_type=reward_type,
         reward_value=reward_value,
-        status=status
+        status=status,
     )
 
     session.add(reward)
@@ -147,10 +138,7 @@ async def create_referral_reward(
     return reward
 
 
-async def complete_referral_reward(
-    session: AsyncSession,
-    reward_id: int
-) -> ReferralReward:
+async def complete_referral_reward(session: AsyncSession, reward_id: int) -> ReferralReward:
     """
     Отмечает вознаграждение как выполненное
 
@@ -161,9 +149,7 @@ async def complete_referral_reward(
     Returns:
         Обновлённая запись
     """
-    result = await session.execute(
-        select(ReferralReward).where(ReferralReward.id == reward_id)
-    )
+    result = await session.execute(select(ReferralReward).where(ReferralReward.id == reward_id))
     reward = result.scalar_one_or_none()
 
     if reward and reward.status == ReferralRewardStatus.PENDING:
@@ -187,10 +173,7 @@ async def complete_referral_reward(
     return reward
 
 
-async def get_referral_stats(
-    session: AsyncSession,
-    user_id: int
-) -> dict:
+async def get_referral_stats(session: AsyncSession, user_id: int) -> dict:
     """
     Получает статистику рефералов пользователя
 
@@ -214,7 +197,7 @@ async def get_referral_stats(
         select(func.count(ReferralReward.id)).where(
             and_(
                 ReferralReward.referrer_id == user_id,
-                ReferralReward.status == ReferralRewardStatus.COMPLETED
+                ReferralReward.status == ReferralRewardStatus.COMPLETED,
             )
         )
     )
@@ -226,7 +209,7 @@ async def get_referral_stats(
             and_(
                 ReferralReward.referrer_id == user_id,
                 ReferralReward.reward_type == "credits",
-                ReferralReward.status == ReferralRewardStatus.COMPLETED
+                ReferralReward.status == ReferralRewardStatus.COMPLETED,
             )
         )
     )
@@ -235,14 +218,11 @@ async def get_referral_stats(
     return {
         "total_referrals": total_referrals,
         "completed_rewards": total_completed,
-        "total_credits_earned": total_credits
+        "total_credits_earned": total_credits,
     }
 
 
-async def get_user_referrals(
-    session: AsyncSession,
-    user_id: int
-) -> list[User]:
+async def get_user_referrals(session: AsyncSession, user_id: int) -> list[User]:
     """
     Получает список всех рефералов пользователя
 
@@ -263,16 +243,11 @@ async def get_user_referrals(
         return []
 
     # Получаем пользователей
-    result = await session.execute(
-        select(User).where(User.id.in_(referred_ids))
-    )
+    result = await session.execute(select(User).where(User.id.in_(referred_ids)))
     return result.scalars().all()
 
 
-async def get_pending_rewards(
-    session: AsyncSession,
-    user_id: int
-) -> list[ReferralReward]:
+async def get_pending_rewards(session: AsyncSession, user_id: int) -> list[ReferralReward]:
     """
     Получает список ожидающих вознаграждений
 
@@ -287,7 +262,7 @@ async def get_pending_rewards(
         select(ReferralReward).where(
             and_(
                 ReferralReward.referrer_id == user_id,
-                ReferralReward.status == ReferralRewardStatus.PENDING
+                ReferralReward.status == ReferralRewardStatus.PENDING,
             )
         )
     )

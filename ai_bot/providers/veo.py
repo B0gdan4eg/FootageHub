@@ -4,7 +4,8 @@ VEO 3.1 Provider
 Google VEO 3.1 video generation via Kie.ai
 Advanced video generation with high quality and understanding
 """
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from .base import AbstractAIProvider, GenerationType
 from .kie_ai_client import KieAIClient
 
@@ -39,7 +40,7 @@ class VeoProvider(AbstractAIProvider):
         duration: str = "5",
         image_urls: Optional[List[str]] = None,
         timeout: int = 600,
-        **kwargs
+        **kwargs,
     ) -> Optional[str]:
         """
         Generate video using VEO 3.1
@@ -56,11 +57,7 @@ class VeoProvider(AbstractAIProvider):
             Video URL or None if failed
         """
         # Prepare input parameters
-        input_params = {
-            "prompt": prompt,
-            "aspect_ratio": aspect_ratio,
-            "duration": duration
-        }
+        input_params = {"prompt": prompt, "aspect_ratio": aspect_ratio, "duration": duration}
 
         # Optional: image-to-video mode
         if image_urls:
@@ -70,7 +67,7 @@ class VeoProvider(AbstractAIProvider):
         create_result = await self._client.create_task(
             model=self.model_name,
             input_params=input_params,
-            callback_url=kwargs.get("callback_url")
+            callback_url=kwargs.get("callback_url"),
         )
 
         task_id = create_result.get("data", {}).get("taskId")
@@ -92,6 +89,8 @@ class VeoProvider(AbstractAIProvider):
             "task_id": task_id,
             "state": data.get("state"),
             "progress": data.get("progress", 0),
-            "result_url": self._client.parse_result_urls(data) if data.get("state") == "success" else None,
-            "error": data.get("failMsg") if data.get("state") == "fail" else None
+            "result_url": self._client.parse_result_urls(data)
+            if data.get("state") == "success"
+            else None,
+            "error": data.get("failMsg") if data.get("state") == "fail" else None,
         }

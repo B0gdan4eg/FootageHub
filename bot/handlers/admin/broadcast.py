@@ -2,13 +2,13 @@
 Broadcast messaging functionality for admin panel.
 """
 
-from aiogram import Router, types, Bot
+from aiogram import Bot, Router, types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 
+from bot.state import AdminStates
 from db.models import User
 from db.session import get_session
-from bot.state import AdminStates
 
 # Create a separate router for broadcast functions
 router = Router()
@@ -18,7 +18,9 @@ router = Router()
 async def start_broadcast(callback: types.CallbackQuery, state: FSMContext):
     """Начало рассылки сообщений"""
     await state.set_state(AdminStates.waiting_for_broadcast_text)
-    await callback.message.answer("📝 Введите текст оповещения, который нужно отправить всем пользователям:")
+    await callback.message.answer(
+        "📝 Введите текст оповещения, который нужно отправить всем пользователям:"
+    )
     await callback.answer()
 
 

@@ -1,11 +1,23 @@
+import enum
+from datetime import datetime
+
 from sqlalchemy import (
-    Column, Integer, String, Boolean, BigInteger, DateTime, ForeignKey, Numeric, Text, Enum, Date
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
 )
 from sqlalchemy.orm import declarative_base, relationship
-from datetime import datetime
-import enum
 
 Base = declarative_base()
+
 
 class UserRole(enum.Enum):
     USER = "user"
@@ -13,13 +25,15 @@ class UserRole(enum.Enum):
     MANAGER = "manager"
     PARTNER = "partner"
 
+
 class SubscriptionType(enum.Enum):
-    MONTHLY_50 = "monthly_50"    # 50 скачиваний на месяц (Lite)
+    MONTHLY_50 = "monthly_50"  # 50 скачиваний на месяц (Lite)
     MONTHLY_150 = "monthly_150"  # 150 скачиваний на месяц (Standard)
     MONTHLY_400 = "monthly_400"  # 400 скачиваний на месяц (Pro)
-    DAILY_30 = "daily_30"        # 30 скачиваний каждый день
-    UNLIMITED = "unlimited"       # без лимитов
-    CUSTOM = "custom"             # кастомные условия
+    DAILY_30 = "daily_30"  # 30 скачиваний каждый день
+    UNLIMITED = "unlimited"  # без лимитов
+    CUSTOM = "custom"  # кастомные условия
+
 
 class ServiceType(enum.Enum):
     ENVATO = "ENVATO"
@@ -27,11 +41,13 @@ class ServiceType(enum.Enum):
     MOTION_ARRAY = "MOTION_ARRAY"
     ALL = "ALL"  # доступ ко всем сервисам
 
+
 class ReferralRewardStatus(enum.Enum):
-    PENDING = "pending"      # ожидает выполнения условий
+    PENDING = "pending"  # ожидает выполнения условий
     COMPLETED = "completed"  # вознаграждение выдано
     CANCELLED = "cancelled"  # отменено
-    
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -56,8 +72,13 @@ class User(Base):
     downloads = relationship("Download", back_populates="user")
     payments = relationship("Payment", back_populates="user")
     subscriptions = relationship("Subscription", back_populates="user")
-    referral_rewards = relationship("ReferralReward", foreign_keys="ReferralReward.referrer_id", back_populates="referrer")
-    received_rewards = relationship("ReferralReward", foreign_keys="ReferralReward.referred_id", back_populates="referred")
+    referral_rewards = relationship(
+        "ReferralReward", foreign_keys="ReferralReward.referrer_id", back_populates="referrer"
+    )
+    received_rewards = relationship(
+        "ReferralReward", foreign_keys="ReferralReward.referred_id", back_populates="referred"
+    )
+
 
 class Media(Base):
     __tablename__ = "media"
@@ -107,10 +128,11 @@ class Payment(Base):
 
 class Subscription(Base):
     """Таблица подписок пользователей"""
+
     __tablename__ = "subscriptions"
 
     id = Column(BigInteger, primary_key=True)
-    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
 
     # Тип и сервис
     subscription_type = Column(Enum(SubscriptionType), nullable=False)
@@ -133,7 +155,7 @@ class Subscription(Base):
     is_active = Column(Boolean, default=True)
 
     # Связь с оплатой (опционально)
-    payment_id = Column(BigInteger, ForeignKey('payments.id'), nullable=True)
+    payment_id = Column(BigInteger, ForeignKey("payments.id"), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -146,13 +168,14 @@ class Subscription(Base):
 
 class ReferralReward(Base):
     """Таблица вознаграждений за рефералов"""
+
     __tablename__ = "referral_rewards"
 
     id = Column(BigInteger, primary_key=True)
 
     # Кто пригласил (referrer) и кто был приглашён (referred)
-    referrer_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
-    referred_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
+    referrer_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    referred_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
 
     # Тип вознаграждения
     reward_type = Column(String, nullable=False)  # credits / subscription / bonus
@@ -162,7 +185,9 @@ class ReferralReward(Base):
     status = Column(Enum(ReferralRewardStatus), default=ReferralRewardStatus.PENDING)
 
     # Условия выполнения
-    condition_met = Column(Boolean, default=False)  # выполнено ли условие (например, реферал купил подписку)
+    condition_met = Column(
+        Boolean, default=False
+    )  # выполнено ли условие (например, реферал купил подписку)
     condition_date = Column(DateTime, nullable=True)  # когда условие выполнено
 
     # Даты

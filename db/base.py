@@ -1,15 +1,18 @@
-import subprocess
+import asyncio
 import os
+import subprocess
 from datetime import datetime
+from urllib.parse import urlparse
+
 from alembic import command
 from alembic.config import Config
-import asyncio
-from urllib.parse import urlparse
-from db.session import async_engine
+
 from db.models import Base
+from db.session import async_engine
 
 # Use /app/backups for Docker container (mounted to host ./backups)
 BACKUP_DIR = os.getenv("BACKUP_DIR", "/opt/backups")
+
 
 def _backup_database_sync():
     """
@@ -49,16 +52,21 @@ def _backup_database_sync():
     subprocess.run(
         [
             "pg_dump",
-            "-h", db_host,
-            "-p", str(db_port),
-            "-U", db_user,
-            "-F", "c",  # custom format (compressed)
-            "-b",       # include large objects
-            "-f", filepath,
-            db_name
+            "-h",
+            db_host,
+            "-p",
+            str(db_port),
+            "-U",
+            db_user,
+            "-F",
+            "c",  # custom format (compressed)
+            "-b",  # include large objects
+            "-f",
+            filepath,
+            db_name,
         ],
         env=env,
-        check=True
+        check=True,
     )
 
     # Get file size
@@ -66,6 +74,7 @@ def _backup_database_sync():
     print(f"✅ Backup created successfully: {filepath} ({file_size:.2f} MB)")
 
     return filepath
+
 
 async def backup_database():
     loop = asyncio.get_running_loop()
@@ -76,9 +85,11 @@ def _run_migrations_sync():
     alembic_cfg = Config("alembic.ini")
     command.upgrade(alembic_cfg, "head")
 
+
 async def run_migrations():
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _run_migrations_sync)
+
 
 async def create_tables():
     """Создаёт все таблицы, если их нет."""

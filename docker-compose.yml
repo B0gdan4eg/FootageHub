@@ -1,78 +1,95 @@
+version: '3.8'
+
 services:
-  # MediaBot - Main bot for Envato/Freepik downloads
-  bot:
-    image: ghcr.io/b0gdan4eg/footagehub:latest
-    container_name: footagehub-media-bot
-    restart: always
-    env_file: .env
-    depends_on:
-      db:
-        condition: service_healthy
+  # Shared PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: footagehub-db
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      PYTHONUNBUFFERED: 1
-      DISPLAY: :99
-    ports:
-     - "127.0.0.1:8000:8000"
-     - "127.0.0.1:8443:8443"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: footagehub
     volumes:
-    # Убрали SSL сертификаты - их обрабатывает Nginx
-    - ./backups:/app/backups
-    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "5432:5432"
     networks:
       - footagehub-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # AIBot - AI content generation (isolated)
-  ai-bot:
-    image: ghcr.io/b0gdan4eg/footagehub-ai:latest
-    container_name: footagehub-ai-bot
-    restart: always
-    env_file: .env
+  # MediaBot - Envato/Freepik/Motion Array downloads
+  media-bot:
+    build:
+      context: .
+      dockerfile: docker/media-bot.Dockerfile
+    container_name: footagehub-media-bot
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      AI_BOT_TOKEN: ${AI_BOT_TOKEN}
-      KIE_AI_API_KEY: ${KIE_AI_API_KEY}
-      ADMIN: ${ADMIN}
-      CHANNEL_ID: ${CHANNEL_ID}
-      PYTHONUNBUFFERED: 1
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@postgres:5432/footagehub
+      - BOT_TOKEN=${MEDIA_BOT_TOKEN}
+      - ADMIN=${ADMIN}
+      - DISPLAY=:99
+      # WebPay
+      - WEBPAY_RESOURCE_ID=${WEBPAY_RESOURCE_ID}
+      - WEBPAY_API_KEY=${WEBPAY_API_KEY}
+      - WEBPAY_SECRET_KEY=${WEBPAY_SECRET_KEY}
+      - WEBPAY_SIGNING_KEY=${WEBPAY_SIGNING_KEY}
+      - WEBPAY_SANDBOX=${WEBPAY_SANDBOX:-false}
+      # CryptoBot
+      - CRYPTO_BOT_API_KEY=${CRYPTO_BOT_API_KEY}
+      # Channel
+      - CHANNEL_ID=${CHANNEL_ID:-@footagehub_channel}
+      - CHANNEL_BONUS_CREDITS=${CHANNEL_BONUS_CREDITS:-2}
     volumes:
+      - ./media_bot:/app/media_bot
+      - ./shared:/app/shared
+      - ./envato_utils:/app/envato_utils
+      - ./freepik_utils:/app/freepik_utils
+      - ./motion_utils:/app/motion_utils
+      - ./cookies:/app/cookies
+      - ./debug_screenshots:/app/debug_screenshots
+    networks:
+      - footagehub-network
+    restart: unless-stopped
+    ports:
+      - "8000:8000"  # WebPay webhooks
+
+  # AIBot - AI content generation via Kie.ai
+  ai-bot:
+    build:
+      context: .
+      dockerfile: docker/ai-bot.Dockerfile
+    container_name: footagehub-ai-bot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@postgres:5432/footagehub
+      - BOT_TOKEN=${AI_BOT_TOKEN}
+      - ADMIN=${ADMIN}
+      # AI Providers
+      - KIE_AI_API_KEY=${KIE_AI_API_KEY}
+      # Channel
+      - CHANNEL_ID=${CHANNEL_ID:-@footagehub_channel}
+    volumes:
+      - ./ai_bot:/app/ai_bot
+      - ./shared:/app/shared
       - ./ai_generations:/app/ai_generations
     networks:
       - footagehub-network
-    # Health check for AI bot
-    healthcheck:
-      test: ["CMD-SHELL", "python -c 'import sys; sys.exit(0)'"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    restart: unless-stopped
 
-  db:
-    image: postgres:15
-    container_name: footagehub-db
-    restart: always
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:15432:5432"
-    networks:
-      - footagehub-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+volumes:
+  postgres_data:
 
 networks:
   footagehub-network:
     driver: bridge
-
-volumes:
-  pgdata:

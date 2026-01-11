@@ -1,8 +1,10 @@
 """CRUD операции для работы с подписками"""
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
 from datetime import datetime, timedelta
-from db.models import Subscription, SubscriptionType, ServiceType, User
+
+from sqlalchemy import and_, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.models import ServiceType, Subscription, SubscriptionType, User
 
 
 async def create_subscription(
@@ -13,7 +15,7 @@ async def create_subscription(
     total_limit: int = None,
     daily_limit: int = None,
     days: int = 30,
-    payment_id: int = None
+    payment_id: int = None,
 ) -> Subscription:
     """
     Создаёт новую подписку для пользователя
@@ -37,15 +39,13 @@ async def create_subscription(
         start_date=datetime.utcnow(),
         end_date=datetime.utcnow() + timedelta(days=days),
         payment_id=payment_id,
-        is_active=True
+        is_active=True,
     )
 
     session.add(subscription)
 
     # Получаем пользователя для начисления кредитов
-    result = await session.execute(
-        select(User).where(User.id == user_id)
-    )
+    result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if user:
@@ -65,9 +65,7 @@ async def create_subscription(
 
 
 async def get_active_subscription(
-    session: AsyncSession,
-    user_id: int,
-    service_type: ServiceType = None
+    session: AsyncSession, user_id: int, service_type: ServiceType = None
 ) -> Subscription | None:
     """
     Получает активную подписку пользователя
@@ -84,7 +82,7 @@ async def get_active_subscription(
         and_(
             Subscription.user_id == user_id,
             Subscription.is_active == True,
-            Subscription.end_date > datetime.utcnow()
+            Subscription.end_date > datetime.utcnow(),
         )
     )
 
@@ -92,7 +90,7 @@ async def get_active_subscription(
         query = query.where(
             or_(
                 Subscription.service_type == service_type,
-                Subscription.service_type == ServiceType.ALL
+                Subscription.service_type == ServiceType.ALL,
             )
         )
 
@@ -101,8 +99,7 @@ async def get_active_subscription(
 
 
 async def check_download_limit(
-    session: AsyncSession,
-    subscription: Subscription
+    session: AsyncSession, subscription: Subscription
 ) -> tuple[bool, str]:
     """
     Проверяет, доступно ли скачивание по подписке
@@ -136,10 +133,7 @@ async def check_download_limit(
     return True, ""
 
 
-async def increment_download_count(
-    session: AsyncSession,
-    subscription_id: int
-):
+async def increment_download_count(session: AsyncSession, subscription_id: int):
     """
     Увеличивает счётчик скачиваний для подписки
 
@@ -147,9 +141,7 @@ async def increment_download_count(
         session: Сессия БД
         subscription_id: ID подписки
     """
-    result = await session.execute(
-        select(Subscription).where(Subscription.id == subscription_id)
-    )
+    result = await session.execute(select(Subscription).where(Subscription.id == subscription_id))
     subscription = result.scalar_one_or_none()
 
     if subscription:
@@ -159,10 +151,7 @@ async def increment_download_count(
         await session.commit()
 
 
-async def deactivate_subscription(
-    session: AsyncSession,
-    subscription_id: int
-):
+async def deactivate_subscription(session: AsyncSession, subscription_id: int):
     """
     Деактивирует подписку
 
@@ -170,9 +159,7 @@ async def deactivate_subscription(
         session: Сессия БД
         subscription_id: ID подписки
     """
-    result = await session.execute(
-        select(Subscription).where(Subscription.id == subscription_id)
-    )
+    result = await session.execute(select(Subscription).where(Subscription.id == subscription_id))
     subscription = result.scalar_one_or_none()
 
     if subscription:
@@ -182,9 +169,7 @@ async def deactivate_subscription(
 
 
 async def get_user_subscriptions(
-    session: AsyncSession,
-    user_id: int,
-    include_expired: bool = False
+    session: AsyncSession, user_id: int, include_expired: bool = False
 ) -> list[Subscription]:
     """
     Получает все подписки пользователя
@@ -201,10 +186,7 @@ async def get_user_subscriptions(
 
     if not include_expired:
         query = query.where(
-            and_(
-                Subscription.is_active == True,
-                Subscription.end_date > datetime.utcnow()
-            )
+            and_(Subscription.is_active == True, Subscription.end_date > datetime.utcnow())
         )
 
     result = await session.execute(query)
@@ -212,9 +194,7 @@ async def get_user_subscriptions(
 
 
 async def extend_subscription(
-    session: AsyncSession,
-    subscription_id: int,
-    days: int
+    session: AsyncSession, subscription_id: int, days: int
 ) -> Subscription:
     """
     Продлевает подписку на указанное количество дней
@@ -227,9 +207,7 @@ async def extend_subscription(
     Returns:
         Обновлённая подписка
     """
-    result = await session.execute(
-        select(Subscription).where(Subscription.id == subscription_id)
-    )
+    result = await session.execute(select(Subscription).where(Subscription.id == subscription_id))
     subscription = result.scalar_one_or_none()
 
     if subscription:

@@ -1,10 +1,11 @@
 import asyncio
 import logging
 from typing import NamedTuple
+
 from envato_utils.envato_playwright import EnvatoDownloader
 from freepik_utils.freepik import FreepikDownloader
+from media_bot.config import BROWSER_RESTART_AFTER
 from motion_utils.motion import MotionDownloader
-from bot.config import BROWSER_RESTART_AFTER
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -49,8 +50,12 @@ class LinkProcessor:
     async def start(self):
         """Initialize browsers and start worker pool"""
         try:
-            print(f"[LinkProcessor] Starting with {self.max_workers} workers (Envato + Freepik + Motion Array)...")
-            logger.info(f"Starting LinkProcessor with {self.max_workers} workers (Envato + Freepik + Motion Array)...")
+            print(
+                f"[LinkProcessor] Starting with {self.max_workers} workers (Envato + Freepik + Motion Array)..."
+            )
+            logger.info(
+                f"Starting LinkProcessor with {self.max_workers} workers (Envato + Freepik + Motion Array)..."
+            )
 
             # Initialize all downloaders
             self.envato_downloader = await EnvatoDownloader().__aenter__()
@@ -83,8 +88,12 @@ class LinkProcessor:
         """Restart Envato browser context if request limit reached to prevent memory leaks"""
         async with self._envato_restart_lock:
             if self.envato_request_count >= self.restart_after:
-                print(f"[LinkProcessor] Restarting Envato browser after {self.envato_request_count} requests...")
-                logger.info(f"Restarting Envato browser context after {self.envato_request_count} requests")
+                print(
+                    f"[LinkProcessor] Restarting Envato browser after {self.envato_request_count} requests..."
+                )
+                logger.info(
+                    f"Restarting Envato browser context after {self.envato_request_count} requests"
+                )
 
                 # Close old downloader
                 if self.envato_downloader:
@@ -101,8 +110,12 @@ class LinkProcessor:
         """Restart Freepik browser context if request limit reached to prevent memory leaks"""
         async with self._freepik_restart_lock:
             if self.freepik_request_count >= self.restart_after:
-                print(f"[LinkProcessor] Restarting Freepik browser after {self.freepik_request_count} requests...")
-                logger.info(f"Restarting Freepik browser context after {self.freepik_request_count} requests")
+                print(
+                    f"[LinkProcessor] Restarting Freepik browser after {self.freepik_request_count} requests..."
+                )
+                logger.info(
+                    f"Restarting Freepik browser context after {self.freepik_request_count} requests"
+                )
 
                 # Close old downloader
                 if self.freepik_downloader:
@@ -119,8 +132,12 @@ class LinkProcessor:
         """Restart Motion Array browser context if request limit reached to prevent memory leaks"""
         async with self._motion_restart_lock:
             if self.motion_request_count >= self.restart_after:
-                print(f"[LinkProcessor] Restarting Motion Array browser after {self.motion_request_count} requests...")
-                logger.info(f"Restarting Motion Array browser context after {self.motion_request_count} requests")
+                print(
+                    f"[LinkProcessor] Restarting Motion Array browser after {self.motion_request_count} requests..."
+                )
+                logger.info(
+                    f"Restarting Motion Array browser context after {self.motion_request_count} requests"
+                )
 
                 # Close old downloader
                 if self.motion_downloader:
@@ -165,19 +182,29 @@ class LinkProcessor:
                         await self._restart_envato_browser_if_needed()
                         # Use appropriate method based on license flag
                         if task.with_license:
-                            result = await self.envato_downloader.get_download_url_with_license(task.url)
+                            result = await self.envato_downloader.get_download_url_with_license(
+                                task.url
+                            )
                         else:
                             result = await self.envato_downloader.get_download_url(task.url)
                         self.envato_request_count += 1
 
                     if result:
                         platform_info = f"{task.platform.upper()}"
-                        license_info = f" (WITH LICENSE)" if task.with_license and task.platform == "envato" else ""
+                        license_info = (
+                            f" (WITH LICENSE)"
+                            if task.with_license and task.platform == "envato"
+                            else ""
+                        )
                         print(f"[Worker {idx}] ✅ Success ({platform_info}{license_info})!")
-                        logger.info(f"Worker {idx} success ({platform_info}{license_info}): {task.url[:50]}... -> {result[:50]}...")
+                        logger.info(
+                            f"Worker {idx} success ({platform_info}{license_info}): {task.url[:50]}... -> {result[:50]}..."
+                        )
                     else:
                         print(f"[Worker {idx}] ❌ Failed - No URL")
-                        logger.warning(f"Worker {idx} failed: {task.url[:50]}... -> No URL returned")
+                        logger.warning(
+                            f"Worker {idx} failed: {task.url[:50]}... -> No URL returned"
+                        )
                     task.future.set_result(result)
                 except Exception as e:
                     print(f"[Worker {idx}] ❌ Error: {e}")
@@ -207,13 +234,17 @@ class LinkProcessor:
         """
         loop = asyncio.get_running_loop()
         future = loop.create_future()
-        await self.queue.put(LinkTask(url=url, future=future, with_license=with_license, platform=platform))
+        await self.queue.put(
+            LinkTask(url=url, future=future, with_license=with_license, platform=platform)
+        )
 
         try:
             result = await future
             platform_info = f"{platform.upper()}"
             license_info = f" (WITH LICENSE)" if with_license and platform == "envato" else ""
-            logger.info(f"URL processing completed ({platform_info}{license_info}): {url[:50]}... -> {'Success' if result else 'Failed'}")
+            logger.info(
+                f"URL processing completed ({platform_info}{license_info}): {url[:50]}... -> {'Success' if result else 'Failed'}"
+            )
             return result
         except Exception as e:
             print(f"[LinkProcessor] ERROR: {e}")

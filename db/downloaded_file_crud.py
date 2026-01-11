@@ -1,11 +1,15 @@
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from db.models import Media, Download, ServiceType
 from datetime import datetime, timedelta
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.models import Download, Media, ServiceType
+
 
 async def get_media_by_url(session, url: str):
     result = await session.execute(select(Media).where(Media.url == url))
     return result.scalars().first()
+
 
 async def create_media(session, url: str, file_type: str):
     # Проверяем, есть ли уже запись с таким url
@@ -31,12 +35,14 @@ async def create_download(session, user_id: int, media_id: int, service_type: Se
     await session.refresh(download)
     return download
 
+
 async def count_downloads_by_user(session: AsyncSession, user_id: int) -> int:
     result = await session.execute(
         select(func.count(Download.id)).where(Download.user_id == user_id)
     )
     count = result.scalar_one()
     return count
+
 
 async def count_total_downloads(session: AsyncSession):
     result = await session.execute(select(func.count()).select_from(Download))

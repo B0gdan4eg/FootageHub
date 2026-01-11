@@ -3,9 +3,13 @@ AI Bot Keyboards
 
 Reply keyboards for AI Bot
 """
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
-
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 # Main menu keyboard
 main_menu_kb = ReplyKeyboardMarkup(
@@ -20,7 +24,7 @@ main_menu_kb = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="ℹ️ Информация"),
             KeyboardButton(text="💰 Купить кредиты"),
-        ]
+        ],
     ],
     resize_keyboard=True,
     one_time_keyboard=False,
@@ -45,7 +49,7 @@ admin_menu_kb = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="📝 Логи"),
             KeyboardButton(text="« Назад в главное меню"),
-        ]
+        ],
     ],
     resize_keyboard=True,
     one_time_keyboard=False,
@@ -65,7 +69,7 @@ tools_menu_kb = ReplyKeyboardMarkup(
         ],
         [
             KeyboardButton(text="« Назад"),
-        ]
+        ],
     ],
     resize_keyboard=True,
     one_time_keyboard=False,

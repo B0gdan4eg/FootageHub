@@ -3,9 +3,9 @@ Core admin functionality: authentication and main panel.
 """
 
 from aiogram import Router, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select
 
 from db.models import User, UserRole
@@ -32,18 +32,36 @@ async def admin_panel(message: types.Message, state: FSMContext):
     if not await is_admin(message.from_user.id):
         return await message.answer("⛔ У тебя нет доступа")
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
-        [InlineKeyboardButton(text="🎁 Выдать подписку", callback_data="admin_give_subscription")],
-        [InlineKeyboardButton(text="👤 Назначить роль", callback_data="admin_assign_role")],
-        [InlineKeyboardButton(text="💳 Загрузить цены", callback_data="admin_upload_prices")],
-        [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
-        [InlineKeyboardButton(text="🔄 Восстановить базу", callback_data="admin_restore_db")],
-        [InlineKeyboardButton(text="🍪 Загрузить cookies", callback_data="admin_upload_cookies")],
-        [InlineKeyboardButton(text="📦 Установить лимит всем", callback_data="admin_set_download_limit")],
-        [InlineKeyboardButton(text="🗑️ Удалить все подписки", callback_data="admin_delete_all_subscriptions")],
-        [InlineKeyboardButton(text="📢 Оповещение", callback_data="admin_broadcast")],
-    ])
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
+            [
+                InlineKeyboardButton(
+                    text="🎁 Выдать подписку", callback_data="admin_give_subscription"
+                )
+            ],
+            [InlineKeyboardButton(text="👤 Назначить роль", callback_data="admin_assign_role")],
+            [InlineKeyboardButton(text="💳 Загрузить цены", callback_data="admin_upload_prices")],
+            [InlineKeyboardButton(text="📁 Выгрузка базы", callback_data="export_db")],
+            [InlineKeyboardButton(text="🔄 Восстановить базу", callback_data="admin_restore_db")],
+            [
+                InlineKeyboardButton(
+                    text="🍪 Загрузить cookies", callback_data="admin_upload_cookies"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📦 Установить лимит всем", callback_data="admin_set_download_limit"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🗑️ Удалить все подписки", callback_data="admin_delete_all_subscriptions"
+                )
+            ],
+            [InlineKeyboardButton(text="📢 Оповещение", callback_data="admin_broadcast")],
+        ]
+    )
     await message.answer("📂 Панель администратора", reply_markup=keyboard)
     await state.clear()
 
@@ -61,12 +79,12 @@ async def get_chat_id_command(message: types.Message):
             f"📛 Название: {message.chat.title}\n"
             f"📊 Тип: {chat_type}\n\n"
             f"Используйте этот Chat ID для ADMIN_CHAT_ID в .env",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
     else:
         await message.answer(
             f"📋 <b>Информация о чате:</b>\n\n"
             f"🆔 Chat ID: <code>{chat_id}</code>\n"
             f"📊 Тип: {chat_type}",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )

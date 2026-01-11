@@ -1,0 +1,53 @@
+"""Database module for shared models and operations."""
+
+from shared.db.base import backup_database, create_tables, run_migrations
+from shared.db.models import (  # Enums
+    AIGenerationLog,
+    AIGenerationStatus,
+    AIGenerationType,
+    Base,
+    BonusRewardType,
+    BonusStatus,
+    BonusType,
+    Download,
+    Media,
+    Payment,
+    ReferralReward,
+    ReferralRewardStatus,
+    ReferralTriggerType,
+    ServiceType,
+    Subscription,
+    SubscriptionType,
+    User,
+    UserBonus,
+    UserRole,
+)
+from shared.db.session import AsyncSessionLocal, async_engine, get_session
+
+__all__ = [
+    "Base",
+    "User",
+    "Media",
+    "Download",
+    "Payment",
+    "Subscription",
+    "ReferralReward",
+    "BonusType",
+    "UserBonus",
+    "AIGenerationLog",
+    "UserRole",
+    "SubscriptionType",
+    "ServiceType",
+    "ReferralRewardStatus",
+    "ReferralTriggerType",
+    "BonusRewardType",
+    "BonusStatus",
+    "AIGenerationStatus",
+    "AIGenerationType",
+    "AsyncSessionLocal",
+    "async_engine",
+    "get_session",
+    "create_tables",
+    "run_migrations",
+    "backup_database",
+]

@@ -4,10 +4,12 @@ Kie.ai API Client
 Base client for all Kie.ai API interactions
 Documentation: https://docs.kie.ai/
 """
-import aiohttp
 import asyncio
 import json
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
+import aiohttp
+
 from ai_bot.config import config
 
 
@@ -22,10 +24,7 @@ class KieAIClient:
             raise ValueError("KIE_AI_API_KEY is not set")
 
     async def create_task(
-        self,
-        model: str,
-        input_params: Dict[str, Any],
-        callback_url: Optional[str] = None
+        self, model: str, input_params: Dict[str, Any], callback_url: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create a generation task
@@ -43,15 +42,9 @@ class KieAIClient:
         """
         url = f"{self.BASE_URL}/createTask"
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
-        payload = {
-            "model": model,
-            "input": input_params
-        }
+        payload = {"model": model, "input": input_params}
 
         if callback_url:
             payload["callBackUrl"] = callback_url
@@ -89,9 +82,7 @@ class KieAIClient:
         """
         url = f"{self.BASE_URL}/recordInfo"
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}"
-        }
+        headers = {"Authorization": f"Bearer {self.api_key}"}
 
         params = {"taskId": task_id}
 
@@ -105,10 +96,7 @@ class KieAIClient:
                 return result
 
     async def wait_for_completion(
-        self,
-        task_id: str,
-        timeout: int = 300,
-        poll_interval: int = 3
+        self, task_id: str, timeout: int = 300, poll_interval: int = 3
     ) -> Dict[str, Any]:
         """
         Wait for task completion with adaptive polling
@@ -174,8 +162,7 @@ class KieAIClient:
         """
         if code == 402:
             return Exception(
-                "Недостаточно кредитов на Kie.ai аккаунте. "
-                "Пополните баланс на https://kie.ai/"
+                "Недостаточно кредитов на Kie.ai аккаунте. " "Пополните баланс на https://kie.ai/"
             )
         elif code == 401:
             return Exception("Неверный API ключ Kie.ai")
@@ -219,9 +206,7 @@ class KieAIClient:
         """
         url = "https://api.kie.ai/api/v1/chat/credit"
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}"
-        }
+        headers = {"Authorization": f"Bearer {self.api_key}"}
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as response:

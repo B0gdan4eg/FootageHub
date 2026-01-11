@@ -3,24 +3,25 @@ Admin Handlers
 
 Admin panel for AI Bot management
 """
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import CallbackQuery, Message
+from sqlalchemy import func, select
 
-from ai_bot.keyboards import admin_menu_kb, main_menu_kb, get_cancel_kb
 from ai_bot.config import config
+from ai_bot.keyboards import admin_menu_kb, get_cancel_kb, main_menu_kb
 from ai_bot.services import CreditManager, PricingService
-from db.session import AsyncSessionLocal
-from sqlalchemy import select, func
-from db.models import User
+from shared.db.models import User
+from shared.db.session import AsyncSessionLocal
 
 router = Router()
 
 
 class AdminStates(StatesGroup):
     """Admin panel states"""
+
     waiting_for_user_id = State()
     waiting_for_credits_amount = State()
     waiting_for_broadcast_message = State()
@@ -109,11 +110,7 @@ async def admin_users(message: Message):
 
     async with AsyncSessionLocal() as session:
         # Get last 10 users
-        result = await session.execute(
-            select(User)
-            .order_by(User.created_at.desc())
-            .limit(10)
-        )
+        result = await session.execute(select(User).order_by(User.created_at.desc()).limit(10))
         users = result.scalars().all()
 
     if not users:
@@ -143,10 +140,9 @@ async def admin_credits_menu(message: Message, state: FSMContext):
 
     await state.set_state(AdminStates.waiting_for_user_id)
     await message.answer(
-        "💎 <b>Управление кредитами</b>\n\n"
-        "Отправьте Telegram ID пользователя:",
+        "💎 <b>Управление кредитами</b>\n\n" "Отправьте Telegram ID пользователя:",
         reply_markup=get_cancel_kb(),
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
 
@@ -171,8 +167,7 @@ async def admin_user_id_received(message: Message, state: FSMContext):
 
         if not stats:
             await message.answer(
-                f"❌ Пользователь с ID {user_id} не найден",
-                reply_markup=admin_menu_kb
+                f"❌ Пользователь с ID {user_id} не найден", reply_markup=admin_menu_kb
             )
             await state.clear()
             return
@@ -240,7 +235,7 @@ async def admin_broadcast_menu(message: Message, state: FSMContext):
         "Отправьте сообщение для рассылки всем пользователям:\n\n"
         "⚠️ Сообщение будет отправлено всем пользователям бота!",
         reply_markup=get_cancel_kb(),
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
 
@@ -264,12 +259,12 @@ async def admin_broadcast_message_received(message: Message, state: FSMContext):
     fail_count = 0
 
     status_message = await message.answer(
-        f"📤 Рассылка началась...\n"
-        f"Всего пользователей: {len(user_ids)}",
-        reply_markup=admin_menu_kb
+        f"📤 Рассылка началась...\n" f"Всего пользователей: {len(user_ids)}",
+        reply_markup=admin_menu_kb,
     )
 
     from aiogram import Bot
+
     bot = message.bot
 
     for user_id in user_ids:
@@ -283,7 +278,7 @@ async def admin_broadcast_message_received(message: Message, state: FSMContext):
         f"✅ <b>Рассылка завершена!</b>\n\n"
         f"✅ Отправлено: {success_count}\n"
         f"❌ Не отправлено: {fail_count}",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
     await state.clear()
@@ -373,7 +368,7 @@ async def admin_kie_balance(message: Message):
             f"• API ключ в конфигурации\n"
             f"• Соединение с интернетом\n"
             f"• Статус API Kie.ai",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
 
 
@@ -385,9 +380,7 @@ async def admin_logs(message: Message):
 
     # TODO: Implement logging system
     await message.answer(
-        "📝 <b>Логи</b>\n\n"
-        "Система логирования находится в разработке",
-        parse_mode="HTML"
+        "📝 <b>Логи</b>\n\n" "Система логирования находится в разработке", parse_mode="HTML"
     )
 
 
@@ -395,7 +388,4 @@ async def admin_logs(message: Message):
 async def admin_back_to_main(message: Message, state: FSMContext):
     """Return to main menu from admin panel"""
     await state.clear()
-    await message.answer(
-        "Вы вернулись в главное меню",
-        reply_markup=main_menu_kb
-    )
+    await message.answer("Вы вернулись в главное меню", reply_markup=main_menu_kb)

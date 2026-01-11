@@ -1,8 +1,9 @@
-# AI Bot specific dependencies
-
-# Include base requirements
+# AIBot-specific dependencies
 -r base.txt
 
-# No additional dependencies needed yet
-# Future: openai, anthropic, or other AI SDKs if needed
-# For now, all AI API calls will be made via httpx (from base.txt)
+# No additional dependencies currently
+# All AI functionality is handled via Kie.ai HTTP API (using httpx from base.txt)
+
+# Future additions:
+# - Pillow (for image processing if needed)
+# - aiofiles (already in base.txt for saving generated media)

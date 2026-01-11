@@ -4,10 +4,10 @@
 Использует универсальную утилиту из utils.cookie_fixer.
 Читает из new_cookies.json и создаёт envato_cookies_N.json (где N - следующий номер).
 """
-from pathlib import Path
-import json
 import glob
+import json
 import sys
+from pathlib import Path
 
 # Добавляем корневую директорию в путь для импорта
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -18,7 +18,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 INPUT_COOKIE_FILE = SCRIPT_DIR / "new_cookies.json"
 
 # Важные cookies для Envato
-IMPORTANT_COOKIES = ['envatoid', 'elements.session.5', '_elements_session_4', 'envato_client_id']
+IMPORTANT_COOKIES = ["envatoid", "elements.session.5", "_elements_session_4", "envato_client_id"]
 
 
 def get_next_cookie_number():
@@ -65,7 +65,7 @@ def main():
             cookie_file=INPUT_COOKIE_FILE,
             output_file=output_file,
             backup=True,
-            default_domain=".elements.envato.com"
+            default_domain=".elements.envato.com",
         )
 
         print(f"✅ Исправлено {fixed_count} из {total_count} cookies")

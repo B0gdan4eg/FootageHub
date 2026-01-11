@@ -1,0 +1,50 @@
+# bot/states.py
+from aiogram.fsm.state import State, StatesGroup
+
+
+class DownloadFlow(StatesGroup):
+    waiting_for_link = State()  # Ждём ссылку Envato
+    waiting_for_freepik_link = State()  # Ждём ссылку Freepik
+    waiting_for_motion_link = State()  # Ждём ссылку Motion Array
+    waiting_for_payment = State()  # Предложено оплатить
+    waiting_for_confirmation = State()  # Ждём подтверждение оплаты (вебхук или вручную)
+
+
+class ManagerFlow(StatesGroup):
+    waiting_for_description = State()  # Выбор действия
+    waiting_for_ref_code = State()  # (если нужно по ID глянуть)
+    # NANO BANANA configuration states
+    waiting_for_prompt = State()
+    waiting_for_aspect_ratio = State()
+    waiting_for_resolution = State()
+    waiting_for_output_format = State()
+    # Kling video generation states
+    waiting_for_video_prompt = State()
+    waiting_for_video_aspect_ratio = State()
+    waiting_for_video_duration = State()
+    waiting_for_video_sound = State()
+
+
+class AdminStates(StatesGroup):
+    waiting_for_user_id = State()
+    waiting_for_role = State()
+    waiting_for_price_json = State()
+    waiting_for_cookies_json = State()
+    waiting_for_limit_value = State()
+    waiting_for_broadcast_text = State()
+    # Новые состояния для выдачи подписки
+    waiting_for_subscription_user_id = State()
+    waiting_for_subscription_plan = State()
+    waiting_for_restore_xlsx = State()
+    # Credits management states
+    waiting_for_user_id_credits = State()
+    waiting_for_credits_amount = State()
+    # Bonus management states
+    waiting_for_bonus_code = State()
+    waiting_for_bonus_name = State()
+    waiting_for_bonus_description = State()
+    waiting_for_bonus_credits = State()
+    waiting_for_bonus_repeatable = State()
+    waiting_for_bonus_code_toggle = State()
+    # Subscription delete state
+    waiting_for_subscription_delete_id = State()

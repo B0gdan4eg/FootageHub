@@ -3,16 +3,16 @@ Image Generation Handlers
 
 Handlers for AI image generation using Nano Banana
 """
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from ai_bot.state import ImageGenerationStates
-from ai_bot.services import AIService, CreditManager, PricingService
 from ai_bot.config import config
-from db.session import AsyncSessionLocal
+from ai_bot.services import AIService, CreditManager, PricingService
+from ai_bot.state import ImageGenerationStates
+from shared.db.session import AsyncSessionLocal
 
 router = Router()
 
@@ -71,10 +71,7 @@ async def handle_image_prompt(message: Message, state: FSMContext):
     builder.adjust(2)
 
     await state.set_state(ImageGenerationStates.waiting_for_aspect_ratio)
-    await message.answer(
-        "📐 Выберите соотношение сторон:",
-        reply_markup=builder.as_markup()
-    )
+    await message.answer("📐 Выберите соотношение сторон:", reply_markup=builder.as_markup())
 
 
 @router.callback_query(ImageGenerationStates.waiting_for_aspect_ratio, F.data.startswith("ar_"))
@@ -92,9 +89,8 @@ async def handle_aspect_ratio(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(ImageGenerationStates.waiting_for_resolution)
     await callback.message.edit_text(
-        f"✅ Соотношение: {aspect_ratio}\n\n"
-        "📊 Выберите разрешение:",
-        reply_markup=builder.as_markup()
+        f"✅ Соотношение: {aspect_ratio}\n\n" "📊 Выберите разрешение:",
+        reply_markup=builder.as_markup(),
     )
     await callback.answer()
 
@@ -111,8 +107,7 @@ async def handle_resolution(callback: CallbackQuery, state: FSMContext):
     aspect_ratio = data.get("aspect_ratio")
 
     await callback.message.edit_text(
-        f"✅ Разрешение: {resolution}\n\n"
-        "⏳ Генерирую изображение... Это может занять до 2 минут."
+        f"✅ Разрешение: {resolution}\n\n" "⏳ Генерирую изображение... Это может занять до 2 минут."
     )
     await callback.answer()
 
@@ -121,10 +116,7 @@ async def handle_resolution(callback: CallbackQuery, state: FSMContext):
         credit_manager = CreditManager(session)
 
         # Check credits
-        has_credits = await credit_manager.has_enough_credits(
-            user_id,
-            config.IMAGE_GENERATION_COST
-        )
+        has_credits = await credit_manager.has_enough_credits(user_id, config.IMAGE_GENERATION_COST)
 
         if not has_credits:
             await callback.message.answer(
@@ -147,7 +139,7 @@ async def handle_resolution(callback: CallbackQuery, state: FSMContext):
                 aspect_ratio=aspect_ratio,
                 resolution=resolution,
                 output_format="png",
-                timeout=300
+                timeout=300,
             )
 
             if result["success"]:
@@ -161,19 +153,14 @@ async def handle_resolution(callback: CallbackQuery, state: FSMContext):
                     f"💎 Потрачено: {result['credits_spent']} AI кредита"
                 )
 
-                await callback.message.answer_photo(
-                    photo=result["result_url"],
-                    caption=caption
-                )
+                await callback.message.answer_photo(photo=result["result_url"], caption=caption)
 
                 # Log generation (TODO: add to AIGenerationLog)
 
             else:
                 # Refund credits on failure
                 await credit_manager.refund_credits(
-                    user_id,
-                    config.IMAGE_GENERATION_COST,
-                    reason="Generation failed"
+                    user_id, config.IMAGE_GENERATION_COST, reason="Generation failed"
                 )
 
                 await callback.message.answer(
@@ -185,15 +172,11 @@ async def handle_resolution(callback: CallbackQuery, state: FSMContext):
         except Exception as e:
             # Refund credits on exception
             await credit_manager.refund_credits(
-                user_id,
-                config.IMAGE_GENERATION_COST,
-                reason=f"Exception: {str(e)}"
+                user_id, config.IMAGE_GENERATION_COST, reason=f"Exception: {str(e)}"
             )
 
             await callback.message.answer(
-                f"❌ <b>Произошла ошибка</b>\n\n"
-                f"{str(e)}\n\n"
-                f"💎 Кредиты возвращены на ваш счёт"
+                f"❌ <b>Произошла ошибка</b>\n\n" f"{str(e)}\n\n" f"💎 Кредиты возвращены на ваш счёт"
             )
 
     await state.clear()

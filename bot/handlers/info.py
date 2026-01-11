@@ -1,17 +1,20 @@
-from aiogram import Router, types
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.fsm.context import FSMContext
-from db.session import get_session
-from db.user_crud import get_user_by_telegram_id, get_all_users
-from db.downloaded_file_crud import count_downloads_by_user
-from db.subscription_crud import get_active_subscription
-from db.models import User, Download
-from aiogram.enums.parse_mode import ParseMode
-from aiogram.filters import Command
-from sqlalchemy import select, func
 from datetime import datetime, timedelta
 
+from aiogram import Router, types
+from aiogram.enums.parse_mode import ParseMode
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from sqlalchemy import func, select
+
+from db.downloaded_file_crud import count_downloads_by_user
+from db.models import Download, User
+from db.session import get_session
+from db.subscription_crud import get_active_subscription
+from db.user_crud import get_all_users, get_user_by_telegram_id
+
 router = Router()
+
 
 @router.message(Command("info"))
 @router.callback_query(lambda c: c.data == "user_info")
@@ -76,12 +79,14 @@ async def info(message: types.Message, state: FSMContext):
         )
 
         # Создаём кнопку увеличения лимитов
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="buy_subscription")]
-        ])
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="buy_subscription")]
+            ]
+        )
 
         await message.answer(
             INFO_MASSEGE.format(name=message.from_user.first_name),
             parse_mode=ParseMode.HTML,
-            reply_markup=keyboard
+            reply_markup=keyboard,
         )

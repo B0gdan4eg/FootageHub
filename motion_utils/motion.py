@@ -6,7 +6,9 @@ import asyncio
 import json
 import os
 import time
+
 from playwright.async_api import async_playwright
+
 from freepik_utils.logger import logger
 
 COOKIE_DIR = os.path.dirname(__file__)
@@ -52,7 +54,9 @@ def get_next_cookie_file():
     with open(COOKIE_INDEX_FILE, "w") as f:
         f.write(str(next_index))
 
-    print(f"[MOTION] 🔄 Using cookie file: {os.path.basename(selected_file)} ({next_index + 1}/{len(cookie_files)})")
+    print(
+        f"[MOTION] 🔄 Using cookie file: {os.path.basename(selected_file)} ({next_index + 1}/{len(cookie_files)})"
+    )
     return selected_file
 
 
@@ -73,28 +77,29 @@ class MotionDownloader:
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(
-            headless=False,
-            args=['--disable-blink-features=AutomationControlled']
+            headless=False, args=["--disable-blink-features=AutomationControlled"]
         )
-        
+
         # Получаем следующий файл с куками (ротация)
         cookie_file = get_next_cookie_file()
-        
+
         self.context = await self.browser.new_context(
-            viewport={'width': 1920, 'height': 1080},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+            viewport={"width": 1920, "height": 1080},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         )
-        
+
         # Stealth mode
-        await self.context.add_init_script("""
+        await self.context.add_init_script(
+            """
             Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
             window.chrome = {runtime: {}};
-        """)
-        
+        """
+        )
+
         # Load cookies
         with open(cookie_file, "r") as f:
             await self.context.add_cookies(json.load(f))
-        
+
         return self
 
     async def __aexit__(self, *args):
@@ -120,21 +125,21 @@ class MotionDownloader:
         total = self.success_count + self.fail_count
         if total > 0:
             avg_time = self.total_time / total
-            print("\n" + "="*70)
+            print("\n" + "=" * 70)
             print("📊 [MOTION] СТАТИСТИКА:")
             print(f"   ✅ Успешно: {self.success_count}")
             print(f"   ❌ Провалов: {self.fail_count}")
             print(f"   ⏱️  Общее время: {self.total_time:.2f} сек")
             print(f"   ⏱️  Среднее время: {avg_time:.2f} сек/ссылка")
-            print("="*70)
+            print("=" * 70)
 
     async def get_download_url(self, asset_url: str) -> str | None:
         """
         Get direct download URL using CDP network interception.
-        
+
         Args:
             asset_url: URL of the Motion Array asset page
-            
+
         Returns:
             Direct download URL or None if failed
         """
@@ -145,35 +150,37 @@ class MotionDownloader:
 
         try:
             page = await self.context.new_page()
-            
+
             # Enable CDP session for network monitoring
             client = await self.context.new_cdp_session(page)
             await client.send("Network.enable")
-            
+
             # Перехватываем /download/direct endpoint
             async def on_response(event):
                 nonlocal download_url
                 url = event.get("response", {}).get("url", "")
                 status = event.get("response", {}).get("status", 0)
-                
-                if '/download/direct' in url and status == 200:
+
+                if "/download/direct" in url and status == 200:
                     try:
                         request_id = event.get("requestId")
-                        body = await client.send("Network.getResponseBody", {"requestId": request_id})
+                        body = await client.send(
+                            "Network.getResponseBody", {"requestId": request_id}
+                        )
                         data = json.loads(body.get("body", "{}"))
-                        
+
                         if data.get("success") and data.get("downloadUrls"):
                             download_url = data["downloadUrls"][0]
                     except Exception as e:
                         print(f"[MOTION] ⚠️ Error in response handler: {e}")
-            
+
             client.on("Network.responseReceived", on_response)
-            
+
             # Открываем страницу
             await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
-            
+
             await asyncio.sleep(0.5)
-            
+
             # Кликаем на Download
             button_clicked = False
 
@@ -200,7 +207,7 @@ class MotionDownloader:
 
             # Ищем и кликаем на кнопку качества (4K или HD)
             try:
-                quality_buttons = await page.query_selector_all('button')
+                quality_buttons = await page.query_selector_all("button")
                 found_4k = False
                 found_hd = False
                 hd_button = None
@@ -247,7 +254,7 @@ class MotionDownloader:
                 await asyncio.sleep(0.1)
                 if download_url:
                     break
-            
+
             elapsed = time.time() - start_time
             self.total_time += elapsed
 
@@ -257,18 +264,17 @@ class MotionDownloader:
             else:
                 self.fail_count += 1
                 print(f"   ❌ Download URL не получен")
-                
+
                 # Делаем скриншот для отладки
                 screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
                 os.makedirs(screenshot_dir, exist_ok=True)
                 screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
                 await page.screenshot(path=screenshot_path, full_page=False)
-                
+
                 # ← ДОБАВЬ ЭТО:
                 await logger.error(
-                    f"❌ [MOTION] Download URL не получен\n"
-                    f"URL: {asset_url}",
-                    screenshot_path=screenshot_path
+                    f"❌ [MOTION] Download URL не получен\n" f"URL: {asset_url}",
+                    screenshot_path=screenshot_path,
                 )
 
             return download_url
@@ -291,13 +297,11 @@ class MotionDownloader:
                 except Exception as screenshot_error:
                     print(f"[MOTION] Failed to save screenshot: {screenshot_error}")
                     screenshot_path = None
-            
+
             # ← ДОБАВЬ ЭТО:
             await logger.error(
-                f"❌ [MOTION] Ошибка при скачивании\n"
-                f"URL: {asset_url}\n"
-                f"Ошибка: {e}",
-                screenshot_path=screenshot_path
+                f"❌ [MOTION] Ошибка при скачивании\n" f"URL: {asset_url}\n" f"Ошибка: {e}",
+                screenshot_path=screenshot_path,
             )
 
             return None
@@ -323,13 +327,13 @@ async def get_motion_direct_download_url(asset_url: str) -> str | None:
     """
     Get direct download URL for a single Motion Array asset.
     This is the main function used by the bot.
-    
+
     Args:
         asset_url: URL of the Motion Array asset page
-        
+
     Returns:
         Direct download URL or None if failed
-        
+
     Example:
         url = await get_motion_direct_download_url("https://motionarray.com/...")
     """
@@ -343,6 +347,7 @@ async def get_motion_direct_download_url(asset_url: str) -> str | None:
     # Используем семафор для ограничения параллельных скачиваний
     try:
         from bot.services import BotServices
+
         semaphore = BotServices.download_semaphore
     except (ImportError, AttributeError):
         # Если запускается не из бота (тесты), семафор не нужен

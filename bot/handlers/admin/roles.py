@@ -6,9 +6,9 @@ from aiogram import Router, types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, update
 
+from bot.state import AdminStates
 from db.models import User, UserRole
 from db.session import get_session
-from bot.state import AdminStates
 
 # Create a separate router for role functions
 router = Router()
@@ -18,7 +18,9 @@ router = Router()
 async def assign_manager_start(callback: types.CallbackQuery, state: FSMContext):
     """Запрос ID пользователя для назначения роли"""
     await state.set_state(AdminStates.waiting_for_user_id)
-    await callback.message.answer("Введите Telegram ID пользователя, которому хотите назначить роль менеджера:")
+    await callback.message.answer(
+        "Введите Telegram ID пользователя, которому хотите назначить роль менеджера:"
+    )
     await callback.answer()
 
 
@@ -40,9 +42,7 @@ async def assign_manager(message: types.Message, state: FSMContext):
 
         # Назначаем роль MANAGER
         await session.execute(
-            update(User)
-            .where(User.tg_id == user_id)
-            .values(role=UserRole.MANAGER)
+            update(User).where(User.tg_id == user_id).values(role=UserRole.MANAGER)
         )
         await session.commit()
 

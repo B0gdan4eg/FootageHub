@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
 main_menu_kb = ReplyKeyboardMarkup(
     keyboard=[
@@ -12,7 +12,7 @@ main_menu_kb = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="Информация"),
             KeyboardButton(text="Оформить подписку 💳"),
-        ]
+        ],
     ],
     resize_keyboard=True,
     one_time_keyboard=True,

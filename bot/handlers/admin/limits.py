@@ -6,9 +6,9 @@ from aiogram import Router, types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import update
 
+from bot.state import AdminStates
 from db.models import User
 from db.session import get_session
-from bot.state import AdminStates
 
 # Create a separate router for limit functions
 router = Router()
@@ -18,7 +18,9 @@ router = Router()
 async def ask_download_limit(callback: types.CallbackQuery, state: FSMContext):
     """Запрос нового лимита скачиваний"""
     await state.set_state(AdminStates.waiting_for_limit_value)
-    await callback.message.answer("Введите новое количество доступных скачиваний для всех пользователей:")
+    await callback.message.answer(
+        "Введите новое количество доступных скачиваний для всех пользователей:"
+    )
     await callback.answer()
 
 

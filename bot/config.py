@@ -1,6 +1,7 @@
-from dotenv import load_dotenv
 import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -15,7 +16,9 @@ WEBPAY_RESOURCE_ID = os.getenv("WEBPAY_RESOURCE_ID")  # Идентификато
 WEBPAY_API_KEY = os.getenv("WEBPAY_API_KEY")  # Username для логина
 WEBPAY_SECRET_KEY = os.getenv("WEBPAY_SECRET_KEY")  # Password для логина
 WEBPAY_SIGNING_KEY = os.getenv("WEBPAY_SIGNING_KEY")  # Secret key для подписи платежей
-WEBPAY_AUTH_TOKEN = os.getenv("WEBPAY_AUTH_TOKEN")  # Auth token (получить через get_webpay_token.py)
+WEBPAY_AUTH_TOKEN = os.getenv(
+    "WEBPAY_AUTH_TOKEN"
+)  # Auth token (получить через get_webpay_token.py)
 WEBPAY_SANDBOX = os.getenv("WEBPAY_SANDBOX", "false").lower() == "true"
 
 # Channel configuration

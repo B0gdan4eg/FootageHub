@@ -4,11 +4,11 @@ Credits Handlers
 Handlers for checking AI credits balance and usage
 """
 from aiogram import Router
-from aiogram.types import Message
 from aiogram.filters import Command
+from aiogram.types import Message
 
 from ai_bot.services import CreditManager, PricingService
-from db.session import AsyncSessionLocal
+from shared.db.session import AsyncSessionLocal
 
 router = Router()
 
@@ -28,8 +28,7 @@ async def cmd_check_balance(message: Message):
 
         if not stats:
             await message.answer(
-                "❌ <b>Профиль не найден</b>\n\n"
-                "Используйте /start для регистрации"
+                "❌ <b>Профиль не найден</b>\n\n" "Используйте /start для регистрации"
             )
             return
 

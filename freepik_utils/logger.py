@@ -3,8 +3,8 @@
 Используется для Freepik, Envato, Filesta и других сервисов
 """
 import os
-from typing import Optional
 from datetime import datetime
+from typing import Optional
 
 
 class TelegramLogger:
@@ -42,7 +42,7 @@ class TelegramLogger:
         if admin_chat_id:
             self.admin_chat_id = admin_chat_id
         else:
-            chat_id_str = os.getenv('ADMIN_CHAT_ID')
+            chat_id_str = os.getenv("ADMIN_CHAT_ID")
             if chat_id_str:
                 try:
                     self.admin_chat_id = int(chat_id_str)
@@ -63,7 +63,9 @@ class TelegramLogger:
         """Включить отправку в Telegram"""
         self._enabled = True
 
-    async def error(self, message: str, send_to_telegram: bool = True, screenshot_path: Optional[str] = None):
+    async def error(
+        self, message: str, send_to_telegram: bool = True, screenshot_path: Optional[str] = None
+    ):
         """
         Логировать ошибку (в консоль + Telegram админу)
 
@@ -84,11 +86,12 @@ class TelegramLogger:
                 # Если есть скриншот, отправляем его с подписью
                 if screenshot_path and os.path.exists(screenshot_path):
                     from aiogram.types import FSInputFile
+
                     photo = FSInputFile(screenshot_path)
                     await self.bot.send_photo(
                         self.admin_chat_id,
                         photo=photo,
-                        caption=message[:1024]  # Telegram limit for caption
+                        caption=message[:1024],  # Telegram limit for caption
                     )
                     # Удаляем скриншот после успешной отправки
                     try:

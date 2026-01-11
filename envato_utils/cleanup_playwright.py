@@ -75,7 +75,8 @@ def show_disk_usage():
     """Show current disk usage"""
     try:
         import psutil
-        disk = psutil.disk_usage('/')
+
+        disk = psutil.disk_usage("/")
         print(f"\n💾 Disk Usage:")
         print(f"   Total: {disk.total / (1024**3):.2f} GB")
         print(f"   Used: {disk.used / (1024**3):.2f} GB ({disk.percent}%)")
@@ -85,15 +86,15 @@ def show_disk_usage():
 
 
 if __name__ == "__main__":
-    print("="*70)
+    print("=" * 70)
     print("🧹 Playwright Cache Cleanup Tool")
-    print("="*70)
+    print("=" * 70)
 
     show_disk_usage()
     cleanup_playwright_cache()
     show_disk_usage()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("💡 Recommendation: Run this script periodically (e.g., via cron)")
     print("   Example cron: 0 */6 * * * /path/to/python cleanup_playwright.py")
-    print("="*70)
+    print("=" * 70)

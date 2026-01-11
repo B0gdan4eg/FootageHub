@@ -1,51 +1,44 @@
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from db.models import User, Media, Subscription
 from datetime import datetime, timedelta
-from sqlalchemy import update, func, and_
-from db.models import UserRole
+
+from sqlalchemy import and_, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.models import Media, Subscription, User, UserRole
+
 
 async def get_user_by_telegram_id(session: AsyncSession, tg_id: int):
     result = await session.execute(select(User).where(User.tg_id == tg_id))
     return result.scalars().first()
 
+
 async def create_user(session: AsyncSession, tg_id: int):
     if tg_id == 559268908:
-        user = User(
-        tg_id=tg_id,
-        username = "Босс",
-        role = UserRole.ADMIN
-        )
-    user = User(
-        tg_id=tg_id,
-        credits=3
-        )
+        user = User(tg_id=tg_id, username="Босс", role=UserRole.ADMIN)
+    user = User(tg_id=tg_id, credits=3)
     session.add(user)
     await session.commit()
     await session.refresh(user)
     return user
+
 
 async def update_user_subscription(session, user_id: int, months: int = 1):
     await session.execute(
         update(User)
         .where(User.id == user_id)
         .values(
-            is_subscribed=True,
-            subscription_until=datetime.utcnow() + timedelta(days=30 * months)
+            is_subscribed=True, subscription_until=datetime.utcnow() + timedelta(days=30 * months)
         )
     )
     await session.commit()
 
+
 # Начисление кредитов
 async def add_user_credits(session, user_id: int, credits: int):
     await session.execute(
-        update(User)
-        .where(User.id == user_id)
-        .values(
-            credits=User.credits + credits
-        )
+        update(User).where(User.id == user_id).values(credits=User.credits + credits)
     )
     await session.commit()
+
 
 async def get_all_users(session: AsyncSession):
     result = await session.execute(select(User))
@@ -55,14 +48,12 @@ async def get_all_users(session: AsyncSession):
 async def count_active_subs(session: AsyncSession):
     """Подсчитывает количество активных подписок"""
     result = await session.execute(
-        select(func.count()).select_from(Subscription).where(
-            and_(
-                Subscription.is_active == True,
-                Subscription.end_date > datetime.utcnow()
-            )
-        )
+        select(func.count())
+        .select_from(Subscription)
+        .where(and_(Subscription.is_active == True, Subscription.end_date > datetime.utcnow()))
     )
     return result.scalar()
+
 
 async def grant_access(user_id: int, type_: str, value: int, session: AsyncSession):
     result = await session.execute(select(User).where(User.tg_id == user_id))
@@ -88,6 +79,7 @@ async def grant_access(user_id: int, type_: str, value: int, session: AsyncSessi
 
     await session.commit()
 
+
 async def has_user_downloaded(session: AsyncSession, user_id: int, url: str) -> bool:
     """
     Проверяет, скачивал ли КОНКРЕТНЫЙ пользователь файл по данному URL за последние 24 часа.
@@ -106,7 +98,7 @@ async def has_user_downloaded(session: AsyncSession, user_id: int, url: str) -> 
             .where(
                 Download.user_id == user_id,
                 Media.url == url,
-                Download.downloaded_at >= time_limit  # За последние 24 часа
+                Download.downloaded_at >= time_limit,  # За последние 24 часа
             )
         )
         download = result.scalars().first()
@@ -117,6 +109,7 @@ async def has_user_downloaded(session: AsyncSession, user_id: int, url: str) -> 
         print("Ошибка при проверке has_user_downloaded:", e)
         return False
 
+
 async def add_daily_credits(session: AsyncSession, bot):
     now = datetime.utcnow()
 
@@ -125,7 +118,7 @@ async def add_daily_credits(session: AsyncSession, bot):
         select(User).where(
             User.is_subscribed == True,
             User.subscription_until != None,
-            User.subscription_until <= now
+            User.subscription_until <= now,
         )
     )
     expired_users = expired_result.scalars().all()
@@ -137,7 +130,7 @@ async def add_daily_credits(session: AsyncSession, bot):
         select(User).where(
             User.is_subscribed == True,
             User.subscription_until != None,
-            User.subscription_until > now
+            User.subscription_until > now,
         )
     )
     active_users = active_result.scalars().all()
@@ -145,7 +138,8 @@ async def add_daily_credits(session: AsyncSession, bot):
         user.credits += 30
 
     await session.commit()
-    
+
+
 async def set_user_referrer(session: AsyncSession, new_user_tg_id: int, referral_code: str) -> bool:
     """
     Устанавливает для пользователя с tg_id new_user_tg_id реферала по referral_code.
@@ -157,15 +151,11 @@ async def set_user_referrer(session: AsyncSession, new_user_tg_id: int, referral
     :param referral_code: код реферала
     """
     # Ищем реферала (может быть None)
-    result = await session.execute(
-        select(User).where(User.referral_code == referral_code)
-    )
+    result = await session.execute(select(User).where(User.referral_code == referral_code))
     referrer = result.scalar_one_or_none()
 
     # Ищем нового пользователя
-    result = await session.execute(
-        select(User).where(User.tg_id == new_user_tg_id)
-    )
+    result = await session.execute(select(User).where(User.tg_id == new_user_tg_id))
     new_user = result.scalar_one_or_none()
 
     if not new_user:

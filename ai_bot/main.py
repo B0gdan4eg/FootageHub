@@ -5,6 +5,7 @@ Telegram bot for AI content generation
 """
 import asyncio
 import logging
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -14,8 +15,7 @@ from ai_bot.handlers import setup_handlers
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -34,10 +34,7 @@ async def main():
     logger.info(f"Database URL: {config.DATABASE_URL.split('@')[-1]}")
 
     # Initialize bot and dispatcher
-    bot = Bot(
-        token=config.AI_BOT_TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-    )
+    bot = Bot(token=config.AI_BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
     dp = Dispatcher()
 
@@ -61,4 +58,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logger.info("Bot stopped by user")
-

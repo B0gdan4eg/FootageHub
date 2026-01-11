@@ -4,7 +4,8 @@ Kling 2.6 Provider
 Kling 2.6 video generation via Kie.ai
 High-quality text-to-video and image-to-video generation
 """
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from .base import AbstractAIProvider, GenerationType
 from .kie_ai_client import KieAIClient
 
@@ -40,7 +41,7 @@ class KlingProvider(AbstractAIProvider):
         duration: str = "5",
         image_urls: Optional[List[str]] = None,
         timeout: int = 600,
-        **kwargs
+        **kwargs,
     ) -> Optional[str]:
         """
         Generate video using Kling 2.6
@@ -62,7 +63,7 @@ class KlingProvider(AbstractAIProvider):
             "prompt": prompt[:1000],  # Enforce max length
             "sound": sound,
             "aspect_ratio": aspect_ratio,
-            "duration": duration
+            "duration": duration,
         }
 
         # Optional: image-to-video mode
@@ -73,7 +74,7 @@ class KlingProvider(AbstractAIProvider):
         create_result = await self._client.create_task(
             model=self.model_name,
             input_params=input_params,
-            callback_url=kwargs.get("callback_url")
+            callback_url=kwargs.get("callback_url"),
         )
 
         task_id = create_result.get("data", {}).get("taskId")
@@ -95,6 +96,8 @@ class KlingProvider(AbstractAIProvider):
             "task_id": task_id,
             "state": data.get("state"),
             "progress": data.get("progress", 0),
-            "result_url": self._client.parse_result_urls(data) if data.get("state") == "success" else None,
-            "error": data.get("failMsg") if data.get("state") == "fail" else None
+            "result_url": self._client.parse_result_urls(data)
+            if data.get("state") == "success"
+            else None,
+            "error": data.get("failMsg") if data.get("state") == "fail" else None,
         }

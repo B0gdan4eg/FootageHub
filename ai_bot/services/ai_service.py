@@ -4,12 +4,12 @@ AI Service
 Main service for AI generation operations
 Coordinates providers, credits, and logging
 """
-from typing import Optional, Dict, Any, List
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from ai_bot.providers import NanoBananaProvider, KlingProvider, VeoProvider
-from ai_bot.providers.base import AbstractAIProvider
 from ai_bot.config import config
+from ai_bot.providers import KlingProvider, NanoBananaProvider, VeoProvider
+from ai_bot.providers.base import AbstractAIProvider
 from ai_bot.services.pricing_service import PricingService
 
 
@@ -35,7 +35,7 @@ class AIService:
         aspect_ratio: str = "1:1",
         resolution: str = "2K",
         output_format: str = "png",
-        timeout: int = 300
+        timeout: int = 300,
     ) -> Dict[str, Any]:
         """
         Generate image using Nano Banana
@@ -60,7 +60,7 @@ class AIService:
                 aspect_ratio=aspect_ratio,
                 resolution=resolution,
                 output_format=output_format,
-                timeout=timeout
+                timeout=timeout,
             )
 
             processing_time = (datetime.now() - start_time).seconds
@@ -76,8 +76,8 @@ class AIService:
                     "prompt": prompt,
                     "aspect_ratio": aspect_ratio,
                     "resolution": resolution,
-                    "output_format": output_format
-                }
+                    "output_format": output_format,
+                },
             }
 
         except Exception as e:
@@ -86,7 +86,7 @@ class AIService:
                 "provider": provider.provider_name,
                 "model": provider.model_name,
                 "error": str(e),
-                "credits_spent": 0
+                "credits_spent": 0,
             }
 
     async def generate_video(
@@ -97,7 +97,7 @@ class AIService:
         aspect_ratio: str = "16:9",
         duration: str = "5",
         image_urls: Optional[List[str]] = None,
-        timeout: int = 600
+        timeout: int = 600,
     ) -> Dict[str, Any]:
         """
         Generate video using Kling or VEO
@@ -117,7 +117,7 @@ class AIService:
         if provider_name not in ["kling", "veo"]:
             return {
                 "success": False,
-                "error": f"Unknown provider: {provider_name}. Use 'kling' or 'veo'"
+                "error": f"Unknown provider: {provider_name}. Use 'kling' or 'veo'",
             }
 
         provider = self._providers[provider_name]
@@ -130,17 +130,14 @@ class AIService:
                 "aspect_ratio": aspect_ratio,
                 "duration": duration,
                 "image_urls": image_urls,
-                "timeout": timeout
+                "timeout": timeout,
             }
 
             # Kling-specific parameter
             if provider_name == "kling":
                 kwargs["sound"] = sound
 
-            result_url = await provider.generate(
-                prompt=prompt,
-                **kwargs
-            )
+            result_url = await provider.generate(prompt=prompt, **kwargs)
 
             processing_time = (datetime.now() - start_time).seconds
 
@@ -156,8 +153,8 @@ class AIService:
                     "aspect_ratio": aspect_ratio,
                     "duration": duration,
                     "sound": sound if provider_name == "kling" else None,
-                    "image_urls": image_urls
-                }
+                    "image_urls": image_urls,
+                },
             }
 
         except Exception as e:
@@ -166,14 +163,10 @@ class AIService:
                 "provider": provider.provider_name,
                 "model": provider.model_name,
                 "error": str(e),
-                "credits_spent": 0
+                "credits_spent": 0,
             }
 
-    async def check_task_status(
-        self,
-        task_id: str,
-        provider_name: str
-    ) -> Dict[str, Any]:
+    async def check_task_status(self, task_id: str, provider_name: str) -> Dict[str, Any]:
         """
         Check generation task status
 
@@ -185,23 +178,15 @@ class AIService:
             Dict with task status
         """
         if provider_name not in self._providers:
-            return {
-                "error": f"Unknown provider: {provider_name}"
-            }
+            return {"error": f"Unknown provider: {provider_name}"}
 
         provider = self._providers[provider_name]
 
         try:
             status = await provider.check_status(task_id)
-            return {
-                "success": True,
-                **status
-            }
+            return {"success": True, **status}
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     def get_provider_cost(self, provider_name: str) -> int:
         """Get AI credits cost for a provider"""
@@ -217,7 +202,7 @@ class AIService:
                 "provider_name": provider.provider_name,
                 "model_name": provider.model_name,
                 "generation_type": provider.generation_type.value,
-                "cost": provider.get_cost()
+                "cost": provider.get_cost(),
             }
             for name, provider in self._providers.items()
         }

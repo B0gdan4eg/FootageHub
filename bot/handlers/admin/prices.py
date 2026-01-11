@@ -2,13 +2,14 @@
 Price management functionality for admin panel.
 """
 
-from aiogram import Router, types, Bot, F
-from aiogram.fsm.context import FSMContext
-from io import BytesIO
 import json
+from io import BytesIO
 
-from bot.state import AdminStates
+from aiogram import Bot, F, Router, types
+from aiogram.fsm.context import FSMContext
+
 from bot.config import PRICE_LIST_PATH as PRICE_LIST
+from bot.state import AdminStates
 
 # Create a separate router for price functions
 router = Router()

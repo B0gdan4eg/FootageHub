@@ -7,13 +7,12 @@ Create Date: 2025-11-26 00:10:57.710953
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = 'eaa70f2d3456'
-down_revision: Union[str, Sequence[str], None] = 'e8f6ee98578b'
+revision: str = "eaa70f2d3456"
+down_revision: Union[str, Sequence[str], None] = "e8f6ee98578b"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -21,15 +20,18 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     from sqlalchemy import text
+
     conn = op.get_bind()
 
     # Проверяем существование старых значений перед переименованием
     try:
-        result = conn.execute(text(
-            "SELECT EXISTS (SELECT 1 FROM pg_enum e "
-            "JOIN pg_type t ON e.enumtypid = t.oid "
-            "WHERE t.typname = 'subscriptiontype' AND e.enumlabel = 'MONTHLY_100')"
-        ))
+        result = conn.execute(
+            text(
+                "SELECT EXISTS (SELECT 1 FROM pg_enum e "
+                "JOIN pg_type t ON e.enumtypid = t.oid "
+                "WHERE t.typname = 'subscriptiontype' AND e.enumlabel = 'MONTHLY_100')"
+            )
+        )
         if result.scalar():
             op.execute("ALTER TYPE subscriptiontype RENAME VALUE 'MONTHLY_100' TO 'MONTHLY_150'")
         else:
@@ -38,11 +40,13 @@ def upgrade() -> None:
         print(f"Warning: Could not rename MONTHLY_100: {e}")
 
     try:
-        result = conn.execute(text(
-            "SELECT EXISTS (SELECT 1 FROM pg_enum e "
-            "JOIN pg_type t ON e.enumtypid = t.oid "
-            "WHERE t.typname = 'subscriptiontype' AND e.enumlabel = 'DAILY_20')"
-        ))
+        result = conn.execute(
+            text(
+                "SELECT EXISTS (SELECT 1 FROM pg_enum e "
+                "JOIN pg_type t ON e.enumtypid = t.oid "
+                "WHERE t.typname = 'subscriptiontype' AND e.enumlabel = 'DAILY_20')"
+            )
+        )
         if result.scalar():
             op.execute("ALTER TYPE subscriptiontype RENAME VALUE 'DAILY_20' TO 'DAILY_30'")
         else:

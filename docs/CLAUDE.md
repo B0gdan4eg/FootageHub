@@ -8,6 +8,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **ALWAYS ASK BEFORE CREATING DOCUMENTATION** - Before creating any text documents (README.md, .txt, .md files, documentation), always ask the user for permission first. Only create documentation if explicitly requested.
 
+## TODO: Technical Debt
+
+### Pre-commit Hooks & Type Safety
+**Status**: mypy temporarily disabled in `.pre-commit-config.yaml`
+
+**Issue**: 383 type errors found across 59 files when mypy was enabled.
+
+**Tasks**:
+1. Re-enable mypy in `.pre-commit-config.yaml` by uncommenting lines 46-58
+2. Fix type errors systematically:
+   - AsyncSession iteration issues (`has no attribute "__aiter__"`)
+   - Column type mismatches (passing `Column[int]` instead of `int`)
+   - Missing type annotations
+   - Incompatible assignments
+   - Missing return statements
+   - Unreachable code warnings
+3. Add missing stub packages for proper type checking
+4. Ensure all handlers, services, and repositories have proper type hints
+
+**Priority**: Medium - Code works but lacks type safety guarantees
+
+**Files with most errors**:
+- `media_bot/handlers/referral.py` (10 errors)
+- `media_bot/handlers/channel_check.py` (5 errors)
+- `media_bot/handlers/manager.py` (8 errors)
+- `media_bot/handlers/download/*.py` (multiple files, ~40 errors total)
+
+**Common patterns to fix**:
+- Use `user.id` instead of `user_id` column when passing to repository methods
+- Add proper type annotations to variables (e.g., `rewards_by_type: Dict[str, int] = {}`)
+- Fix AsyncSession usage in async context managers
+- Resolve unreachable code after return statements
+
 ## Project Overview
 
 FootageHub is a production Telegram bot that downloads media from Envato Elements, Freepik, and Motion Array, with WebPay payment integration, subscription management, and a referral system. Built with Python 3.11, aiogram 3.x, SQLAlchemy 2.x, and Playwright for browser automation.
@@ -385,16 +418,16 @@ Fallback: If no numbered files exist, uses legacy single file (`envato_cookies.j
 
 ### Debugging Download Issues
 1. Check browser screenshots in `envato_utils/debug_screenshots/`, `freepik_utils/debug_screenshots/`, or `motion_utils/debug_screenshots/`
-2. Run standalone tests: 
+2. Run standalone tests:
    - `python envato_utils/test_env.py`
    - `python freepik_utils/freepik.py`
    - `python test/test_motion.py`
-3. Verify cookies are valid: 
+3. Verify cookies are valid:
    - `python freepik_utils/check_auth.py`
    - For Motion Array: open browser with `python envato_utils/cookie_save.py motion 1` and verify login
 4. Check if site selectors changed (common with Envato/Freepik/Motion Array redesigns)
 5. For Freepik: ensure Xvfb is running and `DISPLAY=:99` is set
-6. For Motion Array: 
+6. For Motion Array:
    - Verify `/download/direct` endpoint is being intercepted
    - Check that button selector `span:has-text('Download')` finds visible elements
    - Ensure stealth mode is working (no `navigator.webdriver` detection)

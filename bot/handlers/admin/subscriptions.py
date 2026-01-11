@@ -2,16 +2,16 @@
 Subscription management functionality for admin panel.
 """
 
-from aiogram import Router, types, F
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select
 
-from db.models import User, Subscription, SubscriptionType, ServiceType
-from db.session import get_session
-from db.user_crud import get_user_by_telegram_id
-from db.subscription_crud import create_subscription, delete_all_subscriptions
 from bot.state import AdminStates
+from db.models import ServiceType, Subscription, SubscriptionType, User
+from db.session import get_session
+from db.subscription_crud import create_subscription, delete_all_subscriptions
+from db.user_crud import get_user_by_telegram_id
 
 # Create a separate router for subscription functions
 router = Router()
@@ -31,7 +31,7 @@ async def give_subscription_start(callback: types.CallbackQuery, state: FSMConte
         "🆔 <b>Выдача подписки</b>\n\n"
         "Введите Telegram ID пользователя, которому хотите выдать подписку:\n\n"
         "Отправьте 'q' для отмены",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -46,7 +46,9 @@ async def receive_subscription_user_id(message: types.Message, state: FSMContext
         return await message.answer("❌ Выдача подписки отменена.")
 
     if not user_id_text.isdigit():
-        return await message.answer("❌ ID должен быть числом. Попробуйте снова или отправьте 'q' для отмены.")
+        return await message.answer(
+            "❌ ID должен быть числом. Попробуйте снова или отправьте 'q' для отмены."
+        )
 
     user_id = int(user_id_text)
 
@@ -60,20 +62,37 @@ async def receive_subscription_user_id(message: types.Message, state: FSMContext
     await state.update_data(subscription_user_id=user_id)
 
     # Показываем выбор плана подписки
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📦 Monthly 50 (30 дней)", callback_data="sub_plan_monthly_50")],
-        [InlineKeyboardButton(text="📦 Monthly 150 (30 дней)", callback_data="sub_plan_monthly_150")],
-        [InlineKeyboardButton(text="📦 Monthly 400 (30 дней)", callback_data="sub_plan_monthly_400")],
-        [InlineKeyboardButton(text="⚡ Daily 30 (30 дней)", callback_data="sub_plan_daily_30")],
-        [InlineKeyboardButton(text="♾️ Unlimited (30 дней)", callback_data="sub_plan_unlimited")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="sub_plan_cancel")],
-    ])
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📦 Monthly 50 (30 дней)", callback_data="sub_plan_monthly_50"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📦 Monthly 150 (30 дней)", callback_data="sub_plan_monthly_150"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📦 Monthly 400 (30 дней)", callback_data="sub_plan_monthly_400"
+                )
+            ],
+            [InlineKeyboardButton(text="⚡ Daily 30 (30 дней)", callback_data="sub_plan_daily_30")],
+            [
+                InlineKeyboardButton(
+                    text="♾️ Unlimited (30 дней)", callback_data="sub_plan_unlimited"
+                )
+            ],
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="sub_plan_cancel")],
+        ]
+    )
 
     await message.answer(
-        f"✅ Пользователь найден: <b>{user_id}</b>\n\n"
-        f"Выберите план подписки:",
+        f"✅ Пользователь найден: <b>{user_id}</b>\n\n" f"Выберите план подписки:",
         reply_markup=keyboard,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
     await state.set_state(AdminStates.waiting_for_subscription_plan)
 
@@ -149,10 +168,14 @@ async def create_subscription_for_user(callback: types.CallbackQuery, state: FSM
                 total_limit=total_limit,
                 daily_limit=daily_limit,
                 days=30,
-                payment_id=None  # Подписка выдана администратором
+                payment_id=None,  # Подписка выдана администратором
             )
 
-            limit_text = "♾️ Безлимит" if plan_key == "unlimited" else (f"{total_limit} скачиваний" if total_limit else f"{daily_limit}/день")
+            limit_text = (
+                "♾️ Безлимит"
+                if plan_key == "unlimited"
+                else (f"{total_limit} скачиваний" if total_limit else f"{daily_limit}/день")
+            )
 
             await callback.message.edit_text(
                 f"✅ <b>Подписка успешно выдана!</b>\n\n"
@@ -161,7 +184,7 @@ async def create_subscription_for_user(callback: types.CallbackQuery, state: FSM
                 f"📊 Лимит: {limit_text}\n"
                 f"📅 Срок: 30 дней\n"
                 f"🆔 ID подписки: <code>{subscription.id}</code>",
-                parse_mode="HTML"
+                parse_mode="HTML",
             )
 
             # Опционально: уведомляем пользователя
@@ -173,10 +196,11 @@ async def create_subscription_for_user(callback: types.CallbackQuery, state: FSM
                     f"📊 Лимит: {limit_text}\n"
                     f"📅 Срок действия: 30 дней\n\n"
                     f"Приятного использования! 🚀",
-                    parse_mode="HTML"
+                    parse_mode="HTML",
                 )
             except Exception as e:
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send notification to user {user_id}: {e}")
 
@@ -184,6 +208,7 @@ async def create_subscription_for_user(callback: types.CallbackQuery, state: FSM
             await callback.message.edit_text(f"❌ Ошибка при создании подписки: {e}")
             import logging
             import traceback
+
             logger = logging.getLogger(__name__)
             logger.error(f"Error creating subscription: {e}", exc_info=True)
             traceback.print_exc()
@@ -206,10 +231,20 @@ async def confirm_delete_all_subscriptions(callback: types.CallbackQuery):
         result = await session.execute(select(Subscription))
         subscriptions_count = len(result.scalars().all())
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Да, удалить все", callback_data="admin_confirm_delete_subscriptions")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="admin_cancel_delete_subscriptions")]
-    ])
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Да, удалить все", callback_data="admin_confirm_delete_subscriptions"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Отмена", callback_data="admin_cancel_delete_subscriptions"
+                )
+            ],
+        ]
+    )
 
     await callback.message.edit_text(
         f"⚠️ <b>Внимание!</b>\n\n"
@@ -217,7 +252,7 @@ async def confirm_delete_all_subscriptions(callback: types.CallbackQuery):
         f"📊 Подписок в базе: <b>{subscriptions_count}</b>\n\n"
         f"⚠️ Это действие необратимо!",
         reply_markup=keyboard,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -236,20 +271,18 @@ async def delete_all_subs_confirmed(callback: types.CallbackQuery):
             deleted_count = await delete_all_subscriptions(session)
 
         await callback.message.edit_text(
-            f"✅ <b>Все подписки удалены!</b>\n\n"
-            f"🗑️ Удалено подписок: <b>{deleted_count}</b>",
-            parse_mode="HTML"
+            f"✅ <b>Все подписки удалены!</b>\n\n" f"🗑️ Удалено подписок: <b>{deleted_count}</b>",
+            parse_mode="HTML",
         )
         await callback.answer("✅ Подписки удалены!")
     except Exception as e:
         await callback.message.edit_text(
-            f"❌ <b>Ошибка при удалении подписок:</b>\n\n"
-            f"<code>{e}</code>",
-            parse_mode="HTML"
+            f"❌ <b>Ошибка при удалении подписок:</b>\n\n" f"<code>{e}</code>", parse_mode="HTML"
         )
         await callback.answer("❌ Ошибка!")
         import logging
         import traceback
+
         logger = logging.getLogger(__name__)
         logger.error(f"Error deleting subscriptions: {e}", exc_info=True)
         traceback.print_exc()

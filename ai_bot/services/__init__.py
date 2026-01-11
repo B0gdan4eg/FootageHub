@@ -8,7 +8,7 @@ from .credit_manager import CreditManager
 from .pricing_service import PricingService
 
 __all__ = [
-    'AIService',
-    'CreditManager',
-    'PricingService',
+    "AIService",
+    "CreditManager",
+    "PricingService",
 ]

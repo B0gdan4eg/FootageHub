@@ -1,17 +1,18 @@
 from aiogram import Router, types
-from aiogram.filters import CommandStart, CommandObject
-from aiogram.fsm.context import FSMContext
 from aiogram.enums.parse_mode import ParseMode
+from aiogram.filters import CommandObject, CommandStart
+from aiogram.fsm.context import FSMContext
 
-from db.session import get_session
-from db.user_crud import get_user_by_telegram_id, create_user, set_user_referrer
+from bot.handlers.messages import MAINTENANCE_MESSAGE, WELCOME
 from bot.keyboards import main_menu_kb
-from bot.handlers.messages import WELCOME, MAINTENANCE_MESSAGE
+from db.session import get_session
+from db.user_crud import create_user, get_user_by_telegram_id, set_user_referrer
 
 router = Router()
 
 # Пользователи, для которых показываем сообщение о технических работах
 BLOCKED_USERS = {472785197, 289997391, 6269570979}
+
 
 @router.message(CommandStart())
 async def cmd_start(message: types.Message, state: FSMContext, command: CommandObject):
@@ -21,9 +22,7 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
     # Проверка на заблокированных пользователей
     if telegram_id in BLOCKED_USERS:
         await message.answer(
-            MAINTENANCE_MESSAGE,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            MAINTENANCE_MESSAGE, parse_mode=ParseMode.HTML, disable_web_page_preview=True
         )
         return
 
@@ -41,5 +40,5 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
         WELCOME.format(name=message.from_user.first_name),
         parse_mode=ParseMode.HTML,
         reply_markup=main_menu_kb,
-        disable_web_page_preview=True
+        disable_web_page_preview=True,
     )

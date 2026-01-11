@@ -5,16 +5,16 @@
 """
 import json
 import shutil
-from pathlib import Path
-from typing import List, Dict, Optional, Tuple
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 
 def fix_cookies_file(
     cookie_file: Path,
     output_file: Optional[Path] = None,
     backup: bool = True,
-    default_domain: str = ".example.com"
+    default_domain: str = ".example.com",
 ) -> Tuple[int, int]:
     """
     Исправляет формат cookies в файле для совместимости с Playwright.

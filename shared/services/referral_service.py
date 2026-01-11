@@ -1,0 +1,493 @@
+"""
+Referral Service - улучшенная реферальная система.
+
+Управляет реферальными наградами, триггерами и интеграцией с бонусной системой.
+"""
+
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from shared.core.constants import BonusCodes, ReferralRewards
+from shared.core.exceptions import BonusException, ReferralException, UserNotFoundException
+from shared.db.models import (
+    ReferralReward,
+    ReferralRewardStatus,
+    ReferralTriggerType,
+    User,
+    UserBonus,
+)
+from shared.db.repositories.bonus_repository import BonusRepository
+from shared.db.repositories.user_repository import UserRepository
+from shared.services.bonus_service import BonusService
+
+
+class ReferralService:
+    """
+    Сервис управления реферальной системой.
+
+    Основные возможности:
+    - Создание реферальных связей
+    - Обработка триггеров наград (регистрация, первая покупка, подписка)
+    - Интеграция с бонусной системой
+    - Отслеживание milestone наград
+    """
+
+    def __init__(
+        self,
+        session: AsyncSession,
+        user_repo: UserRepository,
+        bonus_repo: BonusRepository,
+        bonus_service: BonusService,
+    ):
+        self.session = session
+        self._user_repo = user_repo
+        self._bonus_repo = bonus_repo
+        self._bonus_service = bonus_service
+
+    # ==================== СОЗДАНИЕ РЕФЕРАЛЬНЫХ СВЯЗЕЙ ====================
+
+    async def create_referral_registration(
+        self, referrer_id: int, referred_id: int
+    ) -> ReferralReward:
+        """
+        Создать реферальную награду за регистрацию.
+
+        Args:
+            referrer_id: ID пригласившего пользователя
+            referred_id: ID приглашенного пользователя
+
+        Returns:
+            Созданная реферальная награда
+
+        Raises:
+            UserNotFoundException: Если пользователь не найден
+            ReferralException: Если реферальная связь уже существует
+        """
+        # Проверка пользователей
+        referrer = await self._user_repo.get_by_id(referrer_id)
+        referred = await self._user_repo.get_by_id(referred_id)
+
+        if not referrer:
+            raise UserNotFoundException(f"Referrer {referrer_id} not found")
+        if not referred:
+            raise UserNotFoundException(f"Referred {referred_id} not found")
+
+        # Проверка на дубликат
+        existing = await self._get_referral_by_users(referrer_id, referred_id)
+        if existing:
+            raise ReferralException("Referral reward already exists")
+
+        # Создание реферальной награды
+        referral_reward = ReferralReward(
+            referrer_id=referrer_id,
+            referred_id=referred_id,
+            reward_type="credits",
+            reward_value=ReferralRewards.REGISTRATION_CREDITS,
+            status=ReferralRewardStatus.PENDING,
+            trigger_type=ReferralTriggerType.REGISTRATION,
+            trigger_metadata={"registered_at": datetime.utcnow().isoformat()},
+            condition_met=True,
+            condition_date=datetime.utcnow(),
+        )
+
+        self.session.add(referral_reward)
+        await self.session.flush()
+        await self.session.refresh(referral_reward)
+
+        # НЕ начисляем бонус автоматически
+        # Бонус будет начислен когда реферал подпишется на канал (см. trigger_channel_subscription)
+
+        return referral_reward
+
+    async def _apply_registration_bonus(
+        self, referrer_id: int, referral_reward_id: int
+    ) -> Optional[UserBonus]:
+        """
+        Применить бонус за регистрацию реферала.
+
+        Args:
+            referrer_id: ID пригласившего
+            referral_reward_id: ID реферальной награды
+
+        Returns:
+            Созданный UserBonus или None
+        """
+        try:
+            user_bonus = await self._bonus_service.claim_bonus(
+                user_id=referrer_id,
+                bonus_code=BonusCodes.REFERRAL_REGISTRATION,
+                metadata={"referral_reward_id": referral_reward_id},
+            )
+
+            # Обновляем реферальную награду
+            referral_reward = await self._get_referral_by_id(referral_reward_id)
+            if referral_reward:
+                referral_reward.bonus_id = user_bonus.id
+                referral_reward.status = ReferralRewardStatus.COMPLETED
+                referral_reward.rewarded_at = datetime.utcnow()
+                referral_reward.completed_at = datetime.utcnow()
+                await self.session.flush()
+
+            return user_bonus
+
+        except BonusException:
+            # Бонус уже получен или условия не выполнены
+            return None
+
+    # ==================== ТРИГГЕРЫ НАГРАД ====================
+
+    async def trigger_first_payment(
+        self, user_id: int, payment_amount: float, payment_id: int
+    ) -> Optional[UserBonus]:
+        """
+        Триггер первой покупки реферала.
+
+        Начисляет бонус пользователю, который пригласил этого реферала.
+
+        Args:
+            user_id: ID пользователя, совершившего покупку
+            payment_amount: Сумма покупки
+            payment_id: ID платежа
+
+        Returns:
+            Созданный UserBonus для реферера или None
+        """
+        # Найти реферальную связь где user_id = referred_id
+        referral_reward = await self._get_referral_for_referred(user_id)
+        if not referral_reward:
+            return None
+
+        # Проверить, что это первая покупка
+        payment_count = await self._user_repo.get_payment_count(user_id)
+        if payment_count > 1:
+            return None
+
+        # Создать триггер первой покупки
+        first_payment_reward = ReferralReward(
+            referrer_id=referral_reward.referrer_id,
+            referred_id=user_id,
+            reward_type="credits_and_ai",
+            reward_value=ReferralRewards.FIRST_PAYMENT_CREDITS,
+            status=ReferralRewardStatus.PENDING,
+            trigger_type=ReferralTriggerType.FIRST_PAYMENT,
+            trigger_metadata={
+                "payment_id": payment_id,
+                "amount": payment_amount,
+                "payment_date": datetime.utcnow().isoformat(),
+            },
+            condition_met=True,
+            condition_date=datetime.utcnow(),
+        )
+
+        self.session.add(first_payment_reward)
+        await self.session.flush()
+        await self.session.refresh(first_payment_reward)
+
+        # Начислить бонус
+        try:
+            user_bonus = await self._bonus_service.claim_bonus(
+                user_id=referral_reward.referrer_id,
+                bonus_code=BonusCodes.REFERRAL_FIRST_PAYMENT,
+                metadata={
+                    "referral_reward_id": first_payment_reward.id,
+                    "referred_user_id": user_id,
+                    "payment_amount": payment_amount,
+                },
+            )
+
+            # Обновить статус
+            first_payment_reward.bonus_id = user_bonus.id
+            first_payment_reward.status = ReferralRewardStatus.COMPLETED
+            first_payment_reward.rewarded_at = datetime.utcnow()
+            first_payment_reward.completed_at = datetime.utcnow()
+            await self.session.flush()
+
+            return user_bonus
+
+        except BonusException as e:
+            print(f"Failed to apply first payment bonus: {e}")
+            return None
+
+    async def trigger_subscription(
+        self, user_id: int, subscription_id: int, subscription_type: str
+    ) -> Optional[UserBonus]:
+        """
+        Триггер покупки подписки рефералом.
+
+        Args:
+            user_id: ID пользователя, купившего подписку
+            subscription_id: ID подписки
+            subscription_type: Тип подписки
+
+        Returns:
+            Созданный UserBonus для реферера или None
+        """
+        # Найти реферальную связь
+        referral_reward = await self._get_referral_for_referred(user_id)
+        if not referral_reward:
+            return None
+
+        # Создать триггер подписки
+        subscription_reward = ReferralReward(
+            referrer_id=referral_reward.referrer_id,
+            referred_id=user_id,
+            reward_type="subscription_bonus",
+            reward_value=0,
+            status=ReferralRewardStatus.PENDING,
+            trigger_type=ReferralTriggerType.SUBSCRIPTION,
+            trigger_metadata={
+                "subscription_id": subscription_id,
+                "subscription_type": subscription_type,
+                "subscription_date": datetime.utcnow().isoformat(),
+            },
+            condition_met=True,
+            condition_date=datetime.utcnow(),
+        )
+
+        self.session.add(subscription_reward)
+        await self.session.flush()
+        await self.session.refresh(subscription_reward)
+
+        # Можно добавить специальный бонус за покупку подписки
+        # Пока просто логируем
+
+        subscription_reward.status = ReferralRewardStatus.COMPLETED
+        subscription_reward.completed_at = datetime.utcnow()
+        await self.session.flush()
+
+        return None
+
+    async def trigger_referred_channel_subscription(
+        self, referred_user_id: int
+    ) -> Optional[UserBonus]:
+        """
+        Триггер подписки реферала на канал.
+
+        Начисляет бонус рефереру когда приглашенный пользователь подписывается на канал.
+
+        Args:
+            referred_user_id: ID реферала (приглашенного пользователя)
+
+        Returns:
+            Созданный UserBonus для реферера или None
+        """
+        # Найти реферальную связь где referred_user_id = referred_id
+        referral_reward = await self._get_referral_for_referred(referred_user_id)
+        if not referral_reward:
+            return None
+
+        # Проверить, не был ли уже начислен бонус
+        if referral_reward.bonus_id:
+            return None
+
+        # Начислить бонус рефереру
+        try:
+            user_bonus = await self._bonus_service.claim_bonus(
+                user_id=referral_reward.referrer_id,
+                bonus_code=BonusCodes.REFERRAL_REGISTRATION,
+                metadata={
+                    "referral_reward_id": referral_reward.id,
+                    "referred_user_id": referred_user_id,
+                },
+            )
+
+            # Обновить статус реферальной награды
+            referral_reward.bonus_id = user_bonus.id
+            referral_reward.status = ReferralRewardStatus.COMPLETED
+            referral_reward.rewarded_at = datetime.utcnow()
+            referral_reward.completed_at = datetime.utcnow()
+            await self.session.flush()
+
+            return user_bonus
+
+        except BonusException as e:
+            print(f"Failed to apply referral registration bonus: {e}")
+            return None
+
+    async def check_milestone_rewards(self, referrer_id: int) -> List[UserBonus]:
+        """
+        Проверить и начислить milestone награды.
+
+        Milestone награды начисляются за достижение определенного количества рефералов.
+        Например: 5, 10, 25, 50, 100 рефералов.
+
+        Args:
+            referrer_id: ID пригласившего пользователя
+
+        Returns:
+            Список начисленных бонусов
+        """
+        bonuses = []
+
+        # Получить количество рефералов
+        referral_count = await self._user_repo.get_referral_count(referrer_id)
+
+        # Определить milestone
+        milestones = [5, 10, 25, 50, 100]
+        for milestone in milestones:
+            if referral_count == milestone:
+                # Проверить, не получен ли уже этот milestone
+                existing_milestone = await self._get_milestone_reward(referrer_id, milestone)
+                if existing_milestone:
+                    continue
+
+                # Создать milestone награду
+                milestone_reward = ReferralReward(
+                    referrer_id=referrer_id,
+                    referred_id=referrer_id,  # сам себе
+                    reward_type="milestone",
+                    reward_value=milestone,
+                    status=ReferralRewardStatus.COMPLETED,
+                    trigger_type=ReferralTriggerType.MILESTONE,
+                    trigger_metadata={
+                        "milestone": milestone,
+                        "achieved_at": datetime.utcnow().isoformat(),
+                    },
+                    condition_met=True,
+                    condition_date=datetime.utcnow(),
+                    completed_at=datetime.utcnow(),
+                )
+
+                self.session.add(milestone_reward)
+                await self.session.flush()
+
+                # Можно добавить специальный бонус
+                # Пока просто логируем
+
+        await self.session.flush()
+        return bonuses
+
+    # ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
+
+    async def _get_referral_by_users(
+        self, referrer_id: int, referred_id: int
+    ) -> Optional[ReferralReward]:
+        """Получить реферальную награду по пользователям"""
+        query = select(ReferralReward).where(
+            and_(
+                ReferralReward.referrer_id == referrer_id,
+                ReferralReward.referred_id == referred_id,
+                ReferralReward.trigger_type == ReferralTriggerType.REGISTRATION,
+            )
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def _get_referral_for_referred(self, referred_id: int) -> Optional[ReferralReward]:
+        """Получить реферальную связь для приглашенного пользователя"""
+        query = (
+            select(ReferralReward)
+            .where(
+                and_(
+                    ReferralReward.referred_id == referred_id,
+                    ReferralReward.trigger_type == ReferralTriggerType.REGISTRATION,
+                )
+            )
+            .order_by(ReferralReward.created_at.asc())
+            .limit(1)
+        )
+
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def _get_referral_by_id(self, referral_id: int) -> Optional[ReferralReward]:
+        """Получить реферальную награду по ID"""
+        query = select(ReferralReward).where(ReferralReward.id == referral_id)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def _get_milestone_reward(
+        self, referrer_id: int, milestone: int
+    ) -> Optional[ReferralReward]:
+        """Проверить существование milestone награды"""
+        query = select(ReferralReward).where(
+            and_(
+                ReferralReward.referrer_id == referrer_id,
+                ReferralReward.trigger_type == ReferralTriggerType.MILESTONE,
+                ReferralReward.reward_value == milestone,
+            )
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    # ==================== СТАТИСТИКА ====================
+
+    async def get_referral_stats(self, user_id: int) -> Dict[str, Any]:
+        """
+        Получить статистику по рефералам пользователя.
+
+        Args:
+            user_id: ID пользователя
+
+        Returns:
+            Словарь со статистикой
+        """
+        # Количество рефералов
+        total_referrals = await self._user_repo.get_referral_count(user_id)
+
+        # Количество активных рефералов (с покупками)
+        query_active = select(func.count(ReferralReward.id)).where(
+            and_(
+                ReferralReward.referrer_id == user_id,
+                ReferralReward.trigger_type == ReferralTriggerType.FIRST_PAYMENT,
+                ReferralReward.status == ReferralRewardStatus.COMPLETED,
+            )
+        )
+        result_active = await self.session.execute(query_active)
+        active_referrals = result_active.scalar() or 0
+
+        # Всего заработано бонусов
+        total_credits, total_ai_credits = await self._bonus_repo.get_total_credits_from_bonuses(
+            user_id,
+            bonus_codes=[BonusCodes.REFERRAL_REGISTRATION, BonusCodes.REFERRAL_FIRST_PAYMENT],
+            status="COMPLETED",
+        )
+
+        # Список всех рефералов
+        query_list = (
+            select(ReferralReward)
+            .where(
+                and_(
+                    ReferralReward.referrer_id == user_id,
+                    ReferralReward.trigger_type == ReferralTriggerType.REGISTRATION,
+                )
+            )
+            .order_by(ReferralReward.created_at.desc())
+        )
+
+        result_list = await self.session.execute(query_list)
+        referrals_list = list(result_list.scalars().all())
+
+        return {
+            "total_referrals": total_referrals,
+            "active_referrals": active_referrals,
+            "total_credits_earned": total_credits,
+            "total_ai_credits_earned": total_ai_credits,
+            "referrals": referrals_list,
+        }
+
+    async def get_user_referral_rewards(
+        self, user_id: int, limit: int = 20
+    ) -> List[ReferralReward]:
+        """
+        Получить список реферальных наград пользователя.
+
+        Args:
+            user_id: ID пользователя
+            limit: Максимальное количество записей
+
+        Returns:
+            Список реферальных наград
+        """
+        query = (
+            select(ReferralReward)
+            .where(ReferralReward.referrer_id == user_id)
+            .order_by(ReferralReward.created_at.desc())
+            .limit(limit)
+        )
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())

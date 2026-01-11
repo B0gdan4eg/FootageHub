@@ -8,6 +8,7 @@ import os
 COOKIE_FILE = os.path.join(os.path.dirname(__file__), "freepik_cookies.json")
 BACKUP_FILE = os.path.join(os.path.dirname(__file__), "freepik_cookies_backup.json")
 
+
 def convert_cookies():
     if not os.path.exists(COOKIE_FILE):
         print(f"ERROR: {COOKIE_FILE} not found")
@@ -59,7 +60,11 @@ def convert_cookies():
     print(f"Saved to: {COOKIE_FILE}")
 
     # Show important cookies
-    important = [c for c in converted if any(x in c["name"].lower() for x in ["session", "auth", "token", "user", "gr_"])]
+    important = [
+        c
+        for c in converted
+        if any(x in c["name"].lower() for x in ["session", "auth", "token", "user", "gr_"])
+    ]
     if important:
         print(f"\nAuth cookies found:")
         for c in important:
@@ -67,6 +72,7 @@ def convert_cookies():
     else:
         print("\nWARNING: No auth cookies found!")
         print("You may not be logged in to Freepik")
+
 
 if __name__ == "__main__":
     convert_cookies()

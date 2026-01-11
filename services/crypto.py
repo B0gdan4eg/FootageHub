@@ -1,5 +1,7 @@
-from aiosend import CryptoPay, TESTNET, MAINNET
+from aiosend import MAINNET, TESTNET, CryptoPay
+
 from bot.config import CRYPTO_BOT_API_KEY
+
 
 async def create_crypto_invoice(user_id: int, amount: float, plan_key: str):
     """
@@ -22,7 +24,7 @@ async def create_crypto_invoice(user_id: int, amount: float, plan_key: str):
         description="Покупка подписки",
         hidden_message="Спасибо за оплату!",
         payload=f"{user_id}:{plan_key}",
-        expires_in=3600
+        expires_in=3600,
     )
 
     pay_url = invoice.pay_url if invoice else None

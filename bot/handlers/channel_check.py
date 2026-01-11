@@ -1,37 +1,37 @@
 # channel_check.py
-from aiogram import Bot, Router
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
-from aiogram.enums import ChatMemberStatus
-from bot.handlers.messages import CHANEL_CANCLE, CHANEL_APPLY
-from aiogram.enums.parse_mode import ParseMode
-from db.session import get_session
-from db.models import User
-from sqlalchemy import select
-import os
 import json
 import logging
+import os
+
 import aiofiles
+from aiogram import Bot, Router
+from aiogram.enums import ChatMemberStatus
+from aiogram.enums.parse_mode import ParseMode
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.config import CHANNEL_ID, CHANNEL_BONUS_CREDITS
+
+from bot.config import CHANNEL_BONUS_CREDITS, CHANNEL_ID
+from bot.handlers.messages import CHANEL_APPLY, CHANEL_CANCLE
+from db.models import User
+from db.session import get_session
 
 logger = logging.getLogger(__name__)
 router = Router()
+
 
 # Метод проверки подписки на канал
 # ------------------------------------------------------------
 async def is_subscribed(bot: Bot, tg_user_id: int) -> bool:
     try:
         logger.debug(f"Checking subscription for user {tg_user_id} in channel {CHANNEL_ID}")
-        member = await bot.get_chat_member(
-            chat_id=CHANNEL_ID,
-            user_id=tg_user_id
-        )
+        member = await bot.get_chat_member(chat_id=CHANNEL_ID, user_id=tg_user_id)
         logger.debug(f"Member status: {member.status}")
         return member.status in (
             ChatMemberStatus.MEMBER,
             ChatMemberStatus.ADMINISTRATOR,
-            ChatMemberStatus.CREATOR
+            ChatMemberStatus.CREATOR,
         )
     except TelegramForbiddenError as e:
         logger.debug(f"TelegramForbiddenError: {e}")
@@ -39,6 +39,8 @@ async def is_subscribed(bot: Bot, tg_user_id: int) -> bool:
     except Exception as e:
         logger.debug(f"Ошибка при проверке подписки: {type(e).__name__}: {e}")
         return False
+
+
 # ------------------------------------------------------------
 
 
@@ -56,7 +58,11 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")],
-                [InlineKeyboardButton(text="Проверить подписку 🔍", callback_data="check_subscription")]
+                [
+                    InlineKeyboardButton(
+                        text="Проверить подписку 🔍", callback_data="check_subscription"
+                    )
+                ],
             ]
         )
         try:
@@ -64,7 +70,7 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                 CHANEL_CANCLE,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                reply_markup=keyboard
+                reply_markup=keyboard,
             )
         except TelegramBadRequest as e:
             # Игнорируем ошибку, если сообщение не изменилось
@@ -101,15 +107,16 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
         except Exception as e:
             logger.debug(f"Error in subscription success branch: {type(e).__name__}: {e}")
             import traceback
+
             traceback.print_exc()
 
     await callback.answer()  # убирает "часики"
     logger.debug(f"Callback answered")
 
     # ------------------------------------------------------------
-    
+
+
 async def give_channel_bonus(user_id: int, channel_id: str) -> bool:
-    
     file_name = f"bonuses_channel_{channel_id}.json"
 
     # Загружаем текущий словарь

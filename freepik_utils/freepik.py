@@ -2,7 +2,9 @@ import asyncio
 import json
 import os
 import time
+
 from playwright.async_api import async_playwright
+
 from .logger import logger
 
 COOKIE_DIR = os.path.dirname(__file__)
@@ -48,7 +50,9 @@ def get_next_cookie_file():
     with open(COOKIE_INDEX_FILE, "w") as f:
         f.write(str(next_index))
 
-    print(f"[FREEPIK] 🔄 Using cookie file: {os.path.basename(selected_file)} ({next_index + 1}/{len(cookie_files)})")
+    print(
+        f"[FREEPIK] 🔄 Using cookie file: {os.path.basename(selected_file)} ({next_index + 1}/{len(cookie_files)})"
+    )
     return selected_file
 
 
@@ -122,7 +126,7 @@ class FreepikDownloader:
 
             async def handle_download(download):
                 try:
-                    download_info['url'] = download.url
+                    download_info["url"] = download.url
                     # Отменяем скачивание, нам нужна только ссылка
                     await download.cancel()
                 except Exception as e:
@@ -139,12 +143,12 @@ class FreepikDownloader:
             # Ждём download event (увеличено до 5 секунд для надежности)
             max_wait = 5
             for i in range(max_wait * 10):
-                if download_info.get('url'):
+                if download_info.get("url"):
                     break
                 await asyncio.sleep(0.1)
 
             # Получаем ссылку
-            download_url = download_info.get('url')
+            download_url = download_info.get("url")
 
             elapsed = time.time() - start_time
             self.total_time += elapsed
@@ -158,15 +162,15 @@ class FreepikDownloader:
 
                 # Делаем скриншот для отладки
                 import os
+
                 screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
                 os.makedirs(screenshot_dir, exist_ok=True)
                 screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
                 await page.screenshot(path=screenshot_path, full_page=False)
 
                 await logger.error(
-                    f"❌ [FREEPIK] Download event не сработал\n"
-                    f"URL: {asset_url}",
-                    screenshot_path=screenshot_path
+                    f"❌ [FREEPIK] Download event не сработал\n" f"URL: {asset_url}",
+                    screenshot_path=screenshot_path,
                 )
 
             return download_url
@@ -182,6 +186,7 @@ class FreepikDownloader:
             if page:
                 try:
                     import os
+
                     screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
                     os.makedirs(screenshot_dir, exist_ok=True)
                     screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
@@ -191,9 +196,7 @@ class FreepikDownloader:
                     screenshot_path = None
 
             await logger.error(
-                f"❌ [FREEPIK] Ошибка: {e}\n"
-                f"URL: {asset_url}",
-                screenshot_path=screenshot_path
+                f"❌ [FREEPIK] Ошибка: {e}\n" f"URL: {asset_url}", screenshot_path=screenshot_path
             )
             return None
 
@@ -231,6 +234,7 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
     # Используем семафор для ограничения параллельных скачиваний
     try:
         from bot.services import BotServices
+
         semaphore = BotServices.download_semaphore
     except (ImportError, AttributeError):
         # Если запускается не из бота (тесты), семафор не нужен

@@ -7,7 +7,7 @@ Provides centralized functions for loading subscription plans from prices_list.j
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from bot.config import PRICE_LIST_PATH
 

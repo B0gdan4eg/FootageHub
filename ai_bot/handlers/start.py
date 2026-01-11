@@ -1,9 +1,9 @@
 """
 Start command handler for AI Bot
 """
-from aiogram import Router, F
-from aiogram.types import Message, ReplyKeyboardRemove
+from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
+from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from ai_bot.keyboards import main_menu_kb, tools_menu_kb
@@ -14,8 +14,8 @@ router = Router()
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     """Handle /start command"""
-    from db.session import AsyncSessionLocal
     from ai_bot.services import CreditManager
+    from shared.db.session import AsyncSessionLocal
 
     user_id = message.from_user.id
     username = message.from_user.username or "User"
@@ -57,13 +57,12 @@ async def cmd_help(message: Message):
     await message.answer(help_text, parse_mode="HTML")
 
 
-
-
 # Handle text button commands
 @router.message(F.text == "🎨 Изображение")
 async def text_generate_image(message: Message, state):
     """Handle image generation button"""
     from ai_bot.handlers.image_generation import cmd_generate_image
+
     await cmd_generate_image(message, state)
 
 
@@ -71,24 +70,22 @@ async def text_generate_image(message: Message, state):
 async def text_generate_video(message: Message, state):
     """Handle video generation button"""
     from ai_bot.handlers.video_generation import cmd_generate_video
+
     await cmd_generate_video(message, state)
 
 
 @router.message(F.text == "🛠 Прочие инструменты")
 async def text_other_tools(message: Message):
     """Handle other tools button"""
-    tools_text = (
-        "🛠 <b>Прочие инструменты</b>\n\n"
-        "Выберите нужный инструмент:"
-    )
+    tools_text = "🛠 <b>Прочие инструменты</b>\n\n" "Выберите нужный инструмент:"
     await message.answer(tools_text, reply_markup=tools_menu_kb, parse_mode="HTML")
 
 
 @router.message(F.text == "💎 Баланс кредитов")
 async def text_balance(message: Message):
     """Handle balance button from tools menu"""
-    from db.session import AsyncSessionLocal
     from ai_bot.services import CreditManager, PricingService
+    from shared.db.session import AsyncSessionLocal
 
     user_id = message.from_user.id
 
@@ -126,10 +123,7 @@ async def text_pricing(message: Message):
 
     pricing_service = PricingService()
 
-    pricing_text = (
-        "💰 <b>Цены на генерацию</b>\n\n"
-        "1 кредит = $0.005 (0.5¢)\n\n"
-    )
+    pricing_text = "💰 <b>Цены на генерацию</b>\n\n" "1 кредит = $0.005 (0.5¢)\n\n"
 
     models = pricing_service.get_all_models()
 
@@ -207,17 +201,14 @@ async def text_buy_credits(message: Message):
         "💰 <b>Покупка AI кредитов</b>\n\n"
         "Эта функция находится в разработке.\n"
         "Скоро вы сможете приобретать AI кредиты!",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
 
 @router.message(F.text == "« Назад")
 async def text_back(message: Message):
     """Handle back button"""
-    await message.answer(
-        "Вы вернулись в главное меню",
-        reply_markup=main_menu_kb
-    )
+    await message.answer("Вы вернулись в главное меню", reply_markup=main_menu_kb)
 
 
 @router.callback_query(F.data == "buy_credits")
@@ -227,7 +218,7 @@ async def callback_buy_credits(callback):
         "💰 <b>Покупка AI кредитов</b>\n\n"
         "Эта функция находится в разработке.\n"
         "Скоро вы сможете приобретать AI кредиты!",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -285,10 +276,9 @@ async def callback_other_tools(callback):
     builder.adjust(1)
 
     await callback.message.edit_text(
-        "🛠 <b>Прочие инструменты</b>\n\n"
-        "Выберите нужный инструмент:",
+        "🛠 <b>Прочие инструменты</b>\n\n" "Выберите нужный инструмент:",
         reply_markup=builder.as_markup(),
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -296,8 +286,8 @@ async def callback_other_tools(callback):
 @router.callback_query(F.data == "show_balance")
 async def callback_show_balance(callback):
     """Show balance from other tools menu"""
-    from db.session import AsyncSessionLocal
     from ai_bot.services import CreditManager, PricingService
+    from shared.db.session import AsyncSessionLocal
 
     user_id = callback.from_user.id
 
@@ -330,9 +320,7 @@ async def callback_show_balance(callback):
     builder.adjust(1)
 
     await callback.message.edit_text(
-        balance_text,
-        reply_markup=builder.as_markup(),
-        parse_mode="HTML"
+        balance_text, reply_markup=builder.as_markup(), parse_mode="HTML"
     )
     await callback.answer()
 
@@ -344,10 +332,7 @@ async def callback_show_pricing(callback):
 
     pricing_service = PricingService()
 
-    pricing_text = (
-        "💰 <b>Цены на генерацию</b>\n\n"
-        "1 кредит = $0.005 (0.5¢)\n\n"
-    )
+    pricing_text = "💰 <b>Цены на генерацию</b>\n\n" "1 кредит = $0.005 (0.5¢)\n\n"
 
     models = pricing_service.get_all_models()
 
@@ -373,9 +358,7 @@ async def callback_show_pricing(callback):
     builder.adjust(1)
 
     await callback.message.edit_text(
-        pricing_text,
-        reply_markup=builder.as_markup(),
-        parse_mode="HTML"
+        pricing_text, reply_markup=builder.as_markup(), parse_mode="HTML"
     )
     await callback.answer()
 
@@ -406,8 +389,8 @@ async def callback_help(callback):
 @router.callback_query(F.data == "back_to_start")
 async def callback_back_to_start(callback):
     """Go back to start menu"""
-    from db.session import AsyncSessionLocal
     from ai_bot.services import CreditManager
+    from shared.db.session import AsyncSessionLocal
 
     user_id = callback.from_user.id
     username = callback.from_user.username or "User"
@@ -435,8 +418,6 @@ async def callback_back_to_start(callback):
     builder.adjust(2, 1, 2)
 
     await callback.message.edit_text(
-        welcome_text,
-        reply_markup=builder.as_markup(),
-        parse_mode="HTML"
+        welcome_text, reply_markup=builder.as_markup(), parse_mode="HTML"
     )
     await callback.answer()

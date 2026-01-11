@@ -2,11 +2,12 @@
 Cookie upload functionality for admin panel.
 """
 
-from aiogram import Router, types, Bot, F
-from aiogram.fsm.context import FSMContext
-from io import BytesIO
 import json
+from io import BytesIO
 from pathlib import Path
+
+from aiogram import Bot, F, Router, types
+from aiogram.fsm.context import FSMContext
 
 from bot.state import AdminStates
 

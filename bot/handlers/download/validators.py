@@ -2,20 +2,20 @@
 Common validation and utility functions for downloads.
 """
 
-from aiogram import types, Bot
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.enums.parse_mode import ParseMode
-from db.user_crud import get_user_by_telegram_id
-from bot.handlers.channel_check import is_subscribed, CHANNEL_ID
-from bot.handlers.messages import (
-    USER_NOT_REGISTERED,
-    CHANEL_CHECK,
-    CANCLE_DOWNLOAD_PAYMENT_OFF
-)
 import asyncio
 
+from aiogram import Bot, types
+from aiogram.enums.parse_mode import ParseMode
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-async def auto_delete_download_link(message: types.Message, delay: int = 30, keep_second_button: bool = False):
+from bot.handlers.channel_check import CHANNEL_ID, is_subscribed
+from bot.handlers.messages import CANCLE_DOWNLOAD_PAYMENT_OFF, CHANEL_CHECK, USER_NOT_REGISTERED
+from db.user_crud import get_user_by_telegram_id
+
+
+async def auto_delete_download_link(
+    message: types.Message, delay: int = 30, keep_second_button: bool = False
+):
     """
     Удаляет кнопку со ссылкой на скачивание через заданное время.
 
@@ -55,9 +55,7 @@ async def check_user_eligibility(message: types.Message, bot: Bot, session) -> t
 
     if not user:
         await message.answer(
-            USER_NOT_REGISTERED,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            USER_NOT_REGISTERED, parse_mode=ParseMode.HTML, disable_web_page_preview=True
         )
         return False, None
 
@@ -65,15 +63,23 @@ async def check_user_eligibility(message: types.Message, bot: Bot, session) -> t
         if not await is_subscribed(bot, telegram_id):
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")],
-                    [InlineKeyboardButton(text="Проверить подписку 🔍", callback_data="check_subscription")]
+                    [
+                        InlineKeyboardButton(
+                            text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="Проверить подписку 🔍", callback_data="check_subscription"
+                        )
+                    ],
                 ]
             )
             await message.answer(
                 CHANEL_CHECK,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                reply_markup=keyboard
+                reply_markup=keyboard,
             )
             return False, None
 
@@ -86,7 +92,7 @@ async def check_user_eligibility(message: types.Message, bot: Bot, session) -> t
             CANCLE_DOWNLOAD_PAYMENT_OFF,
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
-            reply_markup=keyboard
+            reply_markup=keyboard,
         )
         return False, None
 

@@ -3,9 +3,9 @@
 Скрипт для конвертации Freepik cookies в формат Playwright.
 Использует универсальную утилиту из utils.cookie_fixer.
 """
-from pathlib import Path
 import json
 import sys
+from pathlib import Path
 
 # Добавляем корневую директорию в путь для импорта
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -15,7 +15,7 @@ from utils.cookie_fixer import fix_cookies_file, print_cookie_stats
 COOKIE_FILE = Path(__file__).resolve().parent / "freepik_cookies.json"
 
 # Важные cookies для Freepik
-IMPORTANT_COOKIES = ['_fprom_sess', 'gr_user_id', 'user_id', 'session']
+IMPORTANT_COOKIES = ["_fprom_sess", "gr_user_id", "user_id", "session"]
 
 
 def main():
@@ -31,9 +31,7 @@ def main():
     try:
         # Исправляем cookies
         fixed_count, total_count = fix_cookies_file(
-            cookie_file=COOKIE_FILE,
-            backup=True,
-            default_domain=".freepik.com"
+            cookie_file=COOKIE_FILE, backup=True, default_domain=".freepik.com"
         )
 
         print(f"✅ Исправлено {fixed_count} из {total_count} cookies")

@@ -8,6 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 class ImageGenerationStates(StatesGroup):
     """States for image generation flow"""
+
     waiting_for_prompt = State()
     waiting_for_aspect_ratio = State()
     waiting_for_resolution = State()
@@ -17,6 +18,7 @@ class ImageGenerationStates(StatesGroup):
 
 class VideoGenerationStates(StatesGroup):
     """States for video generation flow"""
+
     waiting_for_provider_choice = State()  # Kling or VEO
     waiting_for_prompt = State()
     waiting_for_aspect_ratio = State()

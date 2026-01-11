@@ -1,7 +1,8 @@
+from typing import Optional
+
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import update
-from typing import Optional
 
 from db.models import Payment
 
@@ -51,9 +52,7 @@ async def get_payment_by_invoice_id(session: AsyncSession, invoice_id: str) -> O
 async def update_payment_status(session: AsyncSession, invoice_id: str, status: str) -> None:
     """Обновить статус платежа."""
     await session.execute(
-        update(Payment)
-        .where(Payment.invoice_id == invoice_id)
-        .values(status=status)
+        update(Payment).where(Payment.invoice_id == invoice_id).values(status=status)
     )
     await session.commit()
 
@@ -61,9 +60,7 @@ async def update_payment_status(session: AsyncSession, invoice_id: str, status: 
 async def mark_payment_success(session: AsyncSession, invoice_id: str) -> None:
     """Пометить платеж как успешный."""
     await session.execute(
-        update(Payment)
-        .where(Payment.invoice_id == invoice_id)
-        .values(status="success")
+        update(Payment).where(Payment.invoice_id == invoice_id).values(status="success")
     )
     await session.commit()
 

@@ -1,0 +1,16 @@
+# MediaBot-specific dependencies
+-r base.txt
+
+# Playwright for web automation (Envato, Freepik, Motion Array)
+playwright==1.53.0
+pyee==13.0.0
+
+# Excel export for admin panel
+openpyxl==3.1.5
+
+# File sending utilities
+aiosend==2.1.2
+
+# Legacy dependencies (to be reviewed)
+dotenv==0.9.9
+unicorn==2.1.3

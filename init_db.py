@@ -1,6 +1,7 @@
 from db.models import Base
 from db.session import engine
 
+
 async def recreate_tables():
     async with engine.begin() as conn:
         # Удаляем все таблицы
@@ -8,4 +9,5 @@ async def recreate_tables():
         # Создаем все таблицы заново
         await conn.run_sync(Base.metadata.create_all)
 
-#asyncio.run(recreate_tables())
+
+# asyncio.run(recreate_tables())

@@ -2,9 +2,11 @@
 Kie.ai API integration for NANO BANANA image generation
 Documentation: https://docs.kie.ai/market/google/nano-banana
 """
-import aiohttp
 import asyncio
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
+import aiohttp
+
 from bot.config import KIE_AI_API_KEY
 
 
@@ -25,7 +27,7 @@ class KieAIClient:
         resolution: str = "2K",
         output_format: str = "png",
         image_input: Optional[list] = None,
-        callback_url: Optional[str] = None
+        callback_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create NANO BANANA image generation task
@@ -43,18 +45,11 @@ class KieAIClient:
         """
         url = f"{self.BASE_URL}/createTask"
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
         payload = {
             "model": "google/nano-banana",
-            "input": {
-                "prompt": prompt,
-                "image_size": aspect_ratio,
-                "output_format": output_format
-            }
+            "input": {"prompt": prompt, "image_size": aspect_ratio, "output_format": output_format},
         }
 
         if image_input:
@@ -77,7 +72,9 @@ class KieAIClient:
 
                     # User-friendly error messages
                     if code == 402:
-                        raise Exception(f"❌ Недостаточно кредитов на Kie.ai аккаунте. Пополните баланс на https://kie.ai/")
+                        raise Exception(
+                            f"❌ Недостаточно кредитов на Kie.ai аккаунте. Пополните баланс на https://kie.ai/"
+                        )
                     elif code == 401:
                         raise Exception(f"❌ Неверный API ключ Kie.ai")
                     elif code == 429:
@@ -102,9 +99,7 @@ class KieAIClient:
         """
         url = f"{self.BASE_URL}/recordInfo"
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}"
-        }
+        headers = {"Authorization": f"Bearer {self.api_key}"}
 
         params = {"taskId": task_id}
 
@@ -118,10 +113,7 @@ class KieAIClient:
                 return result
 
     async def wait_for_completion(
-        self,
-        task_id: str,
-        timeout: int = 300,
-        poll_interval: int = 3
+        self, task_id: str, timeout: int = 300, poll_interval: int = 3
     ) -> Dict[str, Any]:
         """
         Wait for task completion with polling
@@ -168,7 +160,7 @@ class KieAIClient:
         aspect_ratio: str = "1:1",
         resolution: str = "2K",
         output_format: str = "png",
-        timeout: int = 300
+        timeout: int = 300,
     ) -> Optional[str]:
         """
         Generate image and wait for completion (convenience method)
@@ -188,7 +180,7 @@ class KieAIClient:
             prompt=prompt,
             aspect_ratio=aspect_ratio,
             resolution=resolution,
-            output_format=output_format
+            output_format=output_format,
         )
 
         task_id = create_result.get("data", {}).get("taskId")
@@ -200,6 +192,7 @@ class KieAIClient:
 
         # Parse result URLs
         import json
+
         result_json = data.get("resultJson", "{}")
 
         if not result_json:
@@ -231,7 +224,7 @@ class KlingVideoClient:
         aspect_ratio: str = "16:9",
         duration: str = "5",
         image_urls: Optional[list] = None,
-        callback_url: Optional[str] = None
+        callback_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create Kling text-to-video generation task
@@ -249,10 +242,7 @@ class KlingVideoClient:
         """
         url = f"{self.BASE_URL}/createTask"
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
         payload = {
             "model": "kling-2.6/text-to-video",
@@ -260,8 +250,8 @@ class KlingVideoClient:
                 "prompt": prompt[:1000],  # Enforce max length
                 "sound": sound,
                 "aspect_ratio": aspect_ratio,
-                "duration": duration
-            }
+                "duration": duration,
+            },
         }
 
         if image_urls:
@@ -284,7 +274,9 @@ class KlingVideoClient:
 
                     # User-friendly error messages
                     if code == 402:
-                        raise Exception(f"❌ Недостаточно кредитов на Kie.ai аккаунте. Пополните баланс на https://kie.ai/")
+                        raise Exception(
+                            f"❌ Недостаточно кредитов на Kie.ai аккаунте. Пополните баланс на https://kie.ai/"
+                        )
                     elif code == 401:
                         raise Exception(f"❌ Неверный API ключ Kie.ai")
                     elif code == 429:
@@ -301,9 +293,7 @@ class KlingVideoClient:
         """Get task status and results"""
         url = f"{self.BASE_URL}/recordInfo"
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}"
-        }
+        headers = {"Authorization": f"Bearer {self.api_key}"}
 
         params = {"taskId": task_id}
 
@@ -317,10 +307,7 @@ class KlingVideoClient:
                 return result
 
     async def wait_for_completion(
-        self,
-        task_id: str,
-        timeout: int = 600,
-        poll_interval: int = 5
+        self, task_id: str, timeout: int = 600, poll_interval: int = 5
     ) -> Dict[str, Any]:
         """Wait for video generation completion with polling"""
         start_time = asyncio.get_event_loop().time()
@@ -367,15 +354,12 @@ class KlingVideoClient:
         sound: bool = False,
         aspect_ratio: str = "16:9",
         duration: str = "5",
-        timeout: int = 600
+        timeout: int = 600,
     ) -> Optional[str]:
         """Generate video and wait for completion (convenience method)"""
         # Create task
         create_result = await self.create_video_task(
-            prompt=prompt,
-            sound=sound,
-            aspect_ratio=aspect_ratio,
-            duration=duration
+            prompt=prompt, sound=sound, aspect_ratio=aspect_ratio, duration=duration
         )
 
         # Debug: check create_result
@@ -400,6 +384,7 @@ class KlingVideoClient:
 
         # Parse result URLs
         import json
+
         result_json = data.get("resultJson", "{}")
 
         if not result_json or result_json == "{}":

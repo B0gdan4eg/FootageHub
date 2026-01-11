@@ -1,16 +1,18 @@
 # bot/states.py
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.state import State, StatesGroup
+
 
 class DownloadFlow(StatesGroup):
-    waiting_for_link = State()       # Ждём ссылку Envato
+    waiting_for_link = State()  # Ждём ссылку Envato
     waiting_for_freepik_link = State()  # Ждём ссылку Freepik
     waiting_for_motion_link = State()  # Ждём ссылку Motion Array
-    waiting_for_payment = State()    # Предложено оплатить
+    waiting_for_payment = State()  # Предложено оплатить
     waiting_for_confirmation = State()  # Ждём подтверждение оплаты (вебхук или вручную)
 
+
 class ManagerFlow(StatesGroup):
-    waiting_for_description = State()     # Выбор действия
-    waiting_for_ref_code = State() # (если нужно по ID глянуть)
+    waiting_for_description = State()  # Выбор действия
+    waiting_for_ref_code = State()  # (если нужно по ID глянуть)
     # NANO BANANA configuration states
     waiting_for_prompt = State()
     waiting_for_aspect_ratio = State()
@@ -21,6 +23,7 @@ class ManagerFlow(StatesGroup):
     waiting_for_video_aspect_ratio = State()
     waiting_for_video_duration = State()
     waiting_for_video_sound = State()
+
 
 class AdminStates(StatesGroup):
     waiting_for_user_id = State()

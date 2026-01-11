@@ -1,0 +1,239 @@
+"""
+Unit tests for UserRepository.
+"""
+
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from shared.core.exceptions import (
+    InsufficientAICreditsError,
+    InsufficientCreditsError,
+    UserNotFoundError,
+)
+from shared.db.models import User
+from shared.db.repositories.user_repository import UserRepository
+
+
+class TestUserRepository:
+    """Tests for UserRepository."""
+
+    @pytest.mark.asyncio
+    async def test_create_user(self, async_session: AsyncSession):
+        """Test creating a new user."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(
+            tg_id=123456,
+            username="testuser",
+            referral_code="ABC123",
+        )
+
+        assert user.id is not None
+        assert user.tg_id == 123456
+        assert user.username == "testuser"
+        assert user.referral_code == "ABC123"
+        assert user.credits == 0
+        assert user.ai_credits == 0
+
+    @pytest.mark.asyncio
+    async def test_get_by_telegram_id(self, async_session: AsyncSession):
+        """Test getting user by Telegram ID."""
+        repo = UserRepository(async_session)
+
+        # Create user
+        created_user = await repo.create(tg_id=999888, username="user1")
+        await async_session.commit()
+
+        # Get by telegram ID
+        user = await repo.get_by_telegram_id(999888)
+
+        assert user is not None
+        assert user.id == created_user.id
+        assert user.tg_id == 999888
+
+    @pytest.mark.asyncio
+    async def test_get_by_telegram_id_not_found(self, async_session: AsyncSession):
+        """Test getting user by Telegram ID that doesn't exist."""
+        repo = UserRepository(async_session)
+
+        user = await repo.get_by_telegram_id(999999999)
+
+        assert user is None
+
+    @pytest.mark.asyncio
+    async def test_get_by_referral_code(self, async_session: AsyncSession):
+        """Test getting user by referral code."""
+        repo = UserRepository(async_session)
+
+        created_user = await repo.create(tg_id=111222, username="user2", referral_code="REF123")
+        await async_session.commit()
+
+        user = await repo.get_by_referral_code("REF123")
+
+        assert user is not None
+        assert user.id == created_user.id
+        assert user.referral_code == "REF123"
+
+    @pytest.mark.asyncio
+    async def test_get_or_create_by_telegram_id_existing(self, async_session: AsyncSession):
+        """Test get_or_create returns existing user."""
+        repo = UserRepository(async_session)
+
+        # Create user first
+        created_user = await repo.create(tg_id=333444, username="existing")
+        await async_session.commit()
+
+        # Call get_or_create
+        user = await repo.get_or_create_by_telegram_id(333444, "different_name")
+
+        assert user.id == created_user.id
+        assert user.username == "existing"  # Should keep original
+
+    @pytest.mark.asyncio
+    async def test_get_or_create_by_telegram_id_new(self, async_session: AsyncSession):
+        """Test get_or_create creates new user."""
+        repo = UserRepository(async_session)
+
+        user = await repo.get_or_create_by_telegram_id(555666, "newuser", "NEWREF")
+
+        assert user.id is not None
+        assert user.tg_id == 555666
+        assert user.username == "newuser"
+        assert user.referral_code == "NEWREF"
+
+    @pytest.mark.asyncio
+    async def test_add_credits(self, async_session: AsyncSession):
+        """Test adding credits to user."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(tg_id=777888)
+        await async_session.commit()
+
+        updated_user = await repo.add_credits(user.id, credits=50, ai_credits=25)
+
+        assert updated_user.credits == 50
+        assert updated_user.ai_credits == 25
+
+    @pytest.mark.asyncio
+    async def test_add_credits_user_not_found(self, async_session: AsyncSession):
+        """Test adding credits raises error when user not found."""
+        repo = UserRepository(async_session)
+
+        with pytest.raises(UserNotFoundError):
+            await repo.add_credits(999999, credits=10)
+
+    @pytest.mark.asyncio
+    async def test_deduct_credits(self, async_session: AsyncSession):
+        """Test deducting credits from user."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(tg_id=888999)
+        await async_session.commit()
+
+        # Add credits first
+        await repo.add_credits(user.id, credits=100)
+
+        # Deduct credits
+        updated_user = await repo.deduct_credits(user.id, credits=30)
+
+        assert updated_user.credits == 70
+
+    @pytest.mark.asyncio
+    async def test_deduct_credits_insufficient(self, async_session: AsyncSession):
+        """Test deducting credits raises error when insufficient."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(tg_id=111000)
+        await async_session.commit()
+
+        await repo.add_credits(user.id, credits=10)
+
+        with pytest.raises(InsufficientCreditsError):
+            await repo.deduct_credits(user.id, credits=50)
+
+    @pytest.mark.asyncio
+    async def test_deduct_ai_credits(self, async_session: AsyncSession):
+        """Test deducting AI credits from user."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(tg_id=222000)
+        await async_session.commit()
+
+        # Add AI credits first
+        await repo.add_credits(user.id, ai_credits=50)
+
+        # Deduct AI credits
+        updated_user = await repo.deduct_ai_credits(user.id, ai_credits=20)
+
+        assert updated_user.ai_credits == 30
+        assert updated_user.ai_credits_used == 20
+
+    @pytest.mark.asyncio
+    async def test_deduct_ai_credits_insufficient(self, async_session: AsyncSession):
+        """Test deducting AI credits raises error when insufficient."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(tg_id=333000)
+        await async_session.commit()
+
+        await repo.add_credits(user.id, ai_credits=5)
+
+        with pytest.raises(InsufficientAICreditsError):
+            await repo.deduct_ai_credits(user.id, ai_credits=20)
+
+    @pytest.mark.asyncio
+    async def test_refund_ai_credits(self, async_session: AsyncSession):
+        """Test refunding AI credits to user."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(tg_id=444000)
+        await async_session.commit()
+
+        # Add and use credits
+        await repo.add_credits(user.id, ai_credits=50)
+        await repo.deduct_ai_credits(user.id, ai_credits=30)
+
+        # Refund credits
+        updated_user = await repo.refund_ai_credits(user.id, ai_credits=10)
+
+        assert updated_user.ai_credits == 30  # 20 + 10
+        assert updated_user.ai_credits_used == 20  # 30 - 10
+
+    @pytest.mark.asyncio
+    async def test_get_referral_count(self, async_session: AsyncSession):
+        """Test getting referral count for user."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(tg_id=555000)
+        await async_session.commit()
+
+        count = await repo.get_referral_count(user.id)
+
+        # Should be 0 initially (no referrals)
+        assert count == 0
+
+    @pytest.mark.asyncio
+    async def test_has_any_payment(self, async_session: AsyncSession):
+        """Test checking if user has any payments."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(tg_id=666000)
+        await async_session.commit()
+
+        has_payment = await repo.has_any_payment(user.id)
+
+        # Should be False initially (no payments)
+        assert has_payment is False
+
+    @pytest.mark.asyncio
+    async def test_get_payment_count(self, async_session: AsyncSession):
+        """Test getting payment count for user."""
+        repo = UserRepository(async_session)
+
+        user = await repo.create(tg_id=777000)
+        await async_session.commit()
+
+        count = await repo.get_payment_count(user.id)
+
+        # Should be 0 initially (no payments)
+        assert count == 0

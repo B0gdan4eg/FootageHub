@@ -2,7 +2,10 @@ import asyncio
 import json
 import os
 import time
-from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+from playwright.async_api import async_playwright
+
 from freepik_utils.logger import logger
 
 COOKIE_DIR = os.path.dirname(__file__)
@@ -48,7 +51,9 @@ def get_next_cookie_file():
     with open(COOKIE_INDEX_FILE, "w") as f:
         f.write(str(next_index))
 
-    print(f"[ENVATO] 🔄 Using cookie file: {os.path.basename(selected_file)} ({next_index + 1}/{len(cookie_files)})")
+    print(
+        f"[ENVATO] 🔄 Using cookie file: {os.path.basename(selected_file)} ({next_index + 1}/{len(cookie_files)})"
+    )
     return selected_file
 
 
@@ -69,9 +74,7 @@ class EnvatoDownloader:
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(headless=False)
-        self.context = await self.browser.new_context(
-            viewport={'width': 1920, 'height': 1080}
-        )
+        self.context = await self.browser.new_context(viewport={"width": 1920, "height": 1080})
 
         # Получаем следующий файл с куками (ротация)
         cookie_file = get_next_cookie_file()
@@ -104,13 +107,13 @@ class EnvatoDownloader:
         total = self.success_count + self.fail_count
         if total > 0:
             avg_time = self.total_time / total
-            print("\n" + "="*70)
+            print("\n" + "=" * 70)
             print("📊 [ENVATO] СТАТИСТИКА:")
             print(f"   ✅ Успешно: {self.success_count}")
             print(f"   ❌ Провалов: {self.fail_count}")
             print(f"   ⏱️  Общее время: {self.total_time:.2f} сек")
             print(f"   ⏱️  Среднее время: {avg_time:.2f} сек/ссылка")
-            print("="*70)
+            print("=" * 70)
 
     async def get_download_url(self, asset_url: str) -> str | None:
         """
@@ -135,7 +138,7 @@ class EnvatoDownloader:
 
             async def handle_download(download):
                 try:
-                    download_info['url'] = download.url
+                    download_info["url"] = download.url
                     # Отменяем скачивание, нам нужна только ссылка
                     await download.cancel()
                 except Exception as e:
@@ -160,7 +163,7 @@ class EnvatoDownloader:
             download_button_selectors = [
                 "button:has-text('Скачать')",  # Универсальный по тексту
                 "button[data-analytics-name='download']",  # Новый формат
-                "button[data-testid='button-download']"  # Старый формат
+                "button[data-testid='button-download']",  # Старый формат
             ]
 
             button_clicked = False
@@ -180,19 +183,21 @@ class EnvatoDownloader:
             if "elements.envato.com" in page.url:
                 try:
                     await asyncio.sleep(0.5)
-                    await page.click("button[data-testid='download-without-license-button']", delay=0)
+                    await page.click(
+                        "button[data-testid='download-without-license-button']", delay=0
+                    )
                 except:
                     pass
 
             # Wait for download event with timeout
             max_wait = 5
             for i in range(max_wait * 10):  # Check every 0.1 seconds
-                if download_info.get('url'):
+                if download_info.get("url"):
                     break
                 await asyncio.sleep(0.1)
 
             # Get download URL
-            download_url = download_info.get('url')
+            download_url = download_info.get("url")
 
             elapsed = time.time() - start_time
             self.total_time += elapsed
@@ -206,15 +211,15 @@ class EnvatoDownloader:
 
                 # Делаем скриншот для отладки
                 import os
+
                 screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
                 os.makedirs(screenshot_dir, exist_ok=True)
                 screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
                 await page.screenshot(path=screenshot_path, full_page=False)
 
                 await logger.error(
-                    f"❌ [ENVATO] Download event не сработал\n"
-                    f"URL: {asset_url}",
-                    screenshot_path=screenshot_path
+                    f"❌ [ENVATO] Download event не сработал\n" f"URL: {asset_url}",
+                    screenshot_path=screenshot_path,
                 )
 
             return download_url
@@ -231,6 +236,7 @@ class EnvatoDownloader:
             if page:
                 try:
                     import os
+
                     screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
                     os.makedirs(screenshot_dir, exist_ok=True)
                     screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
@@ -240,10 +246,8 @@ class EnvatoDownloader:
                     screenshot_path = None
 
             await logger.error(
-                f"❌ [ENVATO] Ошибка при скачивании\n"
-                f"URL: {asset_url}\n"
-                f"Ошибка: {e}",
-                screenshot_path=screenshot_path
+                f"❌ [ENVATO] Ошибка при скачивании\n" f"URL: {asset_url}\n" f"Ошибка: {e}",
+                screenshot_path=screenshot_path,
             )
             return None
 
@@ -283,7 +287,10 @@ class EnvatoDownloader:
 
             def on_response(event):
                 url = event.get("response", {}).get("url", "")
-                if "download_and_license" in url or "video-downloads.elements.envatousercontent.com" in url:
+                if (
+                    "download_and_license" in url
+                    or "video-downloads.elements.envatousercontent.com" in url
+                ):
                     captured_responses.append(event)
 
             client.on("Network.responseReceived", on_response)
@@ -295,7 +302,9 @@ class EnvatoDownloader:
             try:
                 # Wait for cookie dialog and click reject button
                 await page.wait_for_selector("#CybotCookiebotDialog", timeout=1000)
-                await page.click(".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=1000)
+                await page.click(
+                    ".CybotCookiebotDialogBodyButton:has-text('Отклонить все')", timeout=1000
+                )
                 await asyncio.sleep(0.2)
             except (PlaywrightTimeoutError, TimeoutError):
                 pass  # Cookie banner not found, continue
@@ -305,7 +314,9 @@ class EnvatoDownloader:
             await asyncio.sleep(1)  # Wait for modal to appear
 
             # Step 2: Click radio button to select project (from recorded_actions.json)
-            await page.click("input[type='radio'][name='project-list-radio-button-item']", timeout=10000)
+            await page.click(
+                "input[type='radio'][name='project-list-radio-button-item']", timeout=10000
+            )
             await asyncio.sleep(0.5)  # Wait for button to become enabled
 
             # Step 3: Click "Download with license" button (from recorded_actions.json)
@@ -323,7 +334,9 @@ class EnvatoDownloader:
             else:
                 self.fail_count += 1
                 print(f"   ❌ Не получен URL (WITH LICENSE)")
-                await logger.error(f"❌ [ENVATO] Download URL не получен (WITH LICENSE)\nURL: {asset_url}")
+                await logger.error(
+                    f"❌ [ENVATO] Download URL не получен (WITH LICENSE)\nURL: {asset_url}"
+                )
 
             return download_url
 
@@ -339,6 +352,7 @@ class EnvatoDownloader:
             if page:
                 try:
                     import os
+
                     screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
                     os.makedirs(screenshot_dir, exist_ok=True)
                     screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
@@ -351,7 +365,7 @@ class EnvatoDownloader:
                 f"❌ [ENVATO] Ошибка при скачивании (WITH LICENSE)\n"
                 f"URL: {asset_url}\n"
                 f"Ошибка: {e}",
-                screenshot_path=screenshot_path
+                screenshot_path=screenshot_path,
             )
             return None
 
@@ -370,7 +384,6 @@ class EnvatoDownloader:
                 except Exception:
                     pass
 
-
     async def _wait_for_download_url(self, client, captured_responses, timeout=5) -> str | None:
         """
         Wait for download URL to appear in intercepted network responses.
@@ -388,7 +401,9 @@ class EnvatoDownloader:
         while time.time() - start < timeout:
             for resp in captured_responses:
                 try:
-                    body = await client.send("Network.getResponseBody", {"requestId": resp["requestId"]})
+                    body = await client.send(
+                        "Network.getResponseBody", {"requestId": resp["requestId"]}
+                    )
                     data = json.loads(body["body"])
                     url = data.get("data", {}).get("attributes", {}).get("downloadUrl")
                     if url:
@@ -397,8 +412,10 @@ class EnvatoDownloader:
                     continue  # Try next response
             await asyncio.sleep(0.1)
         return None
-    
-    async def _wait_for_download_url_from_license(self, client, captured_responses, timeout=5) -> str | None:
+
+    async def _wait_for_download_url_from_license(
+        self, client, captured_responses, timeout=5
+    ) -> str | None:
         """
         Wait for download URL to appear in intercepted network responses.
         Specifically looks for download_and_license API response.
@@ -407,17 +424,21 @@ class EnvatoDownloader:
         while time.time() - start < timeout:
             for resp in captured_responses:
                 try:
-                    body = await client.send("Network.getResponseBody", {"requestId": resp["requestId"]})
+                    body = await client.send(
+                        "Network.getResponseBody", {"requestId": resp["requestId"]}
+                    )
                     data = json.loads(body["body"])
 
                     # Look for download URL in response body
                     url = (
-                        data.get("data", {}).get("attributes", {}).get("downloadUrl") or
-                        data.get("downloadUrl") or
-                        data.get("url")
+                        data.get("data", {}).get("attributes", {}).get("downloadUrl")
+                        or data.get("downloadUrl")
+                        or data.get("url")
                     )
 
-                    if url and ("video-downloads.elements.envatousercontent.com" in url or "download" in url):
+                    if url and (
+                        "video-downloads.elements.envatousercontent.com" in url or "download" in url
+                    ):
                         return url
                 except Exception:
                     continue
@@ -452,6 +473,7 @@ async def get_envato_direct_download_url(asset_url: str, with_license: bool = Fa
     # Используем семафор для ограничения параллельных скачиваний
     try:
         from bot.services import BotServices
+
         semaphore = BotServices.download_semaphore
     except (ImportError, AttributeError):
         # Если запускается не из бота (тесты), семафор не нужен

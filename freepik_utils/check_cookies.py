@@ -8,10 +8,11 @@ from pathlib import Path
 
 COOKIE_FILE = Path(__file__).resolve().parent / "freepik_cookies.json"
 
+
 def check_cookies():
-    print("="*70)
+    print("=" * 70)
     print("🍪 Проверка cookies Freepik")
-    print("="*70)
+    print("=" * 70)
 
     if not COOKIE_FILE.exists():
         print(f"❌ Файл {COOKIE_FILE} не найден!")
@@ -37,7 +38,7 @@ def check_cookies():
     print(f"\n✅ Загружено {len(cookies)} cookies\n")
 
     # Проверяем структуру
-    required_fields = ['name', 'value', 'domain']
+    required_fields = ["name", "value", "domain"]
     valid_cookies = []
     invalid_cookies = []
 
@@ -48,7 +49,9 @@ def check_cookies():
 
         missing_fields = [f for f in required_fields if f not in cookie]
         if missing_fields:
-            invalid_cookies.append(f"Cookie #{i+1} ({cookie.get('name', '?')}): отсутствуют поля {missing_fields}")
+            invalid_cookies.append(
+                f"Cookie #{i+1} ({cookie.get('name', '?')}): отсутствуют поля {missing_fields}"
+            )
         else:
             valid_cookies.append(cookie)
 
@@ -64,20 +67,20 @@ def check_cookies():
 
     # Важные cookies для Freepik
     important_names = [
-        '_fprom_sess',      # Сессия Freepik
-        'gr_user_id',       # ID пользователя
-        'user_id',          # ID пользователя
-        'session',          # Сессия
-        '_ga',              # Google Analytics
-        'OptanonConsent',   # Согласие на cookies
-        'freepik_login',    # Логин
-        'auth_token'        # Токен авторизации
+        "_fprom_sess",  # Сессия Freepik
+        "gr_user_id",  # ID пользователя
+        "user_id",  # ID пользователя
+        "session",  # Сессия
+        "_ga",  # Google Analytics
+        "OptanonConsent",  # Согласие на cookies
+        "freepik_login",  # Логин
+        "auth_token",  # Токен авторизации
     ]
 
     found_important = []
     for cookie in valid_cookies:
-        name = cookie.get('name', '')
-        if name in important_names or 'session' in name.lower() or 'auth' in name.lower():
+        name = cookie.get("name", "")
+        if name in important_names or "session" in name.lower() or "auth" in name.lower():
             found_important.append(name)
 
     print(f"\n🔑 Важные cookies найдены:")
@@ -89,26 +92,26 @@ def check_cookies():
         print(f"   💡 Убедитесь, что вы вошли в аккаунт Freepik перед экспортом")
 
     # Домены
-    domains = set(c.get('domain', '?') for c in valid_cookies)
+    domains = set(c.get("domain", "?") for c in valid_cookies)
     print(f"\n🌐 Домены cookies:")
     for domain in sorted(domains):
-        count = sum(1 for c in valid_cookies if c.get('domain') == domain)
+        count = sum(1 for c in valid_cookies if c.get("domain") == domain)
         print(f"   {domain}: {count} cookies")
 
     # Проверка на freepik.com
-    freepik_cookies = [c for c in valid_cookies if 'freepik.com' in c.get('domain', '')]
+    freepik_cookies = [c for c in valid_cookies if "freepik.com" in c.get("domain", "")]
     print(f"\n📌 Cookies для freepik.com: {len(freepik_cookies)}")
 
     if len(freepik_cookies) < 3:
         print(f"   ⚠️  Слишком мало cookies для Freepik!")
         print(f"   💡 Убедитесь, что вы экспортировали cookies именно с freepik.com")
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     if len(valid_cookies) >= 5 and len(freepik_cookies) >= 3:
         print("✅ Cookies выглядят корректно и готовы к использованию!")
     else:
         print("⚠️  Возможно, cookies неполные. Попробуйте экспортировать заново.")
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":

@@ -4,12 +4,13 @@ Abstract AI Provider
 Base class for all AI generation providers
 """
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
 from enum import Enum
+from typing import Any, Dict, Optional
 
 
 class GenerationType(Enum):
     """AI generation types"""
+
     IMAGE = "IMAGE"
     VIDEO = "VIDEO"
     AUDIO = "AUDIO"

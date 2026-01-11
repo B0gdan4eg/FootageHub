@@ -1,32 +1,50 @@
-import sys
 import asyncio
 import logging
+import sys
+
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram.types import BotCommand
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from bot.config import BOT_TOKEN
-from bot.handlers import start, download, info, admin, payment, channel_check, manager, menu #group_st
-from db.base import run_migrations, create_tables
-from bot.schedule_tasks import scheduler_job, daily_backup_job, cleanup_playwright_cache, process_monthly_subscriptions, check_expired_subscriptions
-from bot.webhook.server_start import start_server
-from envato_utils.test_env import LinkProcessor
+from bot.handlers import (  # group_st
+    admin,
+    channel_check,
+    download,
+    info,
+    manager,
+    menu,
+    payment,
+    start,
+)
+from bot.schedule_tasks import (
+    check_expired_subscriptions,
+    cleanup_playwright_cache,
+    daily_backup_job,
+    process_monthly_subscriptions,
+    scheduler_job,
+)
 from bot.services import BotServices
+from bot.webhook.server_start import start_server
+from db.base import create_tables, run_migrations
+from envato_utils.test_env import LinkProcessor
 from freepik_utils.logger import logger
 
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler('bot.log', encoding='utf-8'),  # Save to file
-        logging.StreamHandler()  # Also print to console
-    ]
+        logging.FileHandler("bot.log", encoding="utf-8"),  # Save to file
+        logging.StreamHandler(),  # Also print to console
+    ],
 )
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    
+
+
 async def set_bot_commands(bot: Bot):
     """Устанавливает список команд бота, чтобы меню отображалось на всех устройствах."""
     commands = [
@@ -38,6 +56,7 @@ async def set_bot_commands(bot: Bot):
         BotCommand(command="pay", description="Оформить подписку"),
     ]
     await bot.set_my_commands(commands)
+
 
 # Telegram bot
 bot = Bot(token=BOT_TOKEN)
@@ -52,19 +71,21 @@ logger.set_bot(bot)
 
 # Роутеры бота
 # Порядок важен! Сначала роутеры с FSM состояниями, потом общие команды
-dp.include_router(admin.router)          # Админ-панель с FSM состояниями
-dp.include_router(manager.router)        # Менеджер-панель с FSM состояниями
-dp.include_router(download.router)       # Скачивание с FSM состояниями (waiting_for_link)
-dp.include_router(payment.router)        # Платежи (могут быть FSM состояния)
+dp.include_router(admin.router)  # Админ-панель с FSM состояниями
+dp.include_router(manager.router)  # Менеджер-панель с FSM состояниями
+dp.include_router(download.router)  # Скачивание с FSM состояниями (waiting_for_link)
+dp.include_router(payment.router)  # Платежи (могут быть FSM состояния)
 dp.include_router(channel_check.router)  # Проверка подписки на канал
-dp.include_router(menu.router)           # Главное меню (сбрасывает состояния)
-dp.include_router(info.router)           # Информация (сбрасывает состояния)
-dp.include_router(start.router)          # /start должен быть последним (сбрасывает состояния)
-#dp.include_router(group_st.router)
+dp.include_router(menu.router)  # Главное меню (сбрасывает состояния)
+dp.include_router(info.router)  # Информация (сбрасывает состояния)
+dp.include_router(start.router)  # /start должен быть последним (сбрасывает состояния)
+# dp.include_router(group_st.router)
+
 
 async def start_bot():
     """Запуск Telegram-бота."""
     await dp.start_polling(bot)
+
 
 async def main():
     # 1. Миграции перед стартом
@@ -112,6 +133,6 @@ async def main():
         print("[INFO] Остановка LinkProcessor...")
         await BotServices.link_processor.stop()
 
+
 if __name__ == "__main__":
     asyncio.run(main())
-    

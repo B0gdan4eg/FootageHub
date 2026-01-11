@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: footagehub_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/dev.txt
+
+    - name: Run isort check
+      run: |
+        isort --check-only shared/ media_bot/ ai_bot/ tests/
+
+    - name: Run black check
+      run: |
+        black --check shared/ media_bot/ ai_bot/ tests/
+
+    - name: Run flake8
+      run: |
+        flake8 shared/ media_bot/ ai_bot/
+
+    - name: Run mypy
+      run: |
+        mypy shared/ media_bot/ ai_bot/ --config-file pyproject.toml
+      continue-on-error: true  # Не блокировать CI если есть type errors
+
+    - name: Run bandit security checks
+      run: |
+        bandit -r shared/ media_bot/ ai_bot/ -c pyproject.toml
+
+    - name: Run tests with coverage
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/footagehub_test
+      run: |
+        pytest tests/ -v --cov=shared --cov=media_bot --cov=ai_bot --cov-report=xml --cov-report=term-missing
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        verbose: true
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build MediaBot Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/media-bot.Dockerfile
+        push: false
+        tags: footagehub/media-bot:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build AIBot Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/ai-bot.Dockerfile
+        push: false
+        tags: footagehub/ai-bot:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

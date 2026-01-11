@@ -4,8 +4,9 @@ Pricing Service
 Service for managing AI model pricing and credits
 Based on Kie.ai documentation and actual costs
 """
-from typing import Dict, Optional
 from datetime import datetime, timedelta
+from typing import Dict, Optional
+
 from ai_bot.providers.kie_ai_client import KieAIClient
 
 
@@ -143,9 +144,7 @@ class PricingService:
 
         # Check cache
         if not force_refresh and self._cached_credits is not None:
-            if self._cache_timestamp and (
-                datetime.now() - self._cache_timestamp < self._cache_ttl
-            ):
+            if self._cache_timestamp and (datetime.now() - self._cache_timestamp < self._cache_ttl):
                 return self._cached_credits
 
         # Fetch fresh data

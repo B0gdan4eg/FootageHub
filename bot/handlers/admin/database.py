@@ -2,18 +2,19 @@
 Database export and restore functionality for admin panel.
 """
 
-from aiogram import Router, types, Bot, F
-from aiogram.types import FSInputFile
-from aiogram.fsm.context import FSMContext
-from sqlalchemy.ext.asyncio import AsyncSession
-import openpyxl
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 
-from db.models import User, Download, Media, Payment, Subscription, ReferralReward
-from db.session import get_session
-from bot.state import AdminStates
+import openpyxl
+from aiogram import Bot, F, Router, types
+from aiogram.fsm.context import FSMContext
+from aiogram.types import FSInputFile
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from bot.state import AdminStates
+from db.models import Download, Media, Payment, ReferralReward, Subscription, User
+from db.session import get_session
 
 # Create a separate router for database functions
 router = Router()
@@ -33,7 +34,7 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
         (Download, "Downloads"),
         (Payment, "Payments"),
         (Subscription, "Subscriptions"),
-        (ReferralReward, "ReferralRewards")
+        (ReferralReward, "ReferralRewards"),
     ]
 
     for model, sheet_name in tables:
@@ -70,13 +71,12 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
 
     try:
         await bot.send_document(
-            chat_id=chat_id,
-            document=FSInputFile(file_path),
-            caption="📊 Полный экспорт базы данных"
+            chat_id=chat_id, document=FSInputFile(file_path), caption="📊 Полный экспорт базы данных"
         )
     finally:
         # Удаляем файл после отправки
         import os
+
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -107,7 +107,7 @@ async def restore_db_start(callback: types.CallbackQuery, state: FSMContext):
         "• Существующие записи будут пропущены (не перезаписаны)\n"
         "• Это безопасная операция - дубликаты не создаются\n\n"
         "Отправьте 'отмена' для отмены.",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -122,21 +122,23 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
 
         # Сохраняем во временную директорию
         import tempfile
+
         temp_dir = tempfile.gettempdir()
-        local_file_path = Path(temp_dir) / f"restore_{message.from_user.id}_{message.document.file_name}"
+        local_file_path = (
+            Path(temp_dir) / f"restore_{message.from_user.id}_{message.document.file_name}"
+        )
 
         await bot.download_file(file_path, local_file_path)
 
         # Проверяем, что это XLSX файл
-        if not str(local_file_path).endswith(('.xlsx', '.xls')):
+        if not str(local_file_path).endswith((".xlsx", ".xls")):
             local_file_path.unlink(missing_ok=True)
             return await message.answer("❌ Файл должен быть в формате XLSX")
 
         # Отправляем сообщение о начале восстановления
         status_msg = await message.answer(
-            "⏳ <b>Восстановление базы данных...</b>\n\n"
-            "Это может занять некоторое время.",
-            parse_mode="HTML"
+            "⏳ <b>Восстановление базы данных...</b>\n\n" "Это может занять некоторое время.",
+            parse_mode="HTML",
         )
 
         # Импортируем функцию восстановления
@@ -150,16 +152,16 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
                 "✅ <b>База данных успешно восстановлена!</b>\n\n"
                 "Все данные из файла были импортированы.\n"
                 "Существующие записи были пропущены.",
-                parse_mode="HTML"
+                parse_mode="HTML",
             )
         except Exception as e:
             await status_msg.edit_text(
-                f"❌ <b>Ошибка при восстановлении базы:</b>\n\n"
-                f"<code>{str(e)[:500]}</code>",
-                parse_mode="HTML"
+                f"❌ <b>Ошибка при восстановлении базы:</b>\n\n" f"<code>{str(e)[:500]}</code>",
+                parse_mode="HTML",
             )
             import logging
             import traceback
+
             logger = logging.getLogger(__name__)
             logger.error(f"Database restore error: {e}", exc_info=True)
             traceback.print_exc()
@@ -169,9 +171,7 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
 
     except Exception as e:
         return await message.answer(
-            f"❌ Ошибка при обработке файла:\n\n"
-            f"<code>{str(e)[:500]}</code>",
-            parse_mode="HTML"
+            f"❌ Ошибка при обработке файла:\n\n" f"<code>{str(e)[:500]}</code>", parse_mode="HTML"
         )
 
     await state.clear()

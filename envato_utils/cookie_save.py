@@ -14,12 +14,12 @@ Examples:
     python cookie_save.py motion 1        # Save to motion_utils/motion_cookies_1.json
 """
 
-from playwright.async_api import async_playwright
 import json
-import sys
 import os
+import sys
 from pathlib import Path
 
+from playwright.async_api import async_playwright
 
 SERVICES = {
     "envato": {
@@ -27,29 +27,29 @@ SERVICES = {
         "success_url": "https://elements.envato.com",
         "alt_success_url": "https://app.envato.com",
         "output_dir": "envato_utils",
-        "cookie_prefix": "envato_cookies"
+        "cookie_prefix": "envato_cookies",
     },
     "freepik": {
         "login_url": "https://www.freepik.com/log-in?client_id=freepik&lang=en",
         "success_url": "https://www.freepik.com",
         "alt_success_url": None,
         "output_dir": "freepik_utils",
-        "cookie_prefix": "freepik_cookies"
+        "cookie_prefix": "freepik_cookies",
     },
     "motion": {
         "login_url": "https://motionarray.com/account/login/",
         "success_url": "https://motionarray.com",
         "alt_success_url": "https://motionarray.com/browse",
         "output_dir": "motion_utils",
-        "cookie_prefix": "motion_cookies"
-    }
+        "cookie_prefix": "motion_cookies",
+    },
 }
 
 
 async def save_cookies_after_login(service: str, number: int = None):
     """
     Save cookies after manual login for specified service.
-    
+
     Args:
         service: Service name (envato, freepik, motion)
         number: Optional number for cookie rotation (e.g., 1, 2, 3)
@@ -58,28 +58,26 @@ async def save_cookies_after_login(service: str, number: int = None):
         print(f"[ERROR] Unknown service: {service}")
         print(f"Available services: {', '.join(SERVICES.keys())}")
         sys.exit(1)
-    
+
     config = SERVICES[service]
-    
+
     # Determine output file path
     if number:
         cookie_file = f"{config['cookie_prefix']}_{number}.json"
     else:
         cookie_file = f"{config['cookie_prefix']}.json"
-    
+
     # Prepare output paths: service directory + test directory
-    service_output_path = os.path.join(config['output_dir'], cookie_file)
+    service_output_path = os.path.join(config["output_dir"], cookie_file)
     test_output_path = os.path.join("test", cookie_file)
-    
+
     # Create output directories if they don't exist
-    Path(config['output_dir']).mkdir(parents=True, exist_ok=True)
+    Path(config["output_dir"]).mkdir(parents=True, exist_ok=True)
     Path("test").mkdir(parents=True, exist_ok=True)
-    
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
-        context = await browser.new_context(
-            viewport={'width': 1920, 'height': 1080}
-        )
+        context = await browser.new_context(viewport={"width": 1920, "height": 1080})
         page = await context.new_page()
 
         print(f"\n{'='*70}")
@@ -92,37 +90,38 @@ async def save_cookies_after_login(service: str, number: int = None):
         print(f"   - {service_output_path}")
         print(f"   - {test_output_path}")
         print(f"\n[*] Ожидание входа (макс. 5 минут)...\n")
-        
-        await page.goto(config['login_url'])
+
+        await page.goto(config["login_url"])
 
         # Wait for successful login (check main page URL)
-        success_urls = [config['success_url']]
-        if config['alt_success_url']:
-            success_urls.append(config['alt_success_url'])
-        
+        success_urls = [config["success_url"]]
+        if config["alt_success_url"]:
+            success_urls.append(config["alt_success_url"])
+
         try:
             # Wait for any of the success URLs
             await page.wait_for_url(f"**{config['success_url']}**", timeout=300000)
         except Exception:
             # Try alternative success URL if available
-            if config['alt_success_url']:
+            if config["alt_success_url"]:
                 try:
                     await page.wait_for_url(f"**{config['alt_success_url']}**", timeout=5000)
                 except Exception:
                     pass
-        
+
         # Give time for all cookies to be set
         print("[+] Вход выполнен! Ожидание загрузки cookies...")
         import asyncio
+
         await asyncio.sleep(3)
 
         # Get all cookies from current context
         cookies = await context.cookies()
-        
+
         # Save cookies to both locations
         with open(service_output_path, "w", encoding="utf-8") as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
-        
+
         with open(test_output_path, "w", encoding="utf-8") as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
 
@@ -133,7 +132,7 @@ async def save_cookies_after_login(service: str, number: int = None):
         print(f"   - {test_output_path}")
         print(f"[INFO] Количество cookies: {len(cookies)}")
         print(f"{'='*70}\n")
-        
+
         await browser.close()
 
 
@@ -153,13 +152,13 @@ if __name__ == "__main__":
         print("[ERROR] Не указан сервис!")
         print_usage()
         sys.exit(1)
-    
+
     service = sys.argv[1].lower()
-    
+
     if service in ["-h", "--help", "help"]:
         print_usage()
         sys.exit(0)
-    
+
     # Parse optional number argument
     number = None
     if len(sys.argv) >= 3:
@@ -169,6 +168,7 @@ if __name__ == "__main__":
             print(f"[ERROR] Неверный номер: {sys.argv[2]}")
             print("Номер должен быть целым числом (например: 1, 2, 3)")
             sys.exit(1)
-    
+
     import asyncio
+
     asyncio.run(save_cookies_after_login(service, number))

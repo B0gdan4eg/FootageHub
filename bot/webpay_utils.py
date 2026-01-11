@@ -1,13 +1,15 @@
 import hashlib
-import httpx
 import time
+
+import httpx
+
 from bot.config import (
-    WEBPAY_RESOURCE_ID,
     WEBPAY_API_KEY,
     WEBPAY_AUTH_TOKEN,
+    WEBPAY_RESOURCE_ID,
+    WEBPAY_SANDBOX,
     WEBPAY_SECRET_KEY,
     WEBPAY_SIGNING_KEY,
-    WEBPAY_SANDBOX
 )
 
 
@@ -37,9 +39,9 @@ class WebPayAPI:
                     json={
                         "merchantId": self.merchant_id,
                         "username": self.api_key,
-                        "password": self.secret_key
+                        "password": self.secret_key,
                     },
-                    timeout=30.0
+                    timeout=30.0,
                 )
 
                 # API может вернуть 200 или 201
@@ -65,7 +67,7 @@ class WebPayAPI:
         description: str,
         return_url: str,
         cancel_url: str,
-        notify_url: str
+        notify_url: str,
     ) -> dict:
         """
         Создает счет для оплаты через JSON API
@@ -99,7 +101,9 @@ class WebPayAPI:
         # Формат: seed + storeid + order_num + test + currency_id + total + signing_key
         test_mode = 1 if self.sandbox else 0
         signature_string = f"{seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_for_signature}{self.signing_key}"
-        signature = hashlib.sha1(signature_string.encode('utf-8')).hexdigest()
+        signature = hashlib.sha1(
+            signature_string.encode("utf-8"), usedforsecurity=False
+        ).hexdigest()
 
         print(f"[WEBPAY] Creating invoice: order_id={order_id}, amount={amount_byn} BYN")
 
@@ -120,7 +124,7 @@ class WebPayAPI:
             "wsb_cancel_return_url": cancel_url,
             "wsb_notify_url": notify_url,
             "wsb_redirect": 1,
-            "wsb_return_format": "json"
+            "wsb_return_format": "json",
         }
 
         # API URL
@@ -134,9 +138,9 @@ class WebPayAPI:
                 headers={
                     "Authorization": f"Bearer {self.auth_token}",
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
+                    "Accept": "application/json",
                 },
-                timeout=30.0
+                timeout=30.0,
             )
 
             # Если ошибка, показываем тело ответа
@@ -151,7 +155,7 @@ class WebPayAPI:
             # Возвращаем URL для оплаты
             return {
                 "invoiceUrl": data.get("data", {}).get("redirectUrl"),
-                "wt": data.get("data", {}).get("wt")
+                "wt": data.get("data", {}).get("wt"),
             }
 
     @staticmethod
@@ -166,29 +170,31 @@ class WebPayAPI:
         Returns:
             True если подпись верна
         """
-        received_signature = params.get('wsb_signature', '')
+        received_signature = params.get("wsb_signature", "")
 
         # Формируем строку для проверки подписи
         # Для NOTIFICATION: batch_timestamp + currency_id + amount + payment_method +
         # order_id + site_order_id + transaction_id + payment_type + rrn + SECRET_KEY
         # ВАЖНО: В webhook используется signing_key в конце!
         fields = [
-            params.get('batch_timestamp', ''),
-            params.get('currency_id', ''),
-            params.get('amount', ''),
-            params.get('payment_method', ''),
-            params.get('order_id', ''),
-            params.get('site_order_id', ''),
-            params.get('transaction_id', ''),
-            params.get('payment_type', ''),
-            params.get('rrn', '')
+            params.get("batch_timestamp", ""),
+            params.get("currency_id", ""),
+            params.get("amount", ""),
+            params.get("payment_method", ""),
+            params.get("order_id", ""),
+            params.get("site_order_id", ""),
+            params.get("transaction_id", ""),
+            params.get("payment_type", ""),
+            params.get("rrn", ""),
         ]
 
         # Добавляем secret_key в конец
-        string_to_sign = ''.join(str(f) for f in fields) + (secret_key or '')
+        string_to_sign = "".join(str(f) for f in fields) + (secret_key or "")
 
         # Для notification всегда используется MD5 (независимо от версии)
-        expected_signature = hashlib.md5(string_to_sign.encode('utf-8')).hexdigest()
+        expected_signature = hashlib.md5(
+            string_to_sign.encode("utf-8"), usedforsecurity=False
+        ).hexdigest()
 
         match = expected_signature == received_signature
 

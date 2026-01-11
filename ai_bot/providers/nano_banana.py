@@ -4,7 +4,8 @@ Nano Banana Provider
 Google Nano Banana image generation via Kie.ai
 Documentation: https://docs.kie.ai/market/google/nano-banana
 """
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from .base import AbstractAIProvider, GenerationType
 from .kie_ai_client import KieAIClient
 
@@ -39,7 +40,7 @@ class NanoBananaProvider(AbstractAIProvider):
         resolution: str = "2K",
         output_format: str = "png",
         timeout: int = 300,
-        **kwargs
+        **kwargs,
     ) -> Optional[str]:
         """
         Generate image using Nano Banana
@@ -59,7 +60,7 @@ class NanoBananaProvider(AbstractAIProvider):
         input_params = {
             "prompt": prompt,
             "image_size": aspect_ratio,
-            "output_format": output_format
+            "output_format": output_format,
         }
 
         # Optional: support for image editing
@@ -71,7 +72,7 @@ class NanoBananaProvider(AbstractAIProvider):
         create_result = await self._client.create_task(
             model=self.model_name,
             input_params=input_params,
-            callback_url=kwargs.get("callback_url")
+            callback_url=kwargs.get("callback_url"),
         )
 
         task_id = create_result.get("data", {}).get("taskId")
@@ -93,6 +94,8 @@ class NanoBananaProvider(AbstractAIProvider):
             "task_id": task_id,
             "state": data.get("state"),
             "progress": data.get("progress", 0),
-            "result_url": self._client.parse_result_urls(data) if data.get("state") == "success" else None,
-            "error": data.get("failMsg") if data.get("state") == "fail" else None
+            "result_url": self._client.parse_result_urls(data)
+            if data.get("state") == "success"
+            else None,
+            "error": data.get("failMsg") if data.get("state") == "fail" else None,
         }

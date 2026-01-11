@@ -5,6 +5,7 @@ Environment variables and settings for AI Bot
 """
 import os
 from typing import Optional
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -20,8 +21,7 @@ class Config:
 
     # Database
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql+asyncpg://user:password@localhost:5432/footagehub"
+        "DATABASE_URL", "postgresql+asyncpg://user:password@localhost:5432/footagehub"
     )
 
     # AI Providers
