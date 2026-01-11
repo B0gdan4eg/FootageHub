@@ -113,9 +113,39 @@ async def export_db_callback(callback_query: types.CallbackQuery, bot: Bot):
         raise
 
 
+@router.message(F.text == "🔄 Восстановить базу")
+async def restore_db_text_button(message: types.Message, state: FSMContext):
+    """Начало восстановления базы данных (текстовая кнопка)"""
+    from media_bot.handlers.admin.core import is_admin
+
+    print(f"[DEBUG] Restore DB TEXT BUTTON triggered by user: {message.from_user.id}")
+    logger.info(f"Restore DB text button triggered by user: {message.from_user.id}")
+
+    if not await is_admin(message.from_user.id):
+        print(f"[DEBUG] Unauthorized restore DB attempt by user: {message.from_user.id}")
+        logger.warning(f"Unauthorized restore DB attempt by user: {message.from_user.id}")
+        await message.answer("❌ У вас нет доступа.")
+        return
+
+    print(f"[DEBUG] Setting state to waiting_for_restore_xlsx")
+    await state.set_state(AdminStates.waiting_for_restore_xlsx)
+    await message.answer(
+        "🔄 <b>Восстановление базы данных</b>\n\n"
+        "Отправьте XLSX файл с экспортом базы данных.\n\n"
+        "⚠️ <b>Внимание:</b>\n"
+        "• Файл должен содержать листы: Users, Media, Downloads, Payments, Subscriptions, ReferralRewards\n"
+        "• Существующие записи будут пропущены (не перезаписаны)\n"
+        "• Это безопасная операция - дубликаты не создаются\n\n"
+        "Отправьте 'отмена' для отмены.",
+        parse_mode="HTML",
+    )
+    print(f"[DEBUG] Restore DB state set successfully")
+    logger.info(f"Restore DB state set for user: {message.from_user.id}")
+
+
 @router.callback_query(lambda c: c.data == "admin_restore_db")
 async def restore_db_start(callback: types.CallbackQuery, state: FSMContext):
-    """Начало восстановления базы данных"""
+    """Начало восстановления базы данных (callback кнопка)"""
     from media_bot.handlers.admin.core import is_admin
 
     print(f"[DEBUG] Restore DB callback triggered by user: {callback.from_user.id}")
