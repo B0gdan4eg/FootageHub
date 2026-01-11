@@ -31,9 +31,11 @@ logger = get_logger(__name__)
 
 async def import_users(sheet, session):
     """Импорт пользователей из листа Users (tg_id — источник истины)"""
+    print(f"[IMPORT_USERS] Начало импорта пользователей...")
     logger.info("Импорт пользователей...")
 
     headers = [cell.value for cell in sheet[1]]
+    print(f"[IMPORT_USERS] Заголовки: {headers}")
 
     added = 0
     skipped = 0
@@ -68,7 +70,9 @@ async def import_users(sheet, session):
         session.add(user)
         added += 1
 
+    print(f"[IMPORT_USERS] Коммит изменений в БД...")
     await session.commit()
+    print(f"[IMPORT_USERS] Результат: Добавлено: {added}, Пропущено: {skipped}")
     logger.info(f"Users: Добавлено: {added}, Пропущено: {skipped}")
 
 
@@ -282,59 +286,97 @@ async def import_referral_rewards(sheet, session):
 async def restore_database(xlsx_path: str):
     """Основная функция восстановления базы данных"""
 
+    print(f"[RESTORE] ========== НАЧАЛО ВОССТАНОВЛЕНИЯ ==========")
     logger.info("=" * 60)
     logger.info("ВОССТАНОВЛЕНИЕ БАЗЫ ДАННЫХ ИЗ EXCEL")
     logger.info("=" * 60)
 
     # Проверяем существование файла
     file_path = Path(xlsx_path)
+    print(f"[RESTORE] Проверка файла: {xlsx_path}")
     if not file_path.exists():
+        print(f"[RESTORE] ERROR: Файл не найден!")
         logger.error(f"Файл не найден: {xlsx_path}")
         raise FileNotFoundError(f"Файл не найден: {xlsx_path}")
 
+    print(f"[RESTORE] Файл найден: {xlsx_path}")
     logger.info(f"Файл: {xlsx_path}")
 
     # Открываем Excel файл
     try:
+        print(f"[RESTORE] Открытие Excel файла...")
         wb = openpyxl.load_workbook(xlsx_path)
+        print(f"[RESTORE] Excel файл загружен успешно!")
+        print(f"[RESTORE] Листов в файле: {len(wb.sheetnames)}")
+        print(f"[RESTORE] Список листов: {wb.sheetnames}")
         logger.info(f"Excel файл загружен")
         logger.info(f"Листов в файле: {len(wb.sheetnames)}")
     except Exception as e:
+        print(f"[RESTORE] ERROR при открытии файла: {e}")
+        import traceback
+
+        traceback.print_exc()
         logger.error(f"Ошибка при открытии файла: {e}", exc_info=True)
         raise
 
     # Импортируем данные в правильном порядке (из-за внешних ключей)
+    print(f"[RESTORE] Получение сессии БД...")
     async for session in get_session():
         try:
+            print(f"[RESTORE] Сессия БД получена, начало импорта...")
+
             # 1. Users (независимая таблица)
             if "Users" in wb.sheetnames:
+                print(f"[RESTORE] Импорт таблицы Users...")
                 await import_users(wb["Users"], session)
+            else:
+                print(f"[RESTORE] WARNING: Лист Users не найден")
 
             # 2. Media (независимая таблица)
             if "Media" in wb.sheetnames:
+                print(f"[RESTORE] Импорт таблицы Media...")
                 await import_media(wb["Media"], session)
+            else:
+                print(f"[RESTORE] WARNING: Лист Media не найден")
 
             # 3. Payments (зависит от Users)
             if "Payments" in wb.sheetnames:
+                print(f"[RESTORE] Импорт таблицы Payments...")
                 await import_payments(wb["Payments"], session)
+            else:
+                print(f"[RESTORE] WARNING: Лист Payments не найден")
 
             # 4. Subscriptions (зависит от Users и Payments)
             if "Subscriptions" in wb.sheetnames:
+                print(f"[RESTORE] Импорт таблицы Subscriptions...")
                 await import_subscriptions(wb["Subscriptions"], session)
+            else:
+                print(f"[RESTORE] WARNING: Лист Subscriptions не найден")
 
             # 5. Downloads (зависит от Users, Media, Subscriptions)
             if "Downloads" in wb.sheetnames:
+                print(f"[RESTORE] Импорт таблицы Downloads...")
                 await import_downloads(wb["Downloads"], session)
+            else:
+                print(f"[RESTORE] WARNING: Лист Downloads не найден")
 
             # 6. ReferralRewards (зависит от Users)
             if "ReferralRewards" in wb.sheetnames:
+                print(f"[RESTORE] Импорт таблицы ReferralRewards...")
                 await import_referral_rewards(wb["ReferralRewards"], session)
+            else:
+                print(f"[RESTORE] WARNING: Лист ReferralRewards не найден")
 
+            print(f"[RESTORE] ========== ВОССТАНОВЛЕНИЕ ЗАВЕРШЕНО ==========")
             logger.info("=" * 60)
             logger.info("ВОССТАНОВЛЕНИЕ ЗАВЕРШЕНО")
             logger.info("=" * 60)
 
         except Exception as e:
+            print(f"[RESTORE] CRITICAL ERROR при импорте: {e}")
+            import traceback
+
+            traceback.print_exc()
             logger.error(f"Ошибка при импорте: {e}", exc_info=True)
             await session.rollback()
             raise

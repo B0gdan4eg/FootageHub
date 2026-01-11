@@ -25,27 +25,19 @@ admin_menu_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
             KeyboardButton(text="📊 Статистика"),
-            KeyboardButton(text="👥 Пользователи"),
-        ],
-        [
             KeyboardButton(text="🎁 Выдать подписку"),
+        ],
+        [
             KeyboardButton(text="💎 Управление кредитами"),
-        ],
-        [
             KeyboardButton(text="🎉 Управление бонусами"),
-            KeyboardButton(text="👤 Назначить роль"),
         ],
         [
-            KeyboardButton(text="💳 Загрузить цены"),
+            KeyboardButton(text="👤 Назначить роль"),
             KeyboardButton(text="📢 Рассылка"),
         ],
         [
             KeyboardButton(text="📁 Выгрузка базы"),
             KeyboardButton(text="🔄 Восстановить базу"),
-        ],
-        [
-            KeyboardButton(text="🍪 Загрузить cookies"),
-            KeyboardButton(text="📦 Установить лимит"),
         ],
         [
             KeyboardButton(text="🗑️ Удалить подписку"),

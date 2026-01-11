@@ -109,31 +109,3 @@ async def admin_credits_amount_received(message: types.Message, state: FSMContex
 
     await message.answer(result_text, reply_markup=admin_menu_kb, parse_mode="HTML")
     await state.clear()
-
-
-@router.message(F.text == "👥 Пользователи")
-async def admin_users(message: types.Message):
-    """Show recent users"""
-    if not await is_admin(message.from_user.id):
-        return
-
-    async for session in get_session():
-        result = await session.execute(select(User).order_by(User.created_at.desc()).limit(10))
-        users = result.scalars().all()
-
-    if not users:
-        await message.answer("Нет пользователей")
-        return
-
-    users_text = "👥 <b>Последние пользователи</b>\n\n"
-
-    for user in users:
-        username = user.username or "Без username"
-        users_text += (
-            f"ID: <code>{user.tg_id}</code>\n"
-            f"Username: @{username}\n"
-            f"💰 Кредитов: {user.credits}\n"
-            f"📅 Регистрация: {user.created_at.strftime('%d.%m.%Y')}\n\n"
-        )
-
-    await message.answer(users_text, parse_mode="HTML")
