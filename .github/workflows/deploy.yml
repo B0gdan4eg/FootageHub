@@ -1,11 +1,22 @@
-name: Build and Deploy to VPS via GHCR
+name: Build and Deploy Media Bot to VPS
 
 on:
   push:
     branches: [ master ]
+    paths:
+      - 'media_bot/**'
+      - 'shared/**'
+      - 'envato_utils/**'
+      - 'freepik_utils/**'
+      - 'motion_utils/**'
+      - 'docker/media-bot.Dockerfile'
+      - 'requirements/base.txt'
+      - 'requirements/media-bot.txt'
+      - '.github/workflows/deploy.yml'
 
 jobs:
-  deploy:
+  build:
+    name: Build Media Bot Docker Image
     runs-on: ubuntu-latest
 
     steps:
@@ -15,11 +26,17 @@ jobs:
     - name: Log in to GitHub Container Registry
       run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-    - name: Build and push Docker image
+    - name: Build and push Media Bot Docker image
       run: |
-        docker build -t ghcr.io/b0gdan4eg/footagehub:latest .
-        docker push ghcr.io/b0gdan4eg/footagehub:latest
+        docker build -f docker/media-bot.Dockerfile -t ghcr.io/b0gdan4eg/footagehub-media-bot:latest .
+        docker push ghcr.io/b0gdan4eg/footagehub-media-bot:latest
 
+  deploy:
+    name: Deploy Media Bot to VPS
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
     - name: Set up SSH
       run: |
         mkdir -p ~/.ssh
@@ -27,7 +44,10 @@ jobs:
         chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Deploy on VPS
+    - name: Deploy Media Bot on VPS
       run: |
         ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-          "cd /opt/my_bot && docker compose pull && docker compose up -d && docker image prune -af"
+          "cd /opt/my_bot && \
+           docker compose pull media-bot && \
+           docker compose up -d media-bot && \
+           docker image prune -af"

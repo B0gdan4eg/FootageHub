@@ -25,9 +25,7 @@ services:
 
   # MediaBot - Envato/Freepik/Motion Array downloads
   media-bot:
-    build:
-      context: .
-      dockerfile: docker/media-bot.Dockerfile
+    image: ghcr.io/b0gdan4eg/footagehub-media-bot:latest
     container_name: footagehub-media-bot
     depends_on:
       postgres:
@@ -65,9 +63,7 @@ services:
 
   # AIBot - AI content generation via Kie.ai
   ai-bot:
-    build:
-      context: .
-      dockerfile: docker/ai-bot.Dockerfile
+    image: ghcr.io/b0gdan4eg/footagehub-ai-bot:latest
     container_name: footagehub-ai-bot
     depends_on:
       postgres:

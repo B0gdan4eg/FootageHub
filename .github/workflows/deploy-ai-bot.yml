@@ -25,8 +25,8 @@ jobs:
 
     - name: Build and push AI Bot Docker image
       run: |
-        docker build -f docker/ai-bot.Dockerfile -t ghcr.io/b0gdan4eg/footagehub-ai:latest .
-        docker push ghcr.io/b0gdan4eg/footagehub-ai:latest
+        docker build -f docker/ai-bot.Dockerfile -t ghcr.io/b0gdan4eg/footagehub-ai-bot:latest .
+        docker push ghcr.io/b0gdan4eg/footagehub-ai-bot:latest
 
   deploy:
     name: Deploy AI Bot to VPS
