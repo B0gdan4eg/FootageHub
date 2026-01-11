@@ -10,6 +10,7 @@ on:
       - 'requirements/base.txt'
       - 'requirements/ai-bot.txt'
       - '.github/workflows/deploy-ai-bot.yml'
+  workflow_dispatch:
 
 jobs:
   build:
