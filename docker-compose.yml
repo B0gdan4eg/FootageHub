@@ -5,6 +5,7 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: footagehub-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -16,7 +17,6 @@ services:
       - "5432:5432"
     networks:
       - footagehub-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
@@ -27,6 +27,8 @@ services:
   media-bot:
     image: ghcr.io/b0gdan4eg/footagehub-media-bot:latest
     container_name: footagehub-media-bot
+    restart: unless-stopped
+    env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,12 +49,9 @@ services:
       - CHANNEL_ID=${CHANNEL_ID:-@footagehub_channel}
       - CHANNEL_BONUS_CREDITS=${CHANNEL_BONUS_CREDITS:-2}
     volumes:
-      - ./cookies:/app/cookies
-      - ./debug_screenshots:/app/debug_screenshots
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     networks:
       - footagehub-network
-    restart: unless-stopped
     ports:
       - "8000:8000"  # WebPay webhooks
       - "8443:8443"  # Webhook server
@@ -61,6 +60,8 @@ services:
   ai-bot:
     image: ghcr.io/b0gdan4eg/footagehub-ai-bot:latest
     container_name: footagehub-ai-bot
+    restart: unless-stopped
+    env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,11 +73,8 @@ services:
       - KIE_AI_API_KEY=${KIE_AI_API_KEY}
       # Channel
       - CHANNEL_ID=${CHANNEL_ID:-@footagehub_channel}
-    volumes:
-      - ./ai_generations:/app/ai_generations
     networks:
       - footagehub-network
-    restart: unless-stopped
 
 volumes:
   postgres_data:
