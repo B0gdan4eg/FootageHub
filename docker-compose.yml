@@ -61,6 +61,7 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"  # WebPay webhooks
+      - "8443:8443"  # Webhook server
 
   # AIBot - AI content generation via Kie.ai
   ai-bot:
