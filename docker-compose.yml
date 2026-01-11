@@ -6,9 +6,9 @@ services:
     image: postgres:15-alpine
     container_name: footagehub-db
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: footagehub
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
@@ -18,7 +18,7 @@ services:
       - footagehub-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,8 +33,8 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@postgres:5432/footagehub
-      - BOT_TOKEN=${MEDIA_BOT_TOKEN}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/footagehub
+      - BOT_TOKEN=${BOT_TOKEN}
       - ADMIN=${ADMIN}
       - DISPLAY=:99
       # WebPay
@@ -73,7 +73,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@postgres:5432/footagehub
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/footagehub
       - BOT_TOKEN=${AI_BOT_TOKEN}
       - ADMIN=${ADMIN}
       # AI Providers
