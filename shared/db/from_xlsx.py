@@ -134,10 +134,28 @@ async def import_downloads(sheet, session):
 
         data = dict(zip(headers, row))
 
-        # Проверяем существование
+        # Проверяем существование download
         existing = await session.scalar(select(Download).where(Download.id == data["id"]))
 
         if existing:
+            skipped += 1
+            continue
+
+        # Проверяем существование user_id в таблице users
+        user_exists = await session.scalar(select(User).where(User.id == data["user_id"]))
+        if not user_exists:
+            print(
+                f"[IMPORT_DOWNLOADS] Пропуск download id={data['id']}: user_id={data['user_id']} не найден"
+            )
+            skipped += 1
+            continue
+
+        # Проверяем существование media_id в таблице media
+        media_exists = await session.scalar(select(Media).where(Media.id == data["media_id"]))
+        if not media_exists:
+            print(
+                f"[IMPORT_DOWNLOADS] Пропуск download id={data['id']}: media_id={data['media_id']} не найден"
+            )
             skipped += 1
             continue
 
@@ -189,6 +207,15 @@ async def import_payments(sheet, session):
                 skipped += 1
                 continue
 
+        # Проверяем существование user_id
+        user_exists = await session.scalar(select(User).where(User.id == data["user_id"]))
+        if not user_exists:
+            print(
+                f"[IMPORT_PAYMENTS] Пропуск payment id={data['id']}: user_id={data['user_id']} не найден"
+            )
+            skipped += 1
+            continue
+
         payment = Payment(
             id=data["id"],
             user_id=data["user_id"],
@@ -225,6 +252,15 @@ async def import_subscriptions(sheet, session):
         existing = await session.scalar(select(Subscription).where(Subscription.id == data["id"]))
 
         if existing:
+            skipped += 1
+            continue
+
+        # Проверяем существование user_id
+        user_exists = await session.scalar(select(User).where(User.id == data["user_id"]))
+        if not user_exists:
+            print(
+                f"[IMPORT_SUBSCRIPTIONS] Пропуск subscription id={data['id']}: user_id={data['user_id']} не найден"
+            )
             skipped += 1
             continue
 
@@ -288,6 +324,24 @@ async def import_referral_rewards(sheet, session):
         )
 
         if existing:
+            skipped += 1
+            continue
+
+        # Проверяем существование referrer_id
+        referrer_exists = await session.scalar(select(User).where(User.id == data["referrer_id"]))
+        if not referrer_exists:
+            print(
+                f"[IMPORT_REFERRAL_REWARDS] Пропуск reward id={data['id']}: referrer_id={data['referrer_id']} не найден"
+            )
+            skipped += 1
+            continue
+
+        # Проверяем существование referred_id
+        referred_exists = await session.scalar(select(User).where(User.id == data["referred_id"]))
+        if not referred_exists:
+            print(
+                f"[IMPORT_REFERRAL_REWARDS] Пропуск reward id={data['id']}: referred_id={data['referred_id']} не найден"
+            )
             skipped += 1
             continue
 
