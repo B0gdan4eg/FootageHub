@@ -34,7 +34,7 @@ from media_bot.handlers.admin.database import (
 )
 from media_bot.handlers.admin.limits import ask_download_limit, set_download_limit
 from media_bot.handlers.admin.prices import receive_price_json, upload_prices
-from media_bot.handlers.admin.roles import assign_manager, assign_manager_start
+from media_bot.handlers.admin.roles import assign_manager_start
 from media_bot.handlers.admin.stats import show_stats
 from media_bot.handlers.admin.subscriptions import (
     cancel_delete_subscriptions,
@@ -69,7 +69,6 @@ __all__ = [
     "get_chat_id_command",
     "admin_panel",
     "assign_manager_start",
-    "assign_manager",
     "upload_prices",
     "receive_price_json",
     "export_full_db_and_send",
