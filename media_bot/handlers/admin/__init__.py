@@ -20,7 +20,7 @@ from media_bot.handlers.admin import (
     stats,
     subscriptions,
 )
-from media_bot.handlers.admin.broadcast import send_broadcast, start_broadcast
+from media_bot.handlers.admin.broadcast import broadcast_start, send_broadcast
 from media_bot.handlers.admin.cookies import receive_cookies_json, upload_cookies
 
 # Re-export commonly used functions
@@ -78,7 +78,7 @@ __all__ = [
     "receive_cookies_json",
     "ask_download_limit",
     "set_download_limit",
-    "start_broadcast",
+    "broadcast_start",
     "send_broadcast",
     "confirm_delete_all_subscriptions",
     "delete_all_subs_confirmed",

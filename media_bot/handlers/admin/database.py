@@ -113,7 +113,7 @@ async def export_db_callback(callback_query: types.CallbackQuery, bot: Bot):
 
 
 async def restore_db_start(callback: types.CallbackQuery, state: FSMContext):
-    """Начало восстановления базы данных (callback кнопка)"""
+    """Начало восстановления базы данных - выбор режима"""
     from media_bot.handlers.admin.core import is_admin
 
     print(f"[DEBUG] Restore DB callback triggered by user: {callback.from_user.id}")
@@ -125,21 +125,112 @@ async def restore_db_start(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("❌ У вас нет доступа.", show_alert=True)
         return
 
-    print(f"[DEBUG] Setting state to waiting_for_restore_xlsx")
-    await state.set_state(AdminStates.waiting_for_restore_xlsx)
+    # Показываем выбор режима
+    from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔄 Полная перезапись (очистить БД)",
+                    callback_data="rst_9x4q2w",  # restore_mode_full obfuscated
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="➕ Обновление (добавить новые)",
+                    callback_data="rst_3v7h8k",  # restore_mode_update obfuscated
+                )
+            ],
+            [
+                InlineKeyboardButton(text="❌ Отмена", callback_data="rst_5z1n6c")
+            ],  # restore_mode_cancel obfuscated
+        ]
+    )
+
     await callback.message.answer(
         "🔄 <b>Восстановление базы данных</b>\n\n"
+        "Выберите режим восстановления:\n\n"
+        "<b>🔄 Полная перезапись:</b>\n"
+        "• Удалит ВСЕ данные из БД\n"
+        "• Загрузит данные из Excel с сохранением всех ID\n"
+        "• Подходит для полного восстановления\n\n"
+        "<b>➕ Обновление:</b>\n"
+        "• Добавит только новые записи\n"
+        "• Обновит существующие данные\n"
+        "• Пропустит дубликаты\n"
+        "• Безопасный режим",
+        reply_markup=keyboard,
+        parse_mode="HTML",
+    )
+    await callback.answer()
+    print(f"[DEBUG] Restore mode selection shown")
+    logger.info(f"Restore mode selection shown for user: {callback.from_user.id}")
+
+
+@router.callback_query(lambda c: c.data == "rst_9x4q2w")
+async def restore_mode_full_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Режим полной перезаписи БД"""
+    from media_bot.handlers.admin.core import is_admin
+
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет доступа.", show_alert=True)
+        return
+
+    await state.update_data(restore_mode="full", clear_before=True)
+    await state.set_state(AdminStates.waiting_for_restore_xlsx)
+
+    await callback.message.answer(
+        "🔄 <b>Режим: Полная перезапись</b>\n\n"
+        "⚠️ <b>ВНИМАНИЕ!</b> ⚠️\n"
+        "Все данные в БД будут УДАЛЕНЫ!\n\n"
         "Отправьте XLSX файл с экспортом базы данных.\n\n"
-        "⚠️ <b>Внимание:</b>\n"
-        "• Файл должен содержать листы: Users, Media, Downloads, Payments, Subscriptions, ReferralRewards\n"
-        "• Существующие записи будут пропущены (не перезаписаны)\n"
-        "• Это безопасная операция - дубликаты не создаются\n\n"
+        "📋 <b>Требования к файлу:</b>\n"
+        "• Листы: Users, Media, Downloads, Payments, Subscriptions, ReferralRewards\n"
+        "• Все ID из Excel будут сохранены\n"
+        "• Все связи между таблицами будут восстановлены\n\n"
         "Отправьте 'отмена' для отмены.",
         parse_mode="HTML",
     )
     await callback.answer()
-    print(f"[DEBUG] Restore DB state set successfully")
-    logger.info(f"Restore DB state set for user: {callback.from_user.id}")
+    logger.info(f"Full restore mode selected by user: {callback.from_user.id}")
+
+
+@router.callback_query(lambda c: c.data == "rst_3v7h8k")
+async def restore_mode_update_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Режим обновления БД"""
+    from media_bot.handlers.admin.core import is_admin
+
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет доступа.", show_alert=True)
+        return
+
+    await state.update_data(restore_mode="update", clear_before=False)
+    await state.set_state(AdminStates.waiting_for_restore_xlsx)
+
+    await callback.message.answer(
+        "➕ <b>Режим: Обновление</b>\n\n"
+        "✅ Безопасный режим\n\n"
+        "Отправьте XLSX файл с экспортом базы данных.\n\n"
+        "📋 <b>Что произойдёт:</b>\n"
+        "• Новые записи будут добавлены\n"
+        "• Существующие записи будут обновлены\n"
+        "• Дубликаты будут пропущены\n"
+        "• Данные не удаляются\n\n"
+        "Отправьте 'отмена' для отмены.",
+        parse_mode="HTML",
+    )
+    await callback.answer()
+    logger.info(f"Update restore mode selected by user: {callback.from_user.id}")
+
+
+@router.callback_query(lambda c: c.data == "rst_5z1n6c")
+async def restore_mode_cancel_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Отмена восстановления БД"""
+    await state.clear()
+    await callback.message.answer("❌ Восстановление базы отменено.")
+    await callback.answer()
+    logger.info(f"Restore cancelled by user: {callback.from_user.id}")
 
 
 @router.message(AdminStates.waiting_for_restore_xlsx, F.content_type == "document")
@@ -190,19 +281,39 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
         print(f"[DEBUG] Importing restore_database function...")
         from shared.db.from_xlsx import restore_database
 
+        # Получаем выбранный режим из state
+        data = await state.get_data()
+        restore_mode = data.get("restore_mode", "update")
+        clear_before = data.get("clear_before", False)
+
+        print(f"[DEBUG] Restore mode: {restore_mode}, Clear before: {clear_before}")
+        logger.info(f"Restore mode: {restore_mode}, Clear before: {clear_before}")
+
         # Запускаем восстановление
         print(f"[DEBUG] Starting database restore...")
         logger.info(f"Starting database restore from file: {local_file_path}")
         try:
-            await restore_database(str(local_file_path))
+            await restore_database(
+                str(local_file_path), mode=restore_mode, clear_before=clear_before
+            )
             print(f"[DEBUG] Database restore completed successfully!")
 
-            await status_msg.edit_text(
-                "✅ <b>База данных успешно восстановлена!</b>\n\n"
-                "Все данные из файла были импортированы.\n"
-                "Существующие записи были пропущены.",
-                parse_mode="HTML",
-            )
+            if restore_mode == "full":
+                result_text = (
+                    "✅ <b>База данных полностью восстановлена!</b>\n\n"
+                    "• Все старые данные были удалены\n"
+                    "• Данные из файла загружены с сохранением ID\n"
+                    "• Все связи восстановлены"
+                )
+            else:
+                result_text = (
+                    "✅ <b>База данных обновлена!</b>\n\n"
+                    "• Новые записи добавлены\n"
+                    "• Существующие записи обновлены\n"
+                    "• Дубликаты пропущены"
+                )
+
+            await status_msg.edit_text(result_text, parse_mode="HTML")
             print(f"[DEBUG] Success message sent to user")
             logger.info(f"Database restore completed successfully for user: {message.from_user.id}")
         except Exception as e:

@@ -29,15 +29,20 @@ from shared.db.session import get_session
 logger = get_logger(__name__)
 
 
-async def import_users(sheet, session):
-    """Импорт пользователей из листа Users (tg_id — источник истины)"""
-    print(f"[IMPORT_USERS] Начало импорта пользователей...")
-    logger.info("Импорт пользователей...")
+async def import_users(sheet, session, mode="full"):
+    """Импорт пользователей из листа Users
+
+    Args:
+        mode: "full" - полная перезапись с сохранением ID, "update" - обновление существующих
+    """
+    print(f"[IMPORT_USERS] Начало импорта пользователей (режим: {mode})...")
+    logger.info(f"Импорт пользователей (режим: {mode})...")
 
     headers = [cell.value for cell in sheet[1]]
     print(f"[IMPORT_USERS] Заголовки: {headers}")
 
     added = 0
+    updated = 0
     skipped = 0
 
     for row in sheet.iter_rows(min_row=2, values_only=True):
@@ -50,14 +55,6 @@ async def import_users(sheet, session):
         if not tg_id:
             continue
 
-        # Проверяем существование пользователя ТОЛЬКО по tg_id
-        existing = await session.scalar(select(User).where(User.tg_id == tg_id))
-
-        if existing:
-            skipped += 1
-            continue
-
-        # ❗ НЕ передаём id — база сама назначит корректный
         # Конвертируем role в uppercase если это строка
         role_value = data.get("role")
         if role_value:
@@ -67,30 +64,65 @@ async def import_users(sheet, session):
         else:
             user_role = UserRole.USER
 
-        user = User(
-            tg_id=tg_id,
-            username=data.get("username"),
-            role=user_role,
-            credits=data.get("credits", 0) or 0,
-            referral_code=data.get("referral_code"),
-            created_at=data.get("created_at") or datetime.utcnow(),
-        )
+        if mode == "update":
+            # Режим обновления: обновляем существующих или создаём новых
+            existing = await session.scalar(select(User).where(User.tg_id == tg_id))
 
-        session.add(user)
-        added += 1
+            if existing:
+                # Обновляем существующего пользователя
+                existing.username = data.get("username")
+                existing.role = user_role
+                existing.credits = data.get("credits", 0) or 0
+                existing.referral_code = data.get("referral_code")
+                updated += 1
+            else:
+                # Создаём нового
+                user = User(
+                    tg_id=tg_id,
+                    username=data.get("username"),
+                    role=user_role,
+                    credits=data.get("credits", 0) or 0,
+                    referral_code=data.get("referral_code"),
+                    created_at=data.get("created_at") or datetime.utcnow(),
+                )
+                session.add(user)
+                added += 1
+        else:
+            # Режим полной перезаписи: используем ID из Excel
+            user_id = data.get("id")
+            if not user_id:
+                print(f"[IMPORT_USERS] Пропуск: отсутствует ID для tg_id={tg_id}")
+                skipped += 1
+                continue
+
+            user = User(
+                id=user_id,  # ✅ Используем ID из Excel для сохранения связей
+                tg_id=tg_id,
+                username=data.get("username"),
+                role=user_role,
+                credits=data.get("credits", 0) or 0,
+                referral_code=data.get("referral_code"),
+                created_at=data.get("created_at") or datetime.utcnow(),
+            )
+
+            session.add(user)
+            added += 1
 
     print(f"[IMPORT_USERS] Коммит изменений в БД...")
     await session.commit()
-    print(f"[IMPORT_USERS] Результат: Добавлено: {added}, Пропущено: {skipped}")
-    logger.info(f"Users: Добавлено: {added}, Пропущено: {skipped}")
+    print(
+        f"[IMPORT_USERS] Результат: Добавлено: {added}, Обновлено: {updated}, Пропущено: {skipped}"
+    )
+    logger.info(f"Users: Добавлено: {added}, Обновлено: {updated}, Пропущено: {skipped}")
 
 
-async def import_media(sheet, session):
+async def import_media(sheet, session, mode="full"):
     """Импорт медиа из листа Media"""
-    logger.info("Импорт медиа...")
+    logger.info(f"Импорт медиа (режим: {mode})...")
 
     headers = [cell.value for cell in sheet[1]]
     added = 0
+    updated = 0
     skipped = 0
 
     for row in sheet.iter_rows(min_row=2, values_only=True):
@@ -99,12 +131,15 @@ async def import_media(sheet, session):
 
         data = dict(zip(headers, row))
 
-        # Проверяем существование по URL
-        existing = await session.scalar(select(Media).where(Media.url == data["url"]))
+        if mode == "update":
+            # Проверяем существование по URL
+            existing = await session.scalar(select(Media).where(Media.url == data["url"]))
 
-        if existing:
-            skipped += 1
-            continue
+            if existing:
+                # Обновляем существующее медиа
+                existing.file_type = data.get("file_type")
+                updated += 1
+                continue
 
         media = Media(
             id=data["id"],
@@ -117,12 +152,12 @@ async def import_media(sheet, session):
         added += 1
 
     await session.commit()
-    logger.info(f"Media: Добавлено: {added}, Пропущено: {skipped}")
+    logger.info(f"Media: Добавлено: {added}, Обновлено: {updated}, Пропущено: {skipped}")
 
 
-async def import_downloads(sheet, session):
+async def import_downloads(sheet, session, mode="full"):
     """Импорт скачиваний из листа Downloads"""
-    logger.info("Импорт скачиваний...")
+    logger.info(f"Импорт скачиваний (режим: {mode})...")
 
     headers = [cell.value for cell in sheet[1]]
     added = 0
@@ -134,30 +169,12 @@ async def import_downloads(sheet, session):
 
         data = dict(zip(headers, row))
 
-        # Проверяем существование download
-        existing = await session.scalar(select(Download).where(Download.id == data["id"]))
-
-        if existing:
-            skipped += 1
-            continue
-
-        # Проверяем существование user_id в таблице users
-        user_exists = await session.scalar(select(User).where(User.id == data["user_id"]))
-        if not user_exists:
-            print(
-                f"[IMPORT_DOWNLOADS] Пропуск download id={data['id']}: user_id={data['user_id']} не найден"
-            )
-            skipped += 1
-            continue
-
-        # Проверяем существование media_id в таблице media
-        media_exists = await session.scalar(select(Media).where(Media.id == data["media_id"]))
-        if not media_exists:
-            print(
-                f"[IMPORT_DOWNLOADS] Пропуск download id={data['id']}: media_id={data['media_id']} не найден"
-            )
-            skipped += 1
-            continue
+        if mode == "update":
+            # В режиме update проверяем существование
+            existing = await session.scalar(select(Download).where(Download.id == data["id"]))
+            if existing:
+                skipped += 1
+                continue
 
         # Конвертируем service_type в uppercase если это строка
         service_type = None
@@ -184,9 +201,9 @@ async def import_downloads(sheet, session):
     logger.info(f"Downloads: Добавлено: {added}, Пропущено: {skipped}")
 
 
-async def import_payments(sheet, session):
+async def import_payments(sheet, session, mode="full"):
     """Импорт платежей из листа Payments"""
-    logger.info("Импорт платежей...")
+    logger.info(f"Импорт платежей (режим: {mode})...")
 
     headers = [cell.value for cell in sheet[1]]
     added = 0
@@ -198,23 +215,15 @@ async def import_payments(sheet, session):
 
         data = dict(zip(headers, row))
 
-        # Проверяем по invoice_id
-        if data.get("invoice_id"):
-            existing = await session.scalar(
-                select(Payment).where(Payment.invoice_id == data["invoice_id"])
-            )
-            if existing:
-                skipped += 1
-                continue
-
-        # Проверяем существование user_id
-        user_exists = await session.scalar(select(User).where(User.id == data["user_id"]))
-        if not user_exists:
-            print(
-                f"[IMPORT_PAYMENTS] Пропуск payment id={data['id']}: user_id={data['user_id']} не найден"
-            )
-            skipped += 1
-            continue
+        if mode == "update":
+            # Проверяем по invoice_id
+            if data.get("invoice_id"):
+                existing = await session.scalar(
+                    select(Payment).where(Payment.invoice_id == data["invoice_id"])
+                )
+                if existing:
+                    skipped += 1
+                    continue
 
         payment = Payment(
             id=data["id"],
@@ -234,9 +243,9 @@ async def import_payments(sheet, session):
     logger.info(f"Payments: Добавлено: {added}, Пропущено: {skipped}")
 
 
-async def import_subscriptions(sheet, session):
+async def import_subscriptions(sheet, session, mode="full"):
     """Импорт подписок из листа Subscriptions"""
-    logger.info("Импорт подписок...")
+    logger.info(f"Импорт подписок (режим: {mode})...")
 
     headers = [cell.value for cell in sheet[1]]
     added = 0
@@ -248,21 +257,14 @@ async def import_subscriptions(sheet, session):
 
         data = dict(zip(headers, row))
 
-        # Проверяем существование
-        existing = await session.scalar(select(Subscription).where(Subscription.id == data["id"]))
-
-        if existing:
-            skipped += 1
-            continue
-
-        # Проверяем существование user_id
-        user_exists = await session.scalar(select(User).where(User.id == data["user_id"]))
-        if not user_exists:
-            print(
-                f"[IMPORT_SUBSCRIPTIONS] Пропуск subscription id={data['id']}: user_id={data['user_id']} не найден"
+        if mode == "update":
+            # Проверяем существование
+            existing = await session.scalar(
+                select(Subscription).where(Subscription.id == data["id"])
             )
-            skipped += 1
-            continue
+            if existing:
+                skipped += 1
+                continue
 
         # Конвертируем subscription_type в uppercase если это строка
         sub_type_value = data["subscription_type"]
@@ -304,9 +306,9 @@ async def import_subscriptions(sheet, session):
     logger.info(f"Subscriptions: Добавлено: {added}, Пропущено: {skipped}")
 
 
-async def import_referral_rewards(sheet, session):
+async def import_referral_rewards(sheet, session, mode="full"):
     """Импорт реферальных вознаграждений из листа ReferralRewards"""
-    logger.info("Импорт реферальных вознаграждений...")
+    logger.info(f"Импорт реферальных вознаграждений (режим: {mode})...")
 
     headers = [cell.value for cell in sheet[1]]
     added = 0
@@ -318,32 +320,14 @@ async def import_referral_rewards(sheet, session):
 
         data = dict(zip(headers, row))
 
-        # Проверяем существование
-        existing = await session.scalar(
-            select(ReferralReward).where(ReferralReward.id == data["id"])
-        )
-
-        if existing:
-            skipped += 1
-            continue
-
-        # Проверяем существование referrer_id
-        referrer_exists = await session.scalar(select(User).where(User.id == data["referrer_id"]))
-        if not referrer_exists:
-            print(
-                f"[IMPORT_REFERRAL_REWARDS] Пропуск reward id={data['id']}: referrer_id={data['referrer_id']} не найден"
+        if mode == "update":
+            # Проверяем существование
+            existing = await session.scalar(
+                select(ReferralReward).where(ReferralReward.id == data["id"])
             )
-            skipped += 1
-            continue
-
-        # Проверяем существование referred_id
-        referred_exists = await session.scalar(select(User).where(User.id == data["referred_id"]))
-        if not referred_exists:
-            print(
-                f"[IMPORT_REFERRAL_REWARDS] Пропуск reward id={data['id']}: referred_id={data['referred_id']} не найден"
-            )
-            skipped += 1
-            continue
+            if existing:
+                skipped += 1
+                continue
 
         # Конвертируем status в uppercase если это строка
         status_value = data.get("status")
@@ -374,12 +358,55 @@ async def import_referral_rewards(sheet, session):
     logger.info(f"ReferralRewards: Добавлено: {added}, Пропущено: {skipped}")
 
 
-async def restore_database(xlsx_path: str):
-    """Основная функция восстановления базы данных"""
+async def clear_all_tables(session):
+    """Очистка всех таблиц в правильном порядке (обратном порядке зависимостей)"""
+    print(f"[CLEAR] Начало очистки всех таблиц...")
+    logger.info("Очистка всех таблиц...")
 
+    try:
+        # Удаляем в обратном порядке зависимостей
+        print(f"[CLEAR] Удаление ReferralRewards...")
+        await session.execute(ReferralReward.__table__.delete())
+
+        print(f"[CLEAR] Удаление Downloads...")
+        await session.execute(Download.__table__.delete())
+
+        print(f"[CLEAR] Удаление Subscriptions...")
+        await session.execute(Subscription.__table__.delete())
+
+        print(f"[CLEAR] Удаление Payments...")
+        await session.execute(Payment.__table__.delete())
+
+        print(f"[CLEAR] Удаление Media...")
+        await session.execute(Media.__table__.delete())
+
+        print(f"[CLEAR] Удаление Users...")
+        await session.execute(User.__table__.delete())
+
+        await session.commit()
+        print(f"[CLEAR] Все таблицы очищены успешно!")
+        logger.info("Все таблицы очищены")
+    except Exception as e:
+        print(f"[CLEAR] ERROR при очистке таблиц: {e}")
+        logger.error(f"Ошибка при очистке таблиц: {e}", exc_info=True)
+        await session.rollback()
+        raise
+
+
+async def restore_database(xlsx_path: str, mode: str = "full", clear_before: bool = True):
+    """Основная функция восстановления базы данных
+
+    Args:
+        xlsx_path: Путь к Excel файлу
+        mode: "full" - полная перезапись с ID, "update" - обновление существующих
+        clear_before: Очищать ли БД перед импортом (только для режима "full")
+    """
     print(f"[RESTORE] ========== НАЧАЛО ВОССТАНОВЛЕНИЯ ==========")
+    print(f"[RESTORE] Режим: {mode}")
+    print(f"[RESTORE] Очистка перед импортом: {clear_before}")
     logger.info("=" * 60)
     logger.info("ВОССТАНОВЛЕНИЕ БАЗЫ ДАННЫХ ИЗ EXCEL")
+    logger.info(f"Режим: {mode}, Очистка: {clear_before}")
     logger.info("=" * 60)
 
     # Проверяем существование файла
@@ -414,47 +441,53 @@ async def restore_database(xlsx_path: str):
     print(f"[RESTORE] Получение сессии БД...")
     async for session in get_session():
         try:
-            print(f"[RESTORE] Сессия БД получена, начало импорта...")
+            print(f"[RESTORE] Сессия БД получена")
+
+            # Очистка БД перед полным импортом
+            if mode == "full" and clear_before:
+                await clear_all_tables(session)
+
+            print(f"[RESTORE] Начало импорта...")
 
             # 1. Users (независимая таблица)
             if "Users" in wb.sheetnames:
                 print(f"[RESTORE] Импорт таблицы Users...")
-                await import_users(wb["Users"], session)
+                await import_users(wb["Users"], session, mode=mode)
             else:
                 print(f"[RESTORE] WARNING: Лист Users не найден")
 
             # 2. Media (независимая таблица)
             if "Media" in wb.sheetnames:
                 print(f"[RESTORE] Импорт таблицы Media...")
-                await import_media(wb["Media"], session)
+                await import_media(wb["Media"], session, mode=mode)
             else:
                 print(f"[RESTORE] WARNING: Лист Media не найден")
 
             # 3. Payments (зависит от Users)
             if "Payments" in wb.sheetnames:
                 print(f"[RESTORE] Импорт таблицы Payments...")
-                await import_payments(wb["Payments"], session)
+                await import_payments(wb["Payments"], session, mode=mode)
             else:
                 print(f"[RESTORE] WARNING: Лист Payments не найден")
 
             # 4. Subscriptions (зависит от Users и Payments)
             if "Subscriptions" in wb.sheetnames:
                 print(f"[RESTORE] Импорт таблицы Subscriptions...")
-                await import_subscriptions(wb["Subscriptions"], session)
+                await import_subscriptions(wb["Subscriptions"], session, mode=mode)
             else:
                 print(f"[RESTORE] WARNING: Лист Subscriptions не найден")
 
             # 5. Downloads (зависит от Users, Media, Subscriptions)
             if "Downloads" in wb.sheetnames:
                 print(f"[RESTORE] Импорт таблицы Downloads...")
-                await import_downloads(wb["Downloads"], session)
+                await import_downloads(wb["Downloads"], session, mode=mode)
             else:
                 print(f"[RESTORE] WARNING: Лист Downloads не найден")
 
             # 6. ReferralRewards (зависит от Users)
             if "ReferralRewards" in wb.sheetnames:
                 print(f"[RESTORE] Импорт таблицы ReferralRewards...")
-                await import_referral_rewards(wb["ReferralRewards"], session)
+                await import_referral_rewards(wb["ReferralRewards"], session, mode=mode)
             else:
                 print(f"[RESTORE] WARNING: Лист ReferralRewards не найден")
 
