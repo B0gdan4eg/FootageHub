@@ -58,10 +58,19 @@ async def import_users(sheet, session):
             continue
 
         # ❗ НЕ передаём id — база сама назначит корректный
+        # Конвертируем role в uppercase если это строка
+        role_value = data.get("role")
+        if role_value:
+            if isinstance(role_value, str):
+                role_value = role_value.upper()
+            user_role = UserRole(role_value)
+        else:
+            user_role = UserRole.USER
+
         user = User(
             tg_id=tg_id,
             username=data.get("username"),
-            role=UserRole(data["role"]) if data.get("role") else UserRole.USER,
+            role=user_role,
             credits=data.get("credits", 0) or 0,
             referral_code=data.get("referral_code"),
             created_at=data.get("created_at") or datetime.utcnow(),
@@ -132,6 +141,14 @@ async def import_downloads(sheet, session):
             skipped += 1
             continue
 
+        # Конвертируем service_type в uppercase если это строка
+        service_type = None
+        if data.get("service_type"):
+            st_value = data["service_type"]
+            if isinstance(st_value, str):
+                st_value = st_value.upper()
+            service_type = ServiceType(st_value)
+
         download = Download(
             id=data["id"],
             user_id=data["user_id"],
@@ -139,7 +156,7 @@ async def import_downloads(sheet, session):
             subscription_id=data.get("subscription_id"),
             downloaded_at=data.get("downloaded_at") or datetime.utcnow(),
             paid=bool(data.get("paid", False)),
-            service_type=ServiceType(data["service_type"]) if data.get("service_type") else None,
+            service_type=service_type,
         )
 
         session.add(download)
@@ -211,13 +228,26 @@ async def import_subscriptions(sheet, session):
             skipped += 1
             continue
 
+        # Конвертируем subscription_type в uppercase если это строка
+        sub_type_value = data["subscription_type"]
+        if isinstance(sub_type_value, str):
+            sub_type_value = sub_type_value.upper()
+        subscription_type = SubscriptionType(sub_type_value)
+
+        # Конвертируем service_type в uppercase если это строка
+        if data.get("service_type"):
+            svc_type_value = data["service_type"]
+            if isinstance(svc_type_value, str):
+                svc_type_value = svc_type_value.upper()
+            service_type = ServiceType(svc_type_value)
+        else:
+            service_type = ServiceType.ALL
+
         subscription = Subscription(
             id=data["id"],
             user_id=data["user_id"],
-            subscription_type=SubscriptionType(data["subscription_type"]),
-            service_type=ServiceType(data["service_type"])
-            if data.get("service_type")
-            else ServiceType.ALL,
+            subscription_type=subscription_type,
+            service_type=service_type,
             total_limit=data.get("total_limit"),
             daily_limit=data.get("daily_limit"),
             used_total=data.get("used_total", 0) or 0,
@@ -261,15 +291,22 @@ async def import_referral_rewards(sheet, session):
             skipped += 1
             continue
 
+        # Конвертируем status в uppercase если это строка
+        status_value = data.get("status")
+        if status_value:
+            if isinstance(status_value, str):
+                status_value = status_value.upper()
+            reward_status = ReferralRewardStatus(status_value)
+        else:
+            reward_status = ReferralRewardStatus.PENDING
+
         reward = ReferralReward(
             id=data["id"],
             referrer_id=data["referrer_id"],
             referred_id=data["referred_id"],
             reward_type=data["reward_type"],
             reward_value=data.get("reward_value"),
-            status=ReferralRewardStatus(data["status"])
-            if data.get("status")
-            else ReferralRewardStatus.PENDING,
+            status=reward_status,
             condition_met=bool(data.get("condition_met", False)),
             condition_date=data.get("condition_date"),
             created_at=data.get("created_at") or datetime.utcnow(),
