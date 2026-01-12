@@ -51,8 +51,8 @@ class AILimits:
 class ReferralRewards:
     """Referral reward amounts"""
 
-    REGISTRATION_CREDITS = 5  # Начисляется когда реферал подписался на канал
-    FIRST_PAYMENT_CREDITS = 5
+    REGISTRATION_CREDITS = 3  # Начисляется когда реферал подписался на канал
+    FIRST_PAYMENT_CREDITS = 3
     FIRST_PAYMENT_AI_CREDITS = 0  # AI кредиты больше не используются
 
 
@@ -62,4 +62,4 @@ class ReferralRewards:
 class ChannelConfig:
     """Channel-related configuration"""
 
-    BONUS_CREDITS = 2  # Credits for subscribing to channel
+    BONUS_CREDITS = 3  # Credits for subscribing to channel

@@ -65,7 +65,7 @@ class UserRepository(BaseRepository[User]):
         user = await self.get_by_telegram_id(telegram_id)
         if not user:
             user = await self.create(
-                tg_id=telegram_id, username=username, referral_code=referral_code
+                tg_id=telegram_id, username=username, referral_code=referral_code, credits=3
             )
         return user
 

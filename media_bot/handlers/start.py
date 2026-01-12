@@ -50,7 +50,7 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                 user_role = UserRole.ADMIN
                 logger.info(f"Creating user {telegram_id} with ADMIN role")
 
-            await user_repo.create(tg_id=telegram_id, role=user_role)
+            await user_repo.create(tg_id=telegram_id, role=user_role, credits=3)
 
             # Если есть реферальный код — создаем реферальную связь
             if args:
