@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 
 from media_bot.handlers.admin.core import is_admin
-from media_bot.keyboards import admin_menu_kb, get_cancel_kb
+from media_bot.keyboards import get_cancel_kb
 from media_bot.state import AdminStates
 from shared.db.models import User
 from shared.db.session import get_session
@@ -16,8 +16,7 @@ from shared.db.session import get_session
 router = Router()
 
 
-@router.message(F.text == "📢 Рассылка")
-async def start_broadcast(message: types.Message, state: FSMContext):
+async def broadcast_start(message: types.Message, state: FSMContext):
     """Начало рассылки сообщений"""
     if not await is_admin(message.from_user.id):
         return
@@ -37,7 +36,7 @@ async def send_broadcast(message: types.Message, state: FSMContext, bot: Bot):
     """Отправка рассылки всем пользователям"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Рассылка отменена", reply_markup=admin_menu_kb)
+        await message.answer("Рассылка отменена")
         return
 
     text = message.text.strip()
@@ -50,7 +49,7 @@ async def send_broadcast(message: types.Message, state: FSMContext, bot: Bot):
         tg_ids = [u[0] for u in users.all()]
 
     status_message = await message.answer(
-        f"📤 Рассылка началась...\nВсего пользователей: {len(tg_ids)}", reply_markup=admin_menu_kb
+        f"📤 Рассылка началась...\nВсего пользователей: {len(tg_ids)}"
     )
 
     for tg_id in tg_ids:

@@ -48,3 +48,5 @@ class AdminStates(StatesGroup):
     waiting_for_bonus_code_toggle = State()
     # Subscription delete state
     waiting_for_subscription_delete_id = State()
+    # Edit user state
+    waiting_for_edit_user_id = State()

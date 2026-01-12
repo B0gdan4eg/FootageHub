@@ -8,7 +8,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select
 
 from media_bot.handlers.admin.core import is_admin
-from media_bot.keyboards import admin_menu_kb, get_cancel_kb
+from media_bot.keyboards import get_cancel_kb
 from media_bot.state import AdminStates
 from shared.db.models import BonusType, UserBonus
 from shared.db.session import get_session
@@ -16,8 +16,7 @@ from shared.db.session import get_session
 router = Router()
 
 
-@router.message(F.text == "🎉 Управление бонусами")
-async def bonuses_menu(message: types.Message):
+async def manage_bonuses(message: types.Message):
     """Show bonus management menu"""
     if not await is_admin(message.from_user.id):
         return
@@ -162,7 +161,7 @@ async def bonus_create_code(message: types.Message, state: FSMContext):
     """Receive bonus code"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Создание бонуса отменено", reply_markup=admin_menu_kb)
+        await message.answer("Создание бонуса отменено")
         return
 
     code = message.text.strip().upper()
@@ -193,7 +192,7 @@ async def bonus_create_name(message: types.Message, state: FSMContext):
     """Receive bonus name"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Создание бонуса отменено", reply_markup=admin_menu_kb)
+        await message.answer("Создание бонуса отменено")
         return
 
     name = message.text.strip()
@@ -210,7 +209,7 @@ async def bonus_create_description(message: types.Message, state: FSMContext):
     """Receive bonus description"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Создание бонуса отменено", reply_markup=admin_menu_kb)
+        await message.answer("Создание бонуса отменено")
         return
 
     description = message.text.strip() if message.text.strip() != "-" else None
@@ -227,7 +226,7 @@ async def bonus_create_credits(message: types.Message, state: FSMContext):
     """Receive bonus credits amount"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Создание бонуса отменено", reply_markup=admin_menu_kb)
+        await message.answer("Создание бонуса отменено")
         return
 
     try:
@@ -251,7 +250,7 @@ async def bonus_create_repeatable(message: types.Message, state: FSMContext):
     """Receive bonus repeatable setting and create bonus"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Создание бонуса отменено", reply_markup=admin_menu_kb)
+        await message.answer("Создание бонуса отменено")
         return
 
     is_repeatable = message.text.strip().lower() in ["да", "yes", "y", "1", "true"]
@@ -290,7 +289,6 @@ async def bonus_create_repeatable(message: types.Message, state: FSMContext):
         f"💰 Кредитов: {data['bonus_credits']}\n"
         f"🔁 Тип: {repeatable_text}\n"
         f"📊 Статус: ✅ Активен",
-        reply_markup=admin_menu_kb,
         parse_mode="HTML",
     )
     await state.clear()
@@ -313,7 +311,7 @@ async def bonus_toggle_execute(message: types.Message, state: FSMContext):
     """Toggle bonus active status"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Операция отменена", reply_markup=admin_menu_kb)
+        await message.answer("Операция отменена")
         return
 
     code = message.text.strip().upper()
@@ -325,7 +323,6 @@ async def bonus_toggle_execute(message: types.Message, state: FSMContext):
         if not bonus:
             await message.answer(
                 f"❌ Бонус с кодом <code>{code}</code> не найден",
-                reply_markup=admin_menu_kb,
                 parse_mode="HTML",
             )
             await state.clear()
@@ -339,7 +336,6 @@ async def bonus_toggle_execute(message: types.Message, state: FSMContext):
 
     await message.answer(
         f"✅ Бонус <b>{bonus.name}</b> (<code>{code}</code>) {status}",
-        reply_markup=admin_menu_kb,
         parse_mode="HTML",
     )
     await state.clear()

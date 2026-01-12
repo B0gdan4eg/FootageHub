@@ -16,7 +16,6 @@ from shared.db.session import get_session
 router = Router()
 
 
-@router.message(F.text == "📊 Статистика")
 async def show_stats(message: types.Message):
     """Показывает статистику по всем пользователям"""
     if not await is_admin(message.from_user.id):

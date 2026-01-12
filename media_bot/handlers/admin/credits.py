@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 
 from media_bot.handlers.admin.core import is_admin
-from media_bot.keyboards import admin_menu_kb, get_cancel_kb
+from media_bot.keyboards import get_cancel_kb
 from media_bot.state import AdminStates
 from shared.db.models import User
 from shared.db.session import get_session
@@ -15,8 +15,7 @@ from shared.db.session import get_session
 router = Router()
 
 
-@router.message(F.text == "💎 Управление кредитами")
-async def admin_credits_menu(message: types.Message, state: FSMContext):
+async def manage_credits(message: types.Message, state: FSMContext):
     """Credits management menu"""
     if not await is_admin(message.from_user.id):
         return
@@ -34,7 +33,7 @@ async def admin_user_id_received(message: types.Message, state: FSMContext):
     """Process user ID for credits management"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Отменено", reply_markup=admin_menu_kb)
+        await message.answer("Отменено")
         return
 
     try:
@@ -49,9 +48,7 @@ async def admin_user_id_received(message: types.Message, state: FSMContext):
         user = result.scalar_one_or_none()
 
         if not user:
-            await message.answer(
-                f"❌ Пользователь с ID {user_id} не найден", reply_markup=admin_menu_kb
-            )
+            await message.answer(f"❌ Пользователь с ID {user_id} не найден")
             await state.clear()
             return
 
@@ -72,7 +69,7 @@ async def admin_credits_amount_received(message: types.Message, state: FSMContex
     """Process credits amount"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Отменено", reply_markup=admin_menu_kb)
+        await message.answer("Отменено")
         return
 
     try:
@@ -89,7 +86,7 @@ async def admin_credits_amount_received(message: types.Message, state: FSMContex
         user = result.scalar_one_or_none()
 
         if not user:
-            await message.answer(f"❌ Пользователь {user_id} не найден", reply_markup=admin_menu_kb)
+            await message.answer(f"❌ Пользователь {user_id} не найден")
             await state.clear()
             return
 
@@ -107,5 +104,5 @@ async def admin_credits_amount_received(message: types.Message, state: FSMContex
 
         result_text += f"\n\n💰 Было: <b>{old_balance:,}</b>\n💰 Стало: <b>{new_balance:,}</b>"
 
-    await message.answer(result_text, reply_markup=admin_menu_kb, parse_mode="HTML")
+    await message.answer(result_text, parse_mode="HTML")
     await state.clear()

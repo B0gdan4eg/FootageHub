@@ -8,7 +8,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select
 
 from media_bot.handlers.admin.core import is_admin
-from media_bot.keyboards import admin_menu_kb, get_cancel_kb
+from media_bot.keyboards import get_cancel_kb
 from media_bot.state import AdminStates
 from shared.db.models import ServiceType, Subscription, SubscriptionType, User
 from shared.db.repositories import SubscriptionRepository, UserRepository
@@ -18,7 +18,6 @@ from shared.db.session import get_session
 router = Router()
 
 
-@router.message(F.text == "🎁 Выдать подписку")
 async def give_subscription_start(message: types.Message, state: FSMContext):
     """Запрос ID пользователя для выдачи подписки"""
     if not await is_admin(message.from_user.id):
@@ -38,7 +37,7 @@ async def receive_subscription_user_id(message: types.Message, state: FSMContext
     """Получение ID пользователя и показ выбора плана"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Выдача подписки отменена", reply_markup=admin_menu_kb)
+        await message.answer("Выдача подписки отменена")
         return
 
     user_id_text = message.text.strip()
@@ -215,7 +214,6 @@ async def create_subscription_for_user(callback: types.CallbackQuery, state: FSM
     await callback.answer()
 
 
-@router.message(F.text == "🗑️ Удалить подписку")
 async def delete_subscription_start(message: types.Message, state: FSMContext):
     """Начать процесс удаления подписки по ID"""
     if not await is_admin(message.from_user.id):
@@ -235,7 +233,7 @@ async def delete_subscription_execute(message: types.Message, state: FSMContext)
     """Удалить подписку пользователя"""
     if message.text == "❌ Отменить":
         await state.clear()
-        await message.answer("Удаление подписки отменено", reply_markup=admin_menu_kb)
+        await message.answer("Удаление подписки отменено")
         return
 
     try:
@@ -250,9 +248,7 @@ async def delete_subscription_execute(message: types.Message, state: FSMContext)
         user = result.scalar_one_or_none()
 
         if not user:
-            await message.answer(
-                f"❌ Пользователь с ID {user_id} не найден", reply_markup=admin_menu_kb
-            )
+            await message.answer(f"❌ Пользователь с ID {user_id} не найден")
             await state.clear()
             return
 
@@ -261,9 +257,7 @@ async def delete_subscription_execute(message: types.Message, state: FSMContext)
         subscription = result.scalar_one_or_none()
 
         if not subscription:
-            await message.answer(
-                f"❌ У пользователя {user_id} нет активной подписки", reply_markup=admin_menu_kb
-            )
+            await message.answer(f"❌ У пользователя {user_id} нет активной подписки")
             await state.clear()
             return
 
@@ -273,7 +267,6 @@ async def delete_subscription_execute(message: types.Message, state: FSMContext)
 
     await message.answer(
         f"✅ Подписка пользователя {user_id} (@{user.username or 'Нет username'}) успешно удалена",
-        reply_markup=admin_menu_kb,
         parse_mode="HTML",
     )
     await state.clear()

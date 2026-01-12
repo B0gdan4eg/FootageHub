@@ -58,15 +58,8 @@ async def manager_command(message: types.Message, state: FSMContext):
 
 
 # Обработчики закодированных коллбэков
-@router.callback_query(lambda c: c.data == "mgr_7k2p9x")
-async def show_stats(callback: types.CallbackQuery):
-    """Показывает статистику по всем пользователям"""
-    if not await is_manager(callback.from_user.id) and not await is_admin(callback.from_user.id):
-        await callback.answer("🚫 Нет доступа", show_alert=True)
-        return
-
-    await callback.answer()
-
+async def get_stats_text():
+    """Получить текст статистики"""
     async for session in get_session():
         # Initialize repositories
         download_repo = DownloadRepository(session)
@@ -142,6 +135,9 @@ async def show_stats(callback: types.CallbackQuery):
         else "   • Нет платежей"
     )
 
+    # Текущее время для отображения последнего обновления
+    current_time = datetime.utcnow().strftime("%H:%M:%S UTC")
+
     text = (
         f"📊 <b>Статистика бота</b>\n\n"
         f"👥 <b>Пользователи:</b>\n"
@@ -158,10 +154,46 @@ async def show_stats(callback: types.CallbackQuery):
         f"   • Всего:\n{total_payments_text}\n"
         f"   • Сегодня:\n{today_payments_text}\n\n"
         f"📋 <b>Счета:</b>\n"
-        f"   • Создано сегодня: {payments_created_today}"
+        f"   • Создано сегодня: {payments_created_today}\n\n"
+        f"🕐 Обновлено: {current_time}"
     )
 
-    await callback.message.answer(text, parse_mode="HTML")
+    return text
+
+
+def get_stats_keyboard():
+    """Получить клавиатуру для статистики с кнопкой обновления"""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔄 Обновить", callback_data="mgr_refresh_stats")],
+        ]
+    )
+
+
+@router.callback_query(lambda c: c.data == "mgr_7k2p9x")
+async def show_stats(callback: types.CallbackQuery):
+    """Показывает статистику по всем пользователям"""
+    if not await is_manager(callback.from_user.id) and not await is_admin(callback.from_user.id):
+        await callback.answer("🚫 Нет доступа", show_alert=True)
+        return
+
+    await callback.answer()
+
+    text = await get_stats_text()
+    await callback.message.answer(text, reply_markup=get_stats_keyboard(), parse_mode="HTML")
+
+
+@router.callback_query(lambda c: c.data == "mgr_refresh_stats")
+async def refresh_stats(callback: types.CallbackQuery):
+    """Обновить статистику"""
+    if not await is_manager(callback.from_user.id) and not await is_admin(callback.from_user.id):
+        await callback.answer("🚫 Нет доступа", show_alert=True)
+        return
+
+    await callback.answer("🔄 Обновление...")
+
+    text = await get_stats_text()
+    await callback.message.edit_text(text, reply_markup=get_stats_keyboard(), parse_mode="HTML")
 
 
 @router.callback_query(lambda c: c.data == "mgr_4h8n3q")
