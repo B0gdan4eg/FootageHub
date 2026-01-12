@@ -176,6 +176,24 @@ async def import_downloads(sheet, session, mode="full"):
                 skipped += 1
                 continue
 
+        # Проверяем существование user_id в таблице Users
+        user_exists = await session.scalar(select(User.id).where(User.id == data["user_id"]))
+        if not user_exists:
+            logger.warning(
+                f"Пропуск download id={data['id']}: user_id={data['user_id']} не найден в таблице Users"
+            )
+            skipped += 1
+            continue
+
+        # Проверяем существование media_id в таблице Media
+        media_exists = await session.scalar(select(Media.id).where(Media.id == data["media_id"]))
+        if not media_exists:
+            logger.warning(
+                f"Пропуск download id={data['id']}: media_id={data['media_id']} не найден в таблице Media"
+            )
+            skipped += 1
+            continue
+
         # Конвертируем service_type в uppercase если это строка
         service_type = None
         if data.get("service_type"):
@@ -225,6 +243,15 @@ async def import_payments(sheet, session, mode="full"):
                     skipped += 1
                     continue
 
+        # Проверяем существование user_id в таблице Users
+        user_exists = await session.scalar(select(User.id).where(User.id == data["user_id"]))
+        if not user_exists:
+            logger.warning(
+                f"Пропуск payment id={data['id']}: user_id={data['user_id']} не найден в таблице Users"
+            )
+            skipped += 1
+            continue
+
         payment = Payment(
             id=data["id"],
             user_id=data["user_id"],
@@ -265,6 +292,15 @@ async def import_subscriptions(sheet, session, mode="full"):
             if existing:
                 skipped += 1
                 continue
+
+        # Проверяем существование user_id в таблице Users
+        user_exists = await session.scalar(select(User.id).where(User.id == data["user_id"]))
+        if not user_exists:
+            logger.warning(
+                f"Пропуск subscription id={data['id']}: user_id={data['user_id']} не найден в таблице Users"
+            )
+            skipped += 1
+            continue
 
         # Конвертируем subscription_type в uppercase если это строка
         sub_type_value = data["subscription_type"]
@@ -328,6 +364,28 @@ async def import_referral_rewards(sheet, session, mode="full"):
             if existing:
                 skipped += 1
                 continue
+
+        # Проверяем существование referrer_id в таблице Users
+        referrer_exists = await session.scalar(
+            select(User.id).where(User.id == data["referrer_id"])
+        )
+        if not referrer_exists:
+            logger.warning(
+                f"Пропуск referral_reward id={data['id']}: referrer_id={data['referrer_id']} не найден в таблице Users"
+            )
+            skipped += 1
+            continue
+
+        # Проверяем существование referred_id в таблице Users
+        referred_exists = await session.scalar(
+            select(User.id).where(User.id == data["referred_id"])
+        )
+        if not referred_exists:
+            logger.warning(
+                f"Пропуск referral_reward id={data['id']}: referred_id={data['referred_id']} не найден в таблице Users"
+            )
+            skipped += 1
+            continue
 
         # Конвертируем status в uppercase если это строка
         status_value = data.get("status")

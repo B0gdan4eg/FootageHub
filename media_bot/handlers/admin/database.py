@@ -318,12 +318,17 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
             logger.info(f"Database restore completed successfully for user: {message.from_user.id}")
         except Exception as e:
             print(f"[DEBUG] ERROR during database restore: {e}")
+            import html
             import traceback
 
             print(f"[DEBUG] Traceback:")
             traceback.print_exc()
+
+            # Экранируем HTML теги в сообщении об ошибке
+            error_msg = html.escape(str(e)[:500])
+
             await status_msg.edit_text(
-                f"❌ <b>Ошибка при восстановлении базы:</b>\n\n" f"<code>{str(e)[:500]}</code>",
+                f"❌ <b>Ошибка при восстановлении базы:</b>\n\n" f"<code>{error_msg}</code>",
                 parse_mode="HTML",
             )
             logger.error(f"Database restore error: {e}", exc_info=True)
@@ -336,13 +341,18 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
 
     except Exception as e:
         print(f"[DEBUG] CRITICAL ERROR processing restore file: {e}")
+        import html
         import traceback
 
         print(f"[DEBUG] Traceback:")
         traceback.print_exc()
         logger.error(f"Error processing restore file: {e}", exc_info=True)
+
+        # Экранируем HTML теги в сообщении об ошибке
+        error_msg = html.escape(str(e)[:500])
+
         return await message.answer(
-            f"❌ Ошибка при обработке файла:\n\n" f"<code>{str(e)[:500]}</code>", parse_mode="HTML"
+            f"❌ Ошибка при обработке файла:\n\n" f"<code>{error_msg}</code>", parse_mode="HTML"
         )
 
     print(f"[DEBUG] Clearing state...")
