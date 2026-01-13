@@ -189,15 +189,18 @@ class UserRepository(BaseRepository[User]):
         Returns:
             Number of referrals
         """
+        from shared.db.models import ReferralReward, ReferralTriggerType
+
         user = await self.get_by_id(user_id)
         if not user:
             return 0
 
+        # Считаем только регистрационные награды (каждая = один уникальный реферал)
         result = await self.session.execute(
-            select(func.count())
-            .select_from(User)
-            .join(User.received_rewards)
-            .where(User.id == user_id)
+            select(func.count(ReferralReward.id)).where(
+                ReferralReward.referrer_id == user_id,
+                ReferralReward.trigger_type == ReferralTriggerType.REGISTRATION,
+            )
         )
         return result.scalar() or 0
 

@@ -472,10 +472,18 @@ class ReferralService:
         result_active = await self.session.execute(query_active)
         active_referrals = result_active.scalar() or 0
 
-        # Всего заработано бонусов
+        # Всего заработано бонусов (включая milestone)
         total_credits, total_ai_credits = await self._bonus_repo.get_total_credits_from_bonuses(
             user_id,
-            bonus_codes=[BonusCodes.REFERRAL_REGISTRATION, BonusCodes.REFERRAL_FIRST_PAYMENT],
+            bonus_codes=[
+                BonusCodes.REFERRAL_REGISTRATION,
+                BonusCodes.REFERRAL_FIRST_PAYMENT,
+                BonusCodes.REFERRAL_MILESTONE_5,
+                BonusCodes.REFERRAL_MILESTONE_10,
+                BonusCodes.REFERRAL_MILESTONE_25,
+                BonusCodes.REFERRAL_MILESTONE_50,
+                BonusCodes.REFERRAL_MILESTONE_100,
+            ],
             status="COMPLETED",
         )
 
