@@ -97,8 +97,9 @@ class ReferralService:
                 user_id=referrer_id,
                 bonus_code=BonusCodes.REFERRAL_REGISTRATION,
                 metadata={
+                    "trigger": "REGISTRATION",
                     "referral_reward_id": referral_reward.id,
-                    "referred_user_id": referred_id,
+                    "referred_id": referred_id,
                 },
             )
 
