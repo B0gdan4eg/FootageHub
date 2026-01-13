@@ -7,8 +7,6 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from envato_utils.test_env import LinkProcessor
-from freepik_utils.logger import logger as error_logger
 from media_bot.config import BOT_TOKEN
 from media_bot.handlers import (
     admin,
@@ -30,6 +28,8 @@ from media_bot.schedule_tasks import (
     scheduler_job,
 )
 from media_bot.services import BotServices
+from media_bot.utils.envato_utils.test_env import LinkProcessor
+from media_bot.utils.freepik_utils.logger import logger as error_logger
 from media_bot.webhook.server_start import start_server
 from shared.core.logger import get_logger
 from shared.db.base import create_tables, run_migrations

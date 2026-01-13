@@ -8,9 +8,9 @@ Preserves all existing functionality without modification.
 from typing import Optional
 
 # Import existing Envato utilities (не модифицируем их)
-from envato_utils.envato_playwright import check_envato_auth
-from envato_utils.envato_playwright import download_file as envato_download_file
-from envato_utils.envato_playwright import rotate_envato_cookies
+from media_bot.utils.envato_utils.envato_playwright import check_envato_auth
+from media_bot.utils.envato_utils.envato_playwright import download_file as envato_download_file
+from media_bot.utils.envato_utils.envato_playwright import rotate_envato_cookies
 
 from .base import AbstractDownloader
 

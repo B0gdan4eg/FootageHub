@@ -2,10 +2,10 @@ import asyncio
 import logging
 from typing import NamedTuple
 
-from envato_utils.envato_playwright import EnvatoDownloader
-from freepik_utils.freepik import FreepikDownloader
 from media_bot.config import BROWSER_RESTART_AFTER
-from motion_utils.motion import MotionDownloader
+from media_bot.utils.envato_utils.envato_playwright import EnvatoDownloader
+from media_bot.utils.freepik_utils.freepik import FreepikDownloader
+from media_bot.utils.motion_utils.motion import MotionDownloader
 
 # Setup logging
 logger = logging.getLogger(__name__)

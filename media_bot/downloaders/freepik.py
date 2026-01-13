@@ -8,9 +8,9 @@ Preserves all existing functionality without modification.
 from typing import Optional
 
 # Import existing Freepik utilities (не модифицируем их)
-from freepik_utils.freepik import check_freepik_auth
-from freepik_utils.freepik import download_file as freepik_download_file
-from freepik_utils.freepik import rotate_freepik_cookies
+from media_bot.utils.freepik_utils.freepik import check_freepik_auth
+from media_bot.utils.freepik_utils.freepik import download_file as freepik_download_file
+from media_bot.utils.freepik_utils.freepik import rotate_freepik_cookies
 
 from .base import AbstractDownloader
 

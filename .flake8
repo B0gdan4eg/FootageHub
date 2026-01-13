@@ -35,7 +35,7 @@ per-file-ignores =
     *_utils/*:F541,B007
     scripts/*:F541,B007
     # Old bot and db directories (deprecated)
-    bot/*:F541,F402
+    bot/*:F401,F541,F402
     db/*:F541
     # Migrations can have exceptions
     migrations/*:B036

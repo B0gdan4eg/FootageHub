@@ -12,7 +12,7 @@ class TelegramLogger:
     Универсальный логгер с отправкой в Telegram
 
     Использование:
-        from freepik_utils.logger import logger
+        from media_bot.utils.freepik_utils.logger import logger
 
         # В main.py
         logger.set_bot(bot, admin_chat_id=-1001234567890)

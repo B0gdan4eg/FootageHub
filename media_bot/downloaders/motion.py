@@ -8,7 +8,7 @@ Preserves all existing functionality without modification.
 from typing import Optional
 
 # Import existing Motion Array utilities (не модифицируем их)
-from motion_utils.motion import get_motion_direct_download_url
+from media_bot.utils.motion_utils.motion import get_motion_direct_download_url
 
 from .base import AbstractDownloader
 

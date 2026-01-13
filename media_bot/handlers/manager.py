@@ -252,7 +252,7 @@ async def restart_envato_browser(callback: types.CallbackQuery):
                 await link_processor.envato_downloader.__aexit__(None, None, None)
 
             # Создаем новый браузер
-            from envato_utils.envato_playwright import EnvatoDownloader
+            from media_bot.utils.envato_utils.envato_playwright import EnvatoDownloader
 
             link_processor.envato_downloader = await EnvatoDownloader().__aenter__()
             link_processor.envato_request_count = 0
@@ -297,7 +297,7 @@ async def restart_freepik_browser(callback: types.CallbackQuery):
                 await link_processor.freepik_downloader.__aexit__(None, None, None)
 
             # Создаем новый браузер
-            from freepik_utils.freepik import FreepikDownloader
+            from media_bot.utils.freepik_utils.freepik import FreepikDownloader
 
             link_processor.freepik_downloader = await FreepikDownloader().__aenter__()
             link_processor.freepik_request_count = 0
@@ -342,7 +342,7 @@ async def restart_motion_browser(callback: types.CallbackQuery):
                 await link_processor.motion_downloader.__aexit__(None, None, None)
 
             # Создаем новый браузер
-            from motion_utils.motion import MotionDownloader
+            from media_bot.utils.motion_utils.motion import MotionDownloader
 
             link_processor.motion_downloader = await MotionDownloader().__aenter__()
             link_processor.motion_request_count = 0
