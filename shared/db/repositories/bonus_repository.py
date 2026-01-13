@@ -5,7 +5,7 @@ Bonus repository for database operations.
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.core.exceptions import BonusNotFoundError
@@ -216,3 +216,20 @@ class BonusRepository(BaseRepository[BonusType]):
         total_ai_credits = row[1] or 0
 
         return (total_credits, total_ai_credits)
+
+    async def count_users_with_bonus(self, bonus_code: str) -> int:
+        """
+        Count number of unique users who received a specific bonus.
+
+        Args:
+            bonus_code: Bonus type code (e.g., "CHANNEL_SUBSCRIPTION")
+
+        Returns:
+            Number of unique users
+        """
+        result = await self.session.execute(
+            select(func.count(func.distinct(UserBonus.user_id)))
+            .join(BonusType, UserBonus.bonus_type_id == BonusType.id)
+            .where(BonusType.code == bonus_code)
+        )
+        return result.scalar() or 0

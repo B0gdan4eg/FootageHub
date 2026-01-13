@@ -524,3 +524,80 @@ class ReferralService:
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+    async def get_user_referrals_detailed(
+        self, user_id: int, limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Получить детальную информацию о рефералах пользователя.
+
+        Args:
+            user_id: ID пользователя
+            limit: Максимальное количество записей
+
+        Returns:
+            Список словарей с информацией о каждом реферале
+        """
+        from shared.db.models import BonusType
+
+        # Получаем все регистрационные награды (каждая = один реферал)
+        query = (
+            select(ReferralReward)
+            .where(
+                and_(
+                    ReferralReward.referrer_id == user_id,
+                    ReferralReward.trigger_type == ReferralTriggerType.REGISTRATION,
+                )
+            )
+            .order_by(ReferralReward.created_at.desc())
+            .limit(limit)
+        )
+
+        result = await self.session.execute(query)
+        registration_rewards = list(result.scalars().all())
+
+        referrals_info = []
+
+        for reward in registration_rewards:
+            # Получаем информацию о реферале
+            referred_user = await self._user_repo.get_by_id(reward.referred_id)
+            if not referred_user:
+                continue
+
+            # Проверяем, была ли первая покупка
+            first_payment_query = select(ReferralReward).where(
+                and_(
+                    ReferralReward.referrer_id == user_id,
+                    ReferralReward.referred_id == reward.referred_id,
+                    ReferralReward.trigger_type == ReferralTriggerType.FIRST_PAYMENT,
+                    ReferralReward.status == ReferralRewardStatus.COMPLETED,
+                )
+            )
+            first_payment_result = await self.session.execute(first_payment_query)
+            has_first_payment = first_payment_result.scalar_one_or_none() is not None
+
+            # Проверяем подписку на канал (через бонус CHANNEL_SUBSCRIPTION)
+            channel_sub_query = (
+                select(UserBonus)
+                .join(BonusType, UserBonus.bonus_type_id == BonusType.id)
+                .where(
+                    and_(
+                        UserBonus.user_id == reward.referred_id,
+                        BonusType.code == BonusCodes.CHANNEL_SUBSCRIPTION,
+                    )
+                )
+            )
+            channel_sub_result = await self.session.execute(channel_sub_query)
+            has_channel_subscription = channel_sub_result.scalar_one_or_none() is not None
+
+            referrals_info.append(
+                {
+                    "telegram_id": referred_user.telegram_id,
+                    "username": referred_user.username,
+                    "registered_at": reward.created_at,
+                    "has_channel_subscription": has_channel_subscription,
+                    "has_first_payment": has_first_payment,
+                }
+            )
+
+        return referrals_info

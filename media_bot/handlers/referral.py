@@ -169,6 +169,11 @@ async def callback_my_referrals(callback: CallbackQuery):
                     "Используйте команду /referral чтобы получить вашу реферальную ссылку!"
                 )
             else:
+                # Получаем детальную информацию о рефералах
+                referrals_detailed = await referral_service.get_user_referrals_detailed(
+                    user_id=user.id, limit=20
+                )
+
                 # Формируем сообщение
                 message_text = (
                     f"👥 <b>Ваши рефералы ({stats['total_referrals']})</b>\n\n"
@@ -176,12 +181,23 @@ async def callback_my_referrals(callback: CallbackQuery):
                     f"💰 Заработано: {stats['total_credits_earned']} скачиваний\n\n"
                 )
 
-                # Получаем детальную информацию (первые 10)
-                # TODO: Добавить метод get_user_referrals в ReferralService
-                message_text += (
-                    "ℹ️ Используйте /referral для просмотра детальной статистики "
-                    "и вашей реферальной ссылки."
-                )
+                if referrals_detailed:
+                    message_text += "<b>Список рефералов:</b>\n"
+                    for idx, ref in enumerate(referrals_detailed[:10], 1):
+                        # Эмодзи для статусов
+                        channel_emoji = "✅" if ref["has_channel_subscription"] else "❌"
+                        payment_emoji = "✅" if ref["has_first_payment"] else "❌"
+
+                        # Формат даты
+                        reg_date = ref["registered_at"].strftime("%d.%m.%Y")
+
+                        message_text += (
+                            f"{idx}. ID: <code>{ref['telegram_id']}</code>\n"
+                            f"   Канал: {channel_emoji} | Покупка: {payment_emoji} | {reg_date}\n"
+                        )
+
+                    if len(referrals_detailed) > 10:
+                        message_text += f"\n<i>... и еще {len(referrals_detailed) - 10}</i>\n"
 
             # Кнопка "Назад"
             keyboard = InlineKeyboardMarkup(
@@ -194,7 +210,7 @@ async def callback_my_referrals(callback: CallbackQuery):
             logger.info(f"Referrals list sent to user {telegram_id}")
 
         except Exception as e:
-            logger.error(f"Failed to get referrals list for user {telegram_id}: {e}")
+            logger.error(f"Failed to get referrals list for user {telegram_id}: {e}", exc_info=True)
             await callback.answer("❌ Ошибка при получении списка рефералов.", show_alert=True)
 
     await callback.answer()
@@ -269,7 +285,7 @@ async def callback_referral_rewards(callback: CallbackQuery):
 
                 for trigger, trigger_rewards in rewards_by_type.items():
                     trigger_name = trigger_names.get(trigger, "❓ Другое")
-                    trigger_sum = sum(r.credits_earned for r in trigger_rewards)
+                    trigger_sum = sum(r.reward_value for r in trigger_rewards)
 
                     message_text += (
                         f"\n{trigger_name}\n"

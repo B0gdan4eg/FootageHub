@@ -9,7 +9,13 @@ from sqlalchemy import func, select
 from media_bot.handlers.admin import is_admin
 from media_bot.services import BotServices
 from shared.db.models import Payment, ServiceType, User, UserRole
-from shared.db.repositories import DownloadRepository, SubscriptionRepository, UserRepository
+from shared.db.repositories import (
+    BonusRepository,
+    DownloadRepository,
+    SubscriptionRepository,
+    UserRepository,
+)
+from shared.db.repositories.referral_repository import ReferralRewardRepository
 from shared.db.session import get_session
 
 router = Router()
@@ -65,6 +71,8 @@ async def get_stats_text():
         download_repo = DownloadRepository(session)
         user_repo = UserRepository(session)
         subscription_repo = SubscriptionRepository(session)
+        bonus_repo = BonusRepository(session)
+        referral_repo = ReferralRewardRepository(session)
 
         total_users = len(await user_repo.get_all_users())
         active_subs = await subscription_repo.count_active_subs()
@@ -119,6 +127,10 @@ async def get_stats_text():
         )
         payments_created_today = result.scalar()
 
+        # Статистика по реферальной системе и подписке на канал
+        users_from_referral = await referral_repo.count_total_referred_users()
+        users_subscribed_channel = await bonus_repo.count_users_with_bonus("CHANNEL_SUBSCRIPTION")
+
     # Форматируем суммы по валютам
     total_payments_text = (
         "\n".join(
@@ -143,7 +155,9 @@ async def get_stats_text():
         f"👥 <b>Пользователи:</b>\n"
         f"   • Всего: {total_users}\n"
         f"   • Новых сегодня: {new_users_today}\n"
-        f"   • Активных подписок: {active_subs}\n\n"
+        f"   • Активных подписок: {active_subs}\n"
+        f"   • По реферальной ссылке: {users_from_referral}\n"
+        f"   • Подписались на канал: {users_subscribed_channel}\n\n"
         f"📥 <b>Загрузки:</b>\n"
         f"   • Всего: {total_downloads}\n"
         f"   • Сегодня: {downloads_today}\n"

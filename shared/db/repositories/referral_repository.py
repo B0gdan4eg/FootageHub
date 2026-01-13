@@ -269,3 +269,19 @@ class ReferralRewardRepository(BaseRepository[ReferralReward]):
             )
         )
         return list(result.scalars().all())
+
+    async def count_total_referred_users(self) -> int:
+        """
+        Count total number of users who came via referral link.
+
+        Returns:
+            Number of unique referred users
+        """
+        from shared.db.models import ReferralTriggerType
+
+        result = await self.session.execute(
+            select(func.count(func.distinct(ReferralReward.referred_id))).where(
+                ReferralReward.trigger_type == ReferralTriggerType.REGISTRATION
+            )
+        )
+        return result.scalar() or 0
