@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiogram import Router, types
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.filters import CommandObject, CommandStart
@@ -50,7 +52,27 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                 user_role = UserRole.ADMIN
                 logger.info(f"Creating user {telegram_id} with ADMIN role")
 
-            await user_repo.create(tg_id=telegram_id, role=user_role, credits=3)
+            # Создаем пользователя с 0 кредитов (бонусная система добавит)
+            user = await user_repo.create(tg_id=telegram_id, role=user_role, credits=0)
+            await session.flush()
+            await session.refresh(user)
+
+            # Применяем бонус за регистрацию
+            try:
+                bonus_service = BonusService(bonus_repo, user_repo)
+                registration_bonus = await bonus_service.claim_bonus(
+                    user_id=user.id,
+                    bonus_code="REGISTRATION",
+                    metadata={"registered_at": datetime.utcnow().isoformat()},
+                )
+                logger.info(
+                    f"REGISTRATION bonus: {registration_bonus.credits_granted} кредитов для {telegram_id}"
+                )
+            except Exception as e:
+                logger.error(f"Ошибка начисления REGISTRATION бонуса: {e}")
+                # Fallback: добавляем кредиты вручную
+                user.credits = 3
+                await session.commit()
 
             # Если есть реферальный код — создаем реферальную связь
             if args:
@@ -58,7 +80,6 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
 
                 # Начисляем бонус рефереру через ReferralService
                 try:
-                    bonus_service = BonusService(bonus_repo, user_repo)
                     referral_service = ReferralService(
                         session, user_repo, bonus_repo, bonus_service
                     )

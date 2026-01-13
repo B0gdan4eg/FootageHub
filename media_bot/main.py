@@ -18,6 +18,7 @@ from media_bot.handlers import (
     manager,
     menu,
     payment,
+    perpetual_credits,
     referral,
     start,
 )
@@ -74,6 +75,7 @@ dp.include_router(admin.router)  # Админ-панель с FSM состоян
 dp.include_router(manager.router)  # Менеджер-панель с FSM состояниями
 dp.include_router(download.router)  # Скачивание с FSM состояниями (waiting_for_link)
 dp.include_router(payment.router)  # Платежи (могут быть FSM состояния)
+dp.include_router(perpetual_credits.router)  # Несгораемые кредиты с FSM
 dp.include_router(channel_check.router)  # Проверка подписки на канал
 dp.include_router(referral.router)  # Реферальная программа (команды без состояний)
 dp.include_router(menu.router)  # Главное меню (сбрасывает состояния)

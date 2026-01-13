@@ -25,6 +25,10 @@ class ManagerFlow(StatesGroup):
     waiting_for_video_sound = State()
 
 
+class PerpetualCreditsFlow(StatesGroup):
+    waiting_for_quantity = State()  # Ждём ввод количества кредитов
+
+
 class AdminStates(StatesGroup):
     waiting_for_user_id = State()
     waiting_for_role = State()

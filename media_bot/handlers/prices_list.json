@@ -24,5 +24,10 @@
             "daily_limit": null,
             "subscription_type": "MONTHLY_400"
         }
+    },
+    "perpetual_credits": {
+        "price_per_credit": 30,
+        "minimum_quantity": 3,
+        "maximum_quantity": 90
     }
 }

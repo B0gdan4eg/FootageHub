@@ -23,7 +23,7 @@ WEBPAY_SANDBOX = os.getenv("WEBPAY_SANDBOX", "false").lower() == "true"
 
 # Channel configuration
 CHANNEL_ID = os.getenv("CHANNEL_ID", "@footagehub_channel")
-CHANNEL_BONUS_CREDITS = int(os.getenv("CHANNEL_BONUS_CREDITS", "2"))
+CHANNEL_BONUS_CREDITS = int(os.getenv("CHANNEL_BONUS_CREDITS", "3"))
 
 # Kie.ai API configuration
 KIE_AI_API_KEY = os.getenv("KIE_AI_API_KEY")

@@ -27,45 +27,156 @@ router = Router()
 
 
 async def send_price_menu(message_or_callback):
-    """Отправляет меню с подписками."""
+    """Отправляет меню с подписками и несгораемыми кредитами."""
+
+    # Получить user_id
+    if isinstance(message_or_callback, types.CallbackQuery):
+        user_id = message_or_callback.from_user.id
+    else:
+        user_id = message_or_callback.from_user.id
+
+    # Проверить активную подписку
+    async for session in get_session():
+        user_repo = UserRepository(session)
+        user = await user_repo.get_by_telegram_id(user_id)
+
+        if not user:
+            if isinstance(message_or_callback, types.CallbackQuery):
+                await message_or_callback.message.answer("❌ Пользователь не найден")
+                await message_or_callback.answer()
+            else:
+                await message_or_callback.answer("❌ Пользователь не найден")
+            return
+
+        subscription_repo = SubscriptionRepository(session)
+        active_subscription = await subscription_repo.get_active_by_user_id(user.id)
+
+        # ВЕТКА 1: У пользователя есть активная подписка
+        if active_subscription:
+            keyboard_buttons = [
+                [
+                    InlineKeyboardButton(
+                        text="💎 Купить поштучно", callback_data="buy_perpetual_credits"
+                    )
+                ]
+            ]
+            keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+
+            subscription_type_name = active_subscription.subscription_type.value
+            end_date = active_subscription.end_date.strftime("%d.%m.%Y %H:%M")
+
+            message_text = f"""✅ <b>У вас активная подписка!</b>
+
+📋 <b>Ваша подписка:</b>
+- Тариф: {subscription_type_name}
+- Действует до: {end_date}
+- Доступно: {user.credits} загрузок
+
+⚠️ <b>Новую подписку нельзя купить, пока действует текущая.</b>
+
+💎 Но вы можете докупить загрузки поштучно — они не сгорают и всегда доступны!
+
+❓ Есть вопросы? Напишите в <a href="https://t.me/FootageHub_support">поддержку</a>
+"""
+
+            if isinstance(message_or_callback, types.CallbackQuery):
+                await message_or_callback.message.edit_text(
+                    message_text,
+                    reply_markup=keyboard,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
+                await message_or_callback.answer()
+            else:
+                await message_or_callback.answer(
+                    message_text,
+                    reply_markup=keyboard,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
+            return
+
+    # ВЕТКА 2: У пользователя НЕТ активной подписки - показываем всё
     try:
         plans = load_subscription_plans()
     except (FileNotFoundError, json.JSONDecodeError) as e:
         logger.error(f"Failed to load subscription plans: {e}")
-        await message_or_callback.answer("❌ Ошибка загрузки списка подписок.")
+        if isinstance(message_or_callback, types.CallbackQuery):
+            await message_or_callback.message.answer("❌ Ошибка загрузки списка подписок.")
+            await message_or_callback.answer()
+        else:
+            await message_or_callback.answer("❌ Ошибка загрузки списка подписок.")
         return
 
     data = dict_to_namespace({"subscription_plans": plans})
     keyboard_buttons = []
 
-    # Добавляем подписки
+    # Добавляем подписки с новым форматом
     if hasattr(data, "subscription_plans"):
-        for key, item in data.subscription_plans.__dict__.items():
-            # Формируем описание лимитов
-            limits_text = ""
-            if item.total_limit:
-                limits_text = f"{item.total_limit} на месяц"
-            if item.daily_limit:
-                limits_text = f"{item.daily_limit}/день"
+        # Порядок отображения планов
+        plan_order = ["monthly_50", "monthly_150", "monthly_400"]
+
+        for key in plan_order:
+            if not hasattr(data.subscription_plans, key):
+                continue
+
+            item = getattr(data.subscription_plans, key)
+
+            # Формируем текст кнопки
+            if key == "monthly_50":
+                button_text = f"Lite · 50 шт · {item.price} ₽/мес"
+            elif key == "monthly_150":
+                button_text = f"Standard · 150 шт · {item.price} ₽/мес ⭐️"
+            elif key == "monthly_400":
+                button_text = f"Pro · 400 шт · {item.price} ₽/мес"
+            else:
+                # Для других планов (если будут)
+                button_text = f"{item.name} · {item.total_limit} шт · {item.price} ₽/мес"
 
             callback_data = f"select_plan_{key}"
             keyboard_buttons.append(
                 [
                     InlineKeyboardButton(
-                        text=f"{item.name} ({limits_text}) — {item.price} RUB",
+                        text=button_text,
                         callback_data=callback_data,
                     )
                 ]
             )
 
+    # Добавить разделитель
+    keyboard_buttons.append(
+        [InlineKeyboardButton(text="─────────── или ───────────", callback_data="separator_ignore")]
+    )
+
+    # Добавить кнопку несгораемых кредитов
+    keyboard_buttons.append(
+        [InlineKeyboardButton(text="💎 Купить поштучно", callback_data="buy_perpetual_credits")]
+    )
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+
+    # Новое сообщение с описанием планов
+    menu_message = """💎 <b>Выберите тарифный план</b>
+
+<b>Lite</b> — 50 шт.
+~8 ₽ за файл · Базовый
+
+<b>Standard</b> — 150 шт.
+~6 ₽ за файл · Популярный ⭐️
+
+<b>Pro</b> — 400 шт.
+~4.5 ₽ за файл · Активный
+
+<i>Чем больше план — тем выгоднее!</i>"""
 
     # Для CallbackQuery редактируем сообщение, для Message создаем новое
     if isinstance(message_or_callback, types.CallbackQuery):
-        await message_or_callback.message.edit_text("💳 Выберите подписку:", reply_markup=keyboard)
+        await message_or_callback.message.edit_text(
+            menu_message, reply_markup=keyboard, parse_mode="HTML"
+        )
         await message_or_callback.answer()
     else:
-        await message_or_callback.answer("💳 Выберите подписку:", reply_markup=keyboard)
+        await message_or_callback.answer(menu_message, reply_markup=keyboard, parse_mode="HTML")
 
 
 # Хендлер для callback "buy_subscription"
@@ -117,46 +228,8 @@ async def show_plan_details(callback_query: types.CallbackQuery):
     else:
         message_template = SUB_PAYMENT_MONTHLY_150  # По умолчанию
 
-    # Проверяем наличие активной подписки
-    user_id = callback_query.from_user.id
-    async for session in get_session():
-        # Получаем пользователя из БД
-        user_repo = UserRepository(session)
-        user = await user_repo.get_by_telegram_id(user_id)
-        if not user:
-            logger.error(f"User not found in DB: {user_id}")
-            await callback_query.message.answer("❌ Пользователь не найден. Начните с /start")
-            await callback_query.answer()
-            return
-
-        # Проверяем активную подписку
-        subscription_repo = SubscriptionRepository(session)
-        active_subscription = await subscription_repo.get_active_by_user_id(user.id)
-        if active_subscription:
-            # У пользователя уже есть активная подписка
-            subscription_type_name = active_subscription.subscription_type.value
-            end_date = active_subscription.end_date.strftime("%d.%m.%Y %H:%M")
-
-            message = ALREADY_HAS_SUBSCRIPTION.format(
-                subscription_type=subscription_type_name, end_date=end_date, credits=user.credits
-            )
-
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_subscription")]
-                ]
-            )
-
-            logger.warning(
-                f"User {user_id} already has active subscription: {subscription_type_name}"
-            )
-            await callback_query.message.edit_text(
-                message, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True
-            )
-            await callback_query.answer()
-            return
-
     # Показываем детали подписки
+    user_id = callback_query.from_user.id
     description = message_template.format(_price=plan.price)
 
     # Создаем инвойс сразу

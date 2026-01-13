@@ -6,7 +6,7 @@ from aiogram.enums.parse_mode import ParseMode
 from fastapi import APIRouter, Request, Response
 
 from media_bot.config import WEBPAY_SIGNING_KEY
-from media_bot.handlers.messages import SUBSCRIPTION_ACTIVATED
+from media_bot.handlers.messages import PERPETUAL_CREDITS_PURCHASED, SUBSCRIPTION_ACTIVATED
 from media_bot.services import BotServices
 from media_bot.utils.price_loader import load_subscription_plans
 from media_bot.webpay_utils import get_webpay_api
@@ -16,6 +16,77 @@ from shared.db.session import get_session
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+async def handle_perpetual_credits_purchase(session, user_id: int, order_id: str, plan_key: str):
+    """
+    Обработка покупки несгораемых кредитов (без создания подписки).
+
+    Args:
+        session: Database session
+        user_id: Telegram user ID
+        order_id: WebPay order ID
+        plan_key: Формат "perpetual_credits_{quantity}"
+    """
+    # Извлечь количество из plan_key
+    try:
+        quantity = int(plan_key.split("_")[-1])
+    except (ValueError, IndexError):
+        logger.error(f"⚠️ [WEBPAY] Invalid perpetual credits plan_key: {plan_key}")
+        return
+
+    # Находим пользователя
+    user_repo = UserRepository(session)
+    user = await user_repo.get_by_telegram_id(user_id)
+    if not user:
+        logger.warning(f"⚠️ [WEBPAY] Пользователь {user_id} не найден")
+        return
+
+    # Проверяем платеж в БД
+    payment_repo = PaymentRepository(session)
+    payment = await payment_repo.get_by_invoice_id(order_id)
+    if not payment:
+        logger.warning(f"⚠️ [WEBPAY] Платеж с order_id {order_id} не найден в БД")
+        return
+
+    # Проверяем, что платеж еще не обработан
+    if payment.status == "success":
+        logger.info(f"✅ [WEBPAY] Платеж {order_id} уже обработан ранее (perpetual credits)")
+        return
+
+    # Добавить кредиты пользователю
+    old_credits = user.credits
+    user.credits += quantity
+    await session.commit()
+
+    # Отметить платёж как успешный
+    await payment_repo.mark_success(order_id)
+
+    logger.info(
+        f"✅ [WEBPAY] Perpetual credits: {quantity} credits added to user {user_id} "
+        f"(was: {old_credits}, now: {user.credits})"
+    )
+
+    # Отправить уведомление
+    if BotServices.bot:
+        try:
+            # Обновляем данные пользователя из сессии
+            await session.refresh(user)
+
+            message = PERPETUAL_CREDITS_PURCHASED.format(
+                quantity=quantity, total_credits=user.credits
+            )
+            await BotServices.bot.send_message(
+                chat_id=user_id,
+                text=message,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+            logger.info(f"✅ [WEBPAY] Perpetual credits notification sent to user {user_id}")
+        except Exception as e:
+            logger.error(f"⚠️ [WEBPAY] Failed to send perpetual credits notification: {e}")
+    else:
+        logger.warning(f"⚠️ [WEBPAY] BotServices.bot not initialized, notification not sent")
 
 
 @router.post("/api/webpay/webhook")
@@ -81,6 +152,12 @@ async def webpay_webhook(request: Request):
                     return Response(content='{"code": 200}', status_code=200)
             except (IndexError, ValueError) as e:
                 logger.warning(f"⚠️ [WEBPAY] Не удалось извлечь данные из {order_id}: {e}")
+                return Response(content='{"code": 200}', status_code=200)
+
+            # Проверяем, является ли это покупкой perpetual credits
+            if plan_key and plan_key.startswith("perpetual_credits_"):
+                # Обрабатываем покупку несгораемых кредитов
+                await handle_perpetual_credits_purchase(session, user_id, order_id, plan_key)
                 return Response(content='{"code": 200}', status_code=200)
 
             # Находим пользователя

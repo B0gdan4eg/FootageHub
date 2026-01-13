@@ -224,8 +224,8 @@ class ReferralBonus(BonusStrategy):
         return user_bonus
 
 
-class DailyLoginBonus(BonusStrategy):
-    """Strategy for daily login bonus."""
+class RegistrationBonus(BonusStrategy):
+    """Strategy for registration bonus."""
 
     async def can_apply(
         self,
@@ -235,17 +235,11 @@ class DailyLoginBonus(BonusStrategy):
         bonus_repo: BonusRepository,
         user_repo: UserRepository,
     ) -> bool:
-        """Check if user hasn't claimed daily bonus today."""
-        last_bonus = await bonus_repo.get_last_user_bonus(
-            user_id=user_id, bonus_type_id=bonus_type.id
+        """Check if user hasn't claimed registration bonus yet."""
+        has_bonus = await bonus_repo.user_has_bonus(
+            user_id=user_id, bonus_type_id=bonus_type.id, status="COMPLETED"
         )
-
-        if not last_bonus or not last_bonus.completed_at:
-            return True
-
-        # Проверяем cooldown
-        cooldown_end = last_bonus.completed_at + timedelta(days=bonus_type.cooldown_days or 1)
-        return datetime.utcnow() >= cooldown_end
+        return not has_bonus
 
     async def apply_bonus(
         self,
@@ -255,7 +249,62 @@ class DailyLoginBonus(BonusStrategy):
         bonus_repo: BonusRepository,
         user_repo: UserRepository,
     ) -> UserBonus:
-        """Apply daily login bonus."""
+        """Apply registration bonus."""
+        user_bonus = await bonus_repo.create_user_bonus(
+            user_id=user_id,
+            bonus_type_id=bonus_type.id,
+            credits_granted=bonus_type.credits_amount,
+            ai_credits_granted=bonus_type.ai_credits_amount,
+            metadata=metadata,
+            status="COMPLETED",
+            completed_at=datetime.utcnow(),
+        )
+
+        await user_repo.add_credits(
+            user_id=user_id,
+            credits=bonus_type.credits_amount,
+            ai_credits=bonus_type.ai_credits_amount,
+        )
+
+        return user_bonus
+
+
+class MilestoneBonus(BonusStrategy):
+    """Strategy for referral milestone bonuses."""
+
+    async def can_apply(
+        self,
+        user_id: int,
+        bonus_type: BonusType,
+        metadata: Dict[str, Any],
+        bonus_repo: BonusRepository,
+        user_repo: UserRepository,
+    ) -> bool:
+        """Check if milestone bonus can be applied."""
+        # Проверяем, не получен ли уже этот майлстоун
+        has_bonus = await bonus_repo.user_has_bonus(
+            user_id=user_id, bonus_type_id=bonus_type.id, status="COMPLETED"
+        )
+        if has_bonus:
+            return False
+
+        # Проверяем, достиг ли пользователь нужного количества рефералов
+        referral_count = await user_repo.get_referral_count(user_id)
+        milestone_count = (
+            bonus_type.conditions.get("milestone_count", 0) if bonus_type.conditions else 0
+        )
+
+        return referral_count >= milestone_count
+
+    async def apply_bonus(
+        self,
+        user_id: int,
+        bonus_type: BonusType,
+        metadata: Dict[str, Any],
+        bonus_repo: BonusRepository,
+        user_repo: UserRepository,
+    ) -> UserBonus:
+        """Apply milestone bonus."""
         user_bonus = await bonus_repo.create_user_bonus(
             user_id=user_id,
             bonus_type_id=bonus_type.id,
@@ -298,9 +347,15 @@ class BonusService:
         self._strategies: Dict[str, BonusStrategy] = {
             "CHANNEL_SUBSCRIPTION": ChannelSubscriptionBonus(),
             "FIRST_LOGIN": FirstLoginBonus(),
+            "REGISTRATION": RegistrationBonus(),
             "REFERRAL_REGISTRATION": ReferralBonus(),
             "REFERRAL_FIRST_PAYMENT": ReferralBonus(),
-            "DAILY_LOGIN": DailyLoginBonus(),
+            # Milestone strategies
+            "REFERRAL_MILESTONE_5": MilestoneBonus(),
+            "REFERRAL_MILESTONE_10": MilestoneBonus(),
+            "REFERRAL_MILESTONE_25": MilestoneBonus(),
+            "REFERRAL_MILESTONE_50": MilestoneBonus(),
+            "REFERRAL_MILESTONE_100": MilestoneBonus(),
         }
 
     async def get_bonus_type(self, code: str) -> Optional[BonusType]:

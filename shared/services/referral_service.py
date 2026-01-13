@@ -160,10 +160,13 @@ class ReferralService:
         if not referral_reward:
             return None
 
-        # Проверить, что это первая покупка
-        payment_count = await self._user_repo.get_payment_count(user_id)
-        if payment_count > 1:
-            return None
+        # Проверить, не был ли уже начислен бонус за первую покупку этого реферала
+        # Любой платеж считается, но бонус выдается только один раз
+        existing_first_payment_bonus = await self._get_first_payment_bonus(
+            referral_reward.referrer_id, user_id
+        )
+        if existing_first_payment_bonus:
+            return None  # Бонус уже был начислен
 
         # Создать триггер первой покупки
         first_payment_reward = ReferralReward(
@@ -204,6 +207,13 @@ class ReferralService:
             first_payment_reward.rewarded_at = datetime.utcnow()
             first_payment_reward.completed_at = datetime.utcnow()
             await self.session.flush()
+
+            # Проверяем майлстоуны
+            milestone_bonuses = await self.check_milestone_rewards(referral_reward.referrer_id)
+            if milestone_bonuses:
+                print(
+                    f"Начислено {len(milestone_bonuses)} майлстоун-бонусов пользователю {referral_reward.referrer_id}"
+                )
 
             return user_bonus
 
@@ -301,6 +311,13 @@ class ReferralService:
             referral_reward.completed_at = datetime.utcnow()
             await self.session.flush()
 
+            # Проверяем майлстоуны
+            milestone_bonuses = await self.check_milestone_rewards(referral_reward.referrer_id)
+            if milestone_bonuses:
+                print(
+                    f"Начислено {len(milestone_bonuses)} майлстоун-бонусов пользователю {referral_reward.referrer_id}"
+                )
+
             return user_bonus
 
         except BonusException as e:
@@ -322,42 +339,48 @@ class ReferralService:
         """
         bonuses = []
 
-        # Получить количество рефералов
+        # Получить текущее количество рефералов
         referral_count = await self._user_repo.get_referral_count(referrer_id)
 
-        # Определить milestone
-        milestones = [5, 10, 25, 50, 100]
-        for milestone in milestones:
-            if referral_count == milestone:
-                # Проверить, не получен ли уже этот milestone
-                existing_milestone = await self._get_milestone_reward(referrer_id, milestone)
-                if existing_milestone:
+        # Определить майлстоуны
+        milestones = {
+            5: BonusCodes.REFERRAL_MILESTONE_5,
+            10: BonusCodes.REFERRAL_MILESTONE_10,
+            25: BonusCodes.REFERRAL_MILESTONE_25,
+            50: BonusCodes.REFERRAL_MILESTONE_50,
+            100: BonusCodes.REFERRAL_MILESTONE_100,
+        }
+
+        # Проверить каждый майлстоун
+        for threshold, bonus_code in milestones.items():
+            if referral_count >= threshold:
+                try:
+                    can_claim = await self._bonus_service.can_claim_bonus(
+                        user_id=referrer_id,
+                        bonus_code=bonus_code,
+                        metadata={
+                            "milestone": threshold,
+                            "referral_count": referral_count,
+                            "achieved_at": datetime.utcnow().isoformat(),
+                        },
+                    )
+
+                    if can_claim:
+                        user_bonus = await self._bonus_service.claim_bonus(
+                            user_id=referrer_id,
+                            bonus_code=bonus_code,
+                            metadata={
+                                "milestone": threshold,
+                                "referral_count": referral_count,
+                                "achieved_at": datetime.utcnow().isoformat(),
+                            },
+                        )
+                        bonuses.append(user_bonus)
+
+                except Exception as e:
+                    # Бонус уже получен или условия не выполнены
                     continue
 
-                # Создать milestone награду
-                milestone_reward = ReferralReward(
-                    referrer_id=referrer_id,
-                    referred_id=referrer_id,  # сам себе
-                    reward_type="milestone",
-                    reward_value=milestone,
-                    status=ReferralRewardStatus.COMPLETED,
-                    trigger_type=ReferralTriggerType.MILESTONE,
-                    trigger_metadata={
-                        "milestone": milestone,
-                        "achieved_at": datetime.utcnow().isoformat(),
-                    },
-                    condition_met=True,
-                    condition_date=datetime.utcnow(),
-                    completed_at=datetime.utcnow(),
-                )
-
-                self.session.add(milestone_reward)
-                await self.session.flush()
-
-                # Можно добавить специальный бонус
-                # Пока просто логируем
-
-        await self.session.flush()
         return bonuses
 
     # ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
@@ -396,6 +419,21 @@ class ReferralService:
     async def _get_referral_by_id(self, referral_id: int) -> Optional[ReferralReward]:
         """Получить реферальную награду по ID"""
         query = select(ReferralReward).where(ReferralReward.id == referral_id)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def _get_first_payment_bonus(
+        self, referrer_id: int, referred_id: int
+    ) -> Optional[ReferralReward]:
+        """Получить бонус за первую покупку для конкретного реферала."""
+        query = select(ReferralReward).where(
+            and_(
+                ReferralReward.referrer_id == referrer_id,
+                ReferralReward.referred_id == referred_id,
+                ReferralReward.trigger_type == ReferralTriggerType.FIRST_PAYMENT,
+                ReferralReward.status == ReferralRewardStatus.COMPLETED,
+            )
+        )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 

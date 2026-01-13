@@ -13,15 +13,27 @@ from shared.db.session import get_session
 
 
 async def scheduler_job(bot: Bot):
-    """Еженедельная выдача бесплатных кредитов."""
-    print("🎁 Еженедельное начисление бесплатных кредитов!")
+    """Еженедельное пополнение бесплатных кредитов до 5."""
+    print("🎁 Еженедельное пополнение бесплатных кредитов!")
     async for session in get_session():
-        # Всем пользователям начисляем базовые бесплатные кредиты
-        await session.execute(update(User).values(credits=DAILY_FREE_CREDITS))
+        # Получаем всех пользователей с кредитами < 5
+        result = await session.execute(select(User).where(User.credits < DAILY_FREE_CREDITS))
+        users_to_top_up = result.scalars().all()
 
-        result = await session.execute(select(User))
-        total_users = len(result.scalars().all())
-        print(f"✅ Начислено {DAILY_FREE_CREDITS} бесплатных кредитов {total_users} пользователям")
+        # Пополняем кредиты до 5
+        topped_up_count = 0
+        for user in users_to_top_up:
+            user.credits = DAILY_FREE_CREDITS
+            topped_up_count += 1
+
+        # Статистика
+        total_result = await session.execute(select(User))
+        total_users = len(total_result.scalars().all())
+
+        print(f"✅ Пополнено кредитов для {topped_up_count} пользователей")
+        print(
+            f"📊 {total_users - topped_up_count} пользователей уже имели >= {DAILY_FREE_CREDITS} кредитов"
+        )
 
         # Получаем всех пользователей с активной дневной подпиской
         result = await session.execute(
