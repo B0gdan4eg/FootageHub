@@ -127,12 +127,14 @@ async def process_quantity_input(message: types.Message, state: FSMContext):
 
     user_id = message.from_user.id
     logger.info(
-        f"User {user_id} requested to buy {quantity} perpetual credits for {total_price} RUB"
+        f"💎 [PERPETUAL] User {user_id} requested to buy {quantity} perpetual credits for {total_price} RUB"
     )
+    logger.debug(f"💎 [PERPETUAL] Config: {config}, total_price={total_price}, quantity={quantity}")
 
     try:
         # Генерируем уникальный ID заказа
         order_id = f"USER_{user_id}_perpetual_credits_{quantity}_{uuid.uuid4().hex[:8]}"
+        logger.info(f"💎 [PERPETUAL] Generated order_id: {order_id}")
 
         # URL для вебхуков
         base_url = "https://footage.com.by"
@@ -141,6 +143,7 @@ async def process_quantity_input(message: types.Message, state: FSMContext):
         notify_url = f"{base_url}/api/webpay/webhook"
 
         # Создаем счет через WebPay
+        logger.info(f"💎 [PERPETUAL] Creating invoice via WebPay: amount={total_price} RUB")
         webpay_api = get_webpay_api()
         result = await webpay_api.create_invoice(
             order_id=order_id,
@@ -150,6 +153,7 @@ async def process_quantity_input(message: types.Message, state: FSMContext):
             cancel_url=cancel_url,
             notify_url=notify_url,
         )
+        logger.info(f"💎 [PERPETUAL] WebPay response: {result}")
 
         pay_url = result.get("invoiceUrl")
     except Exception as e:
@@ -178,7 +182,10 @@ async def process_quantity_input(message: types.Message, state: FSMContext):
         try:
             payment_repo = PaymentRepository(session)
             plan_key = f"perpetual_credits_{quantity}"
-            await payment_repo.create_payment(
+            logger.info(
+                f"💎 [PERPETUAL] Creating payment in DB: plan_key={plan_key}, order_id={order_id}"
+            )
+            payment = await payment_repo.create_payment(
                 user_id=user.id,
                 amount=total_price,
                 currency="RUB",
@@ -186,7 +193,7 @@ async def process_quantity_input(message: types.Message, state: FSMContext):
                 invoice_id=order_id,
             )
             logger.info(
-                f"Payment created for perpetual credits: user={user_id}, amount={total_price}, quantity={quantity}"
+                f"✅ [PERPETUAL] Payment created in DB successfully: id={payment.id}, user={user_id}, amount={total_price}, quantity={quantity}"
             )
         except Exception as e:
             logger.error(f"Error creating payment in DB: {e}", exc_info=True)

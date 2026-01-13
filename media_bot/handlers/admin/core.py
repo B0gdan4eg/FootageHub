@@ -135,7 +135,6 @@ async def handle_edit_user_id(message: types.Message, state: FSMContext):
             f"👤 <b>Информация о пользователе</b>\n\n"
             f"🆔 Telegram ID: <code>{user_id}</code>\n"
             f"👤 Username: @{user.username or 'Нет'}\n"
-            f"📛 Имя: {user.first_name or 'Нет'}\n"
             f"🎭 Роль: {user.role.value}\n"
             f"💰 Кредиты: {user.credits:,}\n\n"
             f"Выберите действие:"
@@ -310,6 +309,178 @@ async def user_assign_role_callback(callback: types.CallbackQuery, state: FSMCon
         f"👤 Пользователь: <code>{user_id}</code>\n\n" "Введите роль (MANAGER или USER):",
         parse_mode="HTML",
     )
+
+
+@router.callback_query(lambda c: c.data == "usr_9x7d2m")
+async def user_delete_callback(callback: types.CallbackQuery, state: FSMContext):
+    """🚫 Удалить пользователя со всеми связанными данными"""
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("🚫 Нет доступа", show_alert=True)
+        return
+
+    data = await state.get_data()
+    user_id = data.get("edit_user_id")
+
+    if not user_id:
+        await callback.answer("❌ Пользователь не выбран", show_alert=True)
+        return
+
+    # Показываем подтверждение с предупреждением
+    from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+    confirmation_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Да, удалить", callback_data="usr_confirm_delete"),
+                InlineKeyboardButton(text="❌ Отмена", callback_data="usr_cancel_delete"),
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        f"⚠️ <b>ВНИМАНИЕ!</b>\n\n"
+        f"Вы собираетесь удалить пользователя <code>{user_id}</code>\n\n"
+        f"❗ Будут удалены:\n"
+        f"• Профиль пользователя\n"
+        f"• Все подписки\n"
+        f"• История платежей\n"
+        f"• История загрузок\n"
+        f"• Все связанные данные\n\n"
+        f"<b>Это действие НЕОБРАТИМО!</b>\n\n"
+        f"Вы уверены?",
+        reply_markup=confirmation_kb,
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(lambda c: c.data == "usr_confirm_delete")
+async def user_confirm_delete_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Подтверждение удаления пользователя"""
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("🚫 Нет доступа", show_alert=True)
+        return
+
+    data = await state.get_data()
+    user_id = data.get("edit_user_id")
+
+    if not user_id:
+        await callback.answer("❌ Пользователь не выбран", show_alert=True)
+        return
+
+    await callback.answer()
+
+    from shared.db.models import Download, Payment, Subscription
+
+    async for session in get_session():
+        # Находим пользователя
+        result = await session.execute(select(User).where(User.tg_id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            await callback.message.edit_text(
+                f"❌ Пользователь с ID {user_id} не найден.", parse_mode="HTML"
+            )
+            await state.clear()
+            return
+
+        username = user.username or "Нет username"
+        db_user_id = user.id
+
+        try:
+            # Удаляем все связанные данные
+            # 1. Удаляем подписки
+            subscriptions_result = await session.execute(
+                select(Subscription).where(Subscription.user_id == db_user_id)
+            )
+            subscriptions = subscriptions_result.scalars().all()
+            for subscription in subscriptions:
+                await session.delete(subscription)
+
+            # 2. Удаляем платежи
+            payments_result = await session.execute(
+                select(Payment).where(Payment.user_id == db_user_id)
+            )
+            payments = payments_result.scalars().all()
+            for payment in payments:
+                await session.delete(payment)
+
+            # 3. Удаляем историю загрузок
+            downloads_result = await session.execute(
+                select(Download).where(Download.user_id == db_user_id)
+            )
+            downloads = downloads_result.scalars().all()
+            for download in downloads:
+                await session.delete(download)
+
+            # 4. Удаляем самого пользователя
+            await session.delete(user)
+
+            # Коммитим все изменения
+            await session.commit()
+
+            await callback.message.edit_text(
+                f"✅ <b>Пользователь успешно удален</b>\n\n"
+                f"🆔 Telegram ID: <code>{user_id}</code>\n"
+                f"👤 Username: @{username}\n\n"
+                f"📊 Удалено:\n"
+                f"• Подписок: {len(subscriptions)}\n"
+                f"• Платежей: {len(payments)}\n"
+                f"• Загрузок: {len(downloads)}",
+                parse_mode="HTML",
+            )
+            await state.clear()
+
+        except Exception as e:
+            await callback.message.edit_text(
+                f"❌ <b>Ошибка при удалении пользователя</b>\n\n" f"Детали: {str(e)}",
+                parse_mode="HTML",
+            )
+            await session.rollback()
+
+
+@router.callback_query(lambda c: c.data == "usr_cancel_delete")
+async def user_cancel_delete_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Отмена удаления пользователя"""
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("🚫 Нет доступа", show_alert=True)
+        return
+
+    data = await state.get_data()
+    user_id = data.get("edit_user_id")
+
+    if not user_id:
+        await callback.answer("❌ Пользователь не выбран", show_alert=True)
+        return
+
+    await callback.answer("Удаление отменено")
+
+    # Возвращаемся к меню редактирования пользователя
+    async for session in get_session():
+        result = await session.execute(select(User).where(User.tg_id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            await callback.message.edit_text(
+                f"❌ Пользователь с ID {user_id} не найден.", parse_mode="HTML"
+            )
+            await state.clear()
+            return
+
+        from media_bot.keyboards import get_user_edit_menu_kb
+
+        user_info = (
+            f"👤 <b>Информация о пользователе</b>\n\n"
+            f"🆔 Telegram ID: <code>{user_id}</code>\n"
+            f"👤 Username: @{user.username or 'Нет'}\n"
+            f"🎭 Роль: {user.role.value}\n"
+            f"💰 Кредиты: {user.credits:,}\n\n"
+            f"Выберите действие:"
+        )
+
+        await callback.message.edit_text(
+            user_info, reply_markup=get_user_edit_menu_kb(), parse_mode="HTML"
+        )
 
 
 @router.callback_query(lambda c: c.data == "usr_back")

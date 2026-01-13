@@ -28,11 +28,18 @@ async def handle_perpetual_credits_purchase(session, user_id: int, order_id: str
         order_id: WebPay order ID
         plan_key: Формат "perpetual_credits_{quantity}"
     """
+    logger.info(
+        f"💎 [WEBPAY-PERPETUAL] Processing perpetual credits purchase: user_id={user_id}, order_id={order_id}, plan_key={plan_key}"
+    )
+
     # Извлечь количество из plan_key
     try:
         quantity = int(plan_key.split("_")[-1])
-    except (ValueError, IndexError):
-        logger.error(f"⚠️ [WEBPAY] Invalid perpetual credits plan_key: {plan_key}")
+        logger.info(f"💎 [WEBPAY-PERPETUAL] Extracted quantity: {quantity}")
+    except (ValueError, IndexError) as e:
+        logger.error(
+            f"⚠️ [WEBPAY-PERPETUAL] Invalid perpetual credits plan_key: {plan_key}, error: {e}"
+        )
         return
 
     # Находим пользователя
@@ -145,8 +152,10 @@ async def webpay_webhook(request: Request):
             try:
                 if order_id and order_id.startswith("USER_"):
                     parts = order_id.split("_")
+                    logger.info(f"💎 [WEBPAY] Parsing order_id: {order_id} -> parts={parts}")
                     user_id = int(parts[1])
                     plan_key = "_".join(parts[2:-1]) if len(parts) > 3 else None
+                    logger.info(f"💎 [WEBPAY] Parsed: user_id={user_id}, plan_key={plan_key}")
                 else:
                     logger.warning(f"⚠️ [WEBPAY] Некорректный формат order_id: {order_id}")
                     return Response(content='{"code": 200}', status_code=200)
@@ -156,6 +165,9 @@ async def webpay_webhook(request: Request):
 
             # Проверяем, является ли это покупкой perpetual credits
             if plan_key and plan_key.startswith("perpetual_credits_"):
+                logger.info(
+                    f"💎 [WEBPAY] Detected perpetual credits purchase, delegating to handler"
+                )
                 # Обрабатываем покупку несгораемых кредитов
                 await handle_perpetual_credits_purchase(session, user_id, order_id, plan_key)
                 return Response(content='{"code": 200}', status_code=200)

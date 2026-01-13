@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import time
 
 import httpx
@@ -11,6 +12,8 @@ from media_bot.config import (
     WEBPAY_SECRET_KEY,
     WEBPAY_SIGNING_KEY,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class WebPayAPI:
@@ -51,13 +54,13 @@ class WebPayAPI:
                     if new_token:
                         self.auth_token = new_token
                         self._token_refresh_time = time.time()
-                        print(f"[WEBPAY] Токен успешно обновлен")
+                        logger.info("[WEBPAY] Токен успешно обновлен")
                         return True
 
-            print(f"[WEBPAY] Не удалось обновить токен")
+            logger.warning("[WEBPAY] Не удалось обновить токен")
             return False
         except Exception as e:
-            print(f"[WEBPAY] Ошибка обновления токена: {e}")
+            logger.error(f"[WEBPAY] Ошибка обновления токена: {e}")
             return False
 
     async def create_invoice(
@@ -105,7 +108,12 @@ class WebPayAPI:
             signature_string.encode("utf-8"), usedforsecurity=False
         ).hexdigest()
 
-        print(f"[WEBPAY] Creating invoice: order_id={order_id}, amount={amount_byn} BYN")
+        logger.info(
+            f"💳 [WEBPAY] Creating invoice: order_id={order_id}, amount_rub={amount}, amount_byn={amount_byn}"
+        )
+        logger.debug(
+            f"💳 [WEBPAY] Signature string (without secret): {seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_for_signature}***"
+        )
 
         # Формируем payload
         payload = {
@@ -146,11 +154,13 @@ class WebPayAPI:
             # Если ошибка, показываем тело ответа
             if response.status_code >= 400:
                 error_body = response.text
-                print(f"[WEBPAY] ❌ Status: {response.status_code}")
-                print(f"[WEBPAY] ❌ Response body: {error_body}")
+                logger.error(f"[WEBPAY] ❌ Status: {response.status_code}")
+                logger.error(f"[WEBPAY] ❌ Response body: {error_body}")
+                logger.error(f"[WEBPAY] ❌ Request payload: {payload}")
 
             response.raise_for_status()
             data = response.json()
+            logger.info(f"💳 [WEBPAY] Invoice created successfully: {data}")
 
             # Возвращаем URL для оплаты
             return {
@@ -200,9 +210,10 @@ class WebPayAPI:
 
         # Логируем только ошибки
         if not match:
-            print(f"[WEBPAY] ❌ Signature mismatch!")
-            print(f"  Expected: {expected_signature}")
-            print(f"  Received: {received_signature}")
+            logger.error(f"[WEBPAY] ❌ Signature mismatch!")
+            logger.error(f"  Expected: {expected_signature}")
+            logger.error(f"  Received: {received_signature}")
+            logger.error(f"  String to sign (without secret): {''.join(str(f) for f in fields)}***")
 
         return match
 

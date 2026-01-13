@@ -60,6 +60,9 @@ def get_user_edit_menu_kb() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="👤 Назначить роль", callback_data="usr_3d9l5p"),
             ],
             [
+                InlineKeyboardButton(text="🚫 Удалить пользователя", callback_data="usr_9x7d2m"),
+            ],
+            [
                 InlineKeyboardButton(text="« Назад", callback_data="usr_back"),
             ],
         ]

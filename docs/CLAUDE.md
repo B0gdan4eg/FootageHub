@@ -191,6 +191,18 @@ python freepik_utils/check_cookies.py
 - Automatic deactivation when limits exhausted or expiration date reached
 - See `docs/SUBSCRIPTIONS_AND_REFERRALS.md` for detailed logic
 
+**Perpetual Credits System:**
+- Pay-as-you-go credits that never expire (несгораемые загрузки)
+- Purchase 3-90 credits at 30 RUB per credit
+- No database migration needed - uses existing `User.credits` field
+- Integrated with WebPay payment system
+- Payment flow uses FSM state: `PerpetualCreditsFlow.waiting_for_quantity`
+- Order ID format: `USER_{user_id}_perpetual_credits_{quantity}_{uuid}`
+- plan_key format: `perpetual_credits_{quantity}` (e.g., `perpetual_credits_10`)
+- After successful payment, credits are added directly to user's balance
+- Users with active subscriptions can still purchase perpetual credits
+- Implementation in `media_bot/handlers/perpetual_credits.py`
+
 **Referral Program:**
 - Each user has unique `referral_code` (generated on first user creation)
 - ReferralReward table tracks referrer → referred relationships
@@ -211,7 +223,9 @@ python freepik_utils/check_cookies.py
 ## Important Implementation Details
 
 ### WebPay Payment Flow
-1. User clicks subscription button → `bot/handlers/payment.py`
+
+**For Subscriptions:**
+1. User clicks subscription button → `media_bot/handlers/payment.py`
 2. Creates Payment record in database with status "pending"
 3. Calls `webpay_api.create_invoice()` with order_id format: `USER_{user_id}_{plan_key}_{uuid}`
 4. Returns payment URL to user
@@ -222,6 +236,18 @@ python freepik_utils/check_cookies.py
 9. Updates Payment status to "success"
 10. Notifies user via Telegram
 
+**For Perpetual Credits:**
+1. User clicks "💎 Купить поштучно" button → `media_bot/handlers/perpetual_credits.py`
+2. Bot sets FSM state `PerpetualCreditsFlow.waiting_for_quantity`
+3. User sends message with quantity (validated: 3-90)
+4. Creates Payment record with `plan_key = "perpetual_credits_{quantity}"`
+5. Creates WebPay invoice with order_id: `USER_{user_id}_perpetual_credits_{quantity}_{uuid}`
+6. User pays → Webhook receives notification
+7. Webhook detects `plan_key.startswith("perpetual_credits_")`
+8. Calls `handle_perpetual_credits_purchase()` instead of subscription creation
+9. Adds credits directly to `user.credits += quantity`
+10. Marks payment as successful, sends notification
+
 **Critical WebPay Signature Details:**
 - **Payment creation**: Uses SHA1 with `WEBPAY_SIGNING_KEY` included
   - Format: `seed + merchant_id + order_num + test + currency_id + total + signing_key`
@@ -231,10 +257,48 @@ python freepik_utils/check_cookies.py
 - Amount formatting: Always use 2 decimal places (e.g., "19.47")
 - **Keys**: `WEBPAY_SECRET_KEY` - password for auth, `WEBPAY_SIGNING_KEY` - for signatures
 
+### Payment Menu Logic (media_bot/handlers/payment.py)
+
+The `send_price_menu()` function has **two distinct branches** based on subscription status:
+
+**Branch 1: User has active subscription**
+- Shows message: "✅ У вас активная подписка!"
+- Displays subscription details (type, end date, available credits)
+- Shows **only** "💎 Купить поштучно" button
+- Prevents purchasing second subscription while first is active
+- Users can still buy perpetual credits to supplement their subscription
+
+**Branch 2: User has no active subscription**
+- Shows all subscription tier buttons:
+  - `Lite · 50 шт · 399 ₽/мес`
+  - `Standard · 150 шт · 899 ₽/мес ⭐️`
+  - `Pro · 400 шт · 1790 ₽/мес`
+- Separator button (non-clickable): `─────────── или ───────────`
+  - Uses `callback_data='separator_ignore'` to prevent interaction
+- Shows "💎 Купить поштучно" button at bottom
+- Menu message displays cost-per-file calculations (~8₽, ~6₽, ~4.5₽)
+
+**Implementation pattern:**
+```python
+async def send_price_menu(message_or_callback):
+    user_id = message_or_callback.from_user.id
+
+    # Check active subscription
+    async for session in get_session():
+        subscription_repo = SubscriptionRepository(session)
+        active_subscription = await subscription_repo.get_active_by_user_id(user.id)
+
+        if active_subscription:
+            # Branch 1: Show only perpetual credits option
+            return
+
+    # Branch 2: Show all subscription tiers + perpetual credits
+```
+
 ### Subscription Eligibility Check
-Before allowing download (in `bot/handlers/download.py`):
+Before allowing download (in `media_bot/handlers/download.py`):
 1. Check if user has active subscription for requested service
-2. Call `check_download_limit(session, subscription)` from `db/subscription_crud.py`
+2. Call `check_download_limit(session, subscription)` from `shared/db/repositories.py`
 3. Checks:
    - Subscription is active
    - Not expired (end_date)
@@ -357,7 +421,7 @@ motion_utils/
 
 Fallback: If no numbered files exist, uses legacy single file (`envato_cookies.json`, `freepik_cookies.json`, `motion_cookies.json`)
 
-### Subscription Plans (bot/handlers/prices_list.json)
+### Subscription Plans (media_bot/handlers/prices_list.json)
 ```json
 {
   "subscription_plans": {
@@ -385,6 +449,11 @@ Fallback: If no numbered files exist, uses legacy single file (`envato_cookies.j
       "daily_limit": null,
       "subscription_type": "MONTHLY_400"
     }
+  },
+  "perpetual_credits": {
+    "price_per_credit": 30,         // RUB per credit
+    "minimum_quantity": 3,          // Min purchase: 90 RUB
+    "maximum_quantity": 90          // Max purchase: 2700 RUB
   }
 }
 ```
@@ -409,12 +478,78 @@ Fallback: If no numbered files exist, uses legacy single file (`envato_cookies.j
 - Clean class-based structure with `__aenter__`/`__aexit__`
 - Statistics tracking (success/fail counts, timing)
 
+### Purchasing Perpetual Credits (FSM Flow)
+
+The perpetual credits purchase uses FSM (Finite State Machine) for user interaction:
+
+**Handler**: `media_bot/handlers/perpetual_credits.py`
+**State**: `PerpetualCreditsFlow.waiting_for_quantity` (defined in `media_bot/state.py`)
+
+**Flow:**
+1. User clicks "💎 Купить поштучно" → `show_perpetual_credits_menu()`
+2. Bot displays prompt with pricing info, sets FSM state
+3. User sends message with quantity (e.g., "10")
+4. `process_quantity_input()` validates via `validate_quantity_input()`:
+   - Checks if integer
+   - Min: 3 credits (90 RUB)
+   - Max: 90 credits (2700 RUB)
+5. If invalid → sends error message, keeps FSM state active
+6. If valid → creates WebPay invoice, saves Payment record
+7. Shows confirmation message with payment button
+8. Clears FSM state with `await state.clear()`
+9. After payment → webhook calls `handle_perpetual_credits_purchase()`
+10. Credits added: `user.credits += quantity`
+11. Notification sent to user
+
+**Key validation function:**
+```python
+def validate_quantity_input(text: str) -> Tuple[bool, int, str]:
+    """Returns (is_valid, quantity, error_message)"""
+    config = load_perpetual_credits_config()
+    try:
+        quantity = int(text.strip())
+    except ValueError:
+        return False, 0, PERPETUAL_CREDITS_INVALID_INPUT
+
+    if quantity < config["minimum_quantity"]:
+        return False, quantity, PERPETUAL_CREDITS_INVALID_QUANTITY
+
+    if quantity > config["maximum_quantity"]:
+        return False, quantity, f"❌ Максимум {config['maximum_quantity']} загрузок"
+
+    return True, quantity, ""
+```
+
+**Configuration loading:**
+```python
+def load_perpetual_credits_config():
+    """Loads from media_bot/handlers/prices_list.json"""
+    from media_bot.config import PRICE_LIST_PATH
+    with open(PRICE_LIST_PATH, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        config = data.get("perpetual_credits", {})
+        return {
+            "price_per_credit": config.get("price_per_credit", 30),
+            "minimum_quantity": config.get("minimum_quantity", 3),
+            "maximum_quantity": config.get("maximum_quantity", 90),
+        }
+```
+
 ### Modifying Payment Plans
-1. Update `bot/handlers/prices_list.json` with new plan
-2. Add subscription type to `SubscriptionType` enum in `db/models.py`
+
+**For Subscription Plans:**
+1. Update `media_bot/handlers/prices_list.json` with new plan
+2. Add subscription type to `SubscriptionType` enum in `shared/db/models.py`
 3. Create Alembic migration if enum changed
-4. Update handlers in `bot/handlers/payment.py` to offer new plan
-5. Update webhook parsing in `bot/webhook/webpay.py` if plan_key format changes
+4. Update handlers in `media_bot/handlers/payment.py` to offer new plan
+5. Update message templates in `media_bot/handlers/messages.py`
+6. Update webhook parsing in `media_bot/webhook/webpay.py` if plan_key format changes
+
+**For Perpetual Credits:**
+1. Update `media_bot/handlers/prices_list.json` → `perpetual_credits` section
+2. Change `price_per_credit`, `minimum_quantity`, or `maximum_quantity`
+3. Update message templates in `media_bot/handlers/messages.py` if pricing changes
+4. No database migration needed - uses existing `User.credits` field
 
 ### Debugging Download Issues
 1. Check browser screenshots in `envato_utils/debug_screenshots/`, `freepik_utils/debug_screenshots/`, or `motion_utils/debug_screenshots/`
@@ -438,9 +573,56 @@ Fallback: If no numbered files exist, uses legacy single file (`envato_cookies.j
 - Test with sandbox first: `WEBPAY_SANDBOX=true` in .env
 - Use `test/get_webpay_token.py` to manually refresh auth token if needed
 
+**Webhook Detection for Perpetual Credits** (`media_bot/webhook/webpay.py`):
+```python
+# After extracting plan_key from order_id
+if plan_key and plan_key.startswith("perpetual_credits_"):
+    # Handle perpetual credits purchase (no subscription creation)
+    await handle_perpetual_credits_purchase(session, user_id, order_id, plan_key)
+    return Response(content='{"code": 200}', status_code=200)
+
+# Otherwise, handle subscription creation
+```
+
+**Handler function:**
+```python
+async def handle_perpetual_credits_purchase(session, user_id, order_id, plan_key):
+    """
+    Processes perpetual credits payment without creating subscription.
+
+    Args:
+        plan_key: Format "perpetual_credits_{quantity}" (e.g., "perpetual_credits_10")
+    """
+    # Extract quantity from plan_key
+    quantity = int(plan_key.split("_")[-1])
+
+    # Get user and payment
+    user = await user_repo.get_by_telegram_id(user_id)
+    payment = await payment_repo.get_by_invoice_id(order_id)
+
+    # Prevent duplicate processing
+    if payment.status == "success":
+        logger.info(f"✅ [WEBPAY] Payment {order_id} already processed")
+        return
+
+    # Add credits directly to user
+    user.credits += quantity
+    await session.commit()
+
+    # Mark payment as successful
+    await payment_repo.mark_success(order_id)
+
+    # Send notification
+    message = PERPETUAL_CREDITS_PURCHASED.format(
+        quantity=quantity,
+        total_credits=user.credits
+    )
+    await BotServices.bot.send_message(chat_id=user_id, text=message, ...)
+```
+
 ## Project-Specific Conventions
 
-- All database operations use async CRUD functions from `db/*_crud.py`
+- All database operations use async CRUD functions from `shared/db/repositories.py`
 - Never use raw SQL queries; use SQLAlchemy ORM
 - Download handlers use LinkProcessor (global queue), not direct Playwright calls
 - Payment webhooks must validate signatures before processing
@@ -448,7 +630,21 @@ Fallback: If no numbered files exist, uses legacy single file (`envato_cookies.j
 - Subscription types are case-sensitive enums (e.g., `MONTHLY_150`, not `monthly_150`)
 - Order IDs for payments always follow format: `USER_{user_id}_{plan_key}_{uuid}`
 - Currency displayed to users: RUB; currency sent to WebPay: BYN (conversion factor in code)
-- **Configuration centralization**: Always import constants from `bot/config.py` (PRICE_LIST_PATH, CHANNEL_ID, etc.), never hardcode paths or values in handlers
+- **Configuration centralization**: Always import constants from `media_bot/config.py` (PRICE_LIST_PATH, CHANNEL_ID, etc.), never hardcode paths or values in handlers
+- **Perpetual Credits System**:
+  - plan_key format: `perpetual_credits_{quantity}` (e.g., `perpetual_credits_10`)
+  - No separate database table - uses `User.credits` field
+  - Validation: 3-90 credits per purchase
+  - Price: 30 RUB per credit (configured in `prices_list.json`)
+  - FSM state: `PerpetualCreditsFlow.waiting_for_quantity`
+  - Webhook detects pattern with `plan_key.startswith("perpetual_credits_")`
+  - Credits added directly: `user.credits += quantity` (no subscription created)
+  - Users with active subscriptions can still buy perpetual credits
+- **Payment Menu Logic**:
+  - Check active subscription first in `send_price_menu()`
+  - If active subscription exists: show only "💎 Купить поштучно" button
+  - If no subscription: show all subscription tiers + perpetual credits button
+  - Separator button uses `callback_data='separator_ignore'` (non-clickable)
 - **Download providers**: Use consistent structure across providers (Envato, Freepik, Motion Array):
   - Class-based with `__aenter__`/`__aexit__` for resource management
   - Cookie rotation with `get_next_cookie_file()` and index tracking
@@ -482,3 +678,11 @@ Fallback: If no numbered files exist, uses legacy single file (`envato_cookies.j
 - Check webhook logs for signature validation errors
 - Verify order_id parsing: `plan_key = "_".join(parts[2:-1])`
 - Ensure plan_key exists in `prices_list.json`
+
+**Perpetual credits not added after payment**
+- Check if webhook detects `plan_key.startswith("perpetual_credits_")`
+- Verify `handle_perpetual_credits_purchase()` is called instead of subscription creation
+- Check payment status - if already "success", it won't process again (prevents duplicates)
+- Verify quantity extraction: `quantity = int(plan_key.split("_")[-1])`
+- Check `User.credits` was incremented: `user.credits += quantity`
+- Ensure notification message uses `PERPETUAL_CREDITS_PURCHASED` template
