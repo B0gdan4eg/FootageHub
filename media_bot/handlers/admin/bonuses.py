@@ -24,6 +24,7 @@ async def manage_bonuses(message: types.Message):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📋 Список бонусов", callback_data="bonus_list")],
+            [InlineKeyboardButton(text="🔄 Инициализировать бонусы", callback_data="bonus_init")],
             [InlineKeyboardButton(text="➕ Создать новый бонус", callback_data="bonus_create")],
             [InlineKeyboardButton(text="✏️ Редактировать бонус", callback_data="bonus_edit")],
             [
@@ -40,6 +41,32 @@ async def manage_bonuses(message: types.Message):
         reply_markup=keyboard,
         parse_mode="HTML",
     )
+
+
+@router.callback_query(F.data == "bonus_init")
+async def bonus_init(callback: types.CallbackQuery):
+    """Initialize default bonuses"""
+    from shared.db.init_bonuses import initialize_bonuses
+
+    try:
+        await callback.message.edit_text("⏳ Инициализация бонусов...", parse_mode="HTML")
+
+        stats = await initialize_bonuses()
+
+        await callback.message.edit_text(
+            f"✅ <b>Бонусы успешно инициализированы!</b>\n\n"
+            f"✨ Создано новых: {stats['created']}\n"
+            f"🔄 Обновлено: {stats['updated']}\n\n"
+            f"Используйте <b>📋 Список бонусов</b> для просмотра.",
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        await callback.message.edit_text(
+            f"❌ <b>Ошибка инициализации бонусов:</b>\n\n" f"<code>{str(e)}</code>",
+            parse_mode="HTML",
+        )
+
+    await callback.answer()
 
 
 @router.callback_query(F.data == "bonus_list")
@@ -61,9 +88,9 @@ async def bonus_list(callback: types.CallbackQuery):
 
         rewards = []
         if bonus.credits_amount > 0:
-            rewards.append(f"💰 {bonus.credits_amount} кредитов")
+            rewards.append(f"💰 {bonus.credits_amount} скачиваний")
         if bonus.ai_credits_amount > 0:
-            rewards.append(f"💎 {bonus.ai_credits_amount} AI кредитов")
+            rewards.append(f"💎 {bonus.ai_credits_amount} AI скачиваний")
 
         reward_text = ", ".join(rewards) if rewards else "Нет наград"
 
@@ -127,14 +154,14 @@ async def bonus_stats(callback: types.CallbackQuery):
                 f"<b>{data['name']}</b> (<code>{code}</code>)\n"
                 f"👥 Выдано: {data['count']} раз\n"
                 f"💰 Кредитов: {data['credits']:,}\n"
-                f"💎 AI кредитов: {data['ai_credits']:,}\n\n"
+                f"💎 AI скачиваний: {data['ai_credits']:,}\n\n"
             )
 
         text += (
             f"<b>📈 Итого:</b>\n"
             f"🎁 Всего бонусов выдано: {len(all_bonuses)}\n"
-            f"💰 Всего кредитов: {total_credits:,}\n"
-            f"💎 Всего AI кредитов: {total_ai_credits:,}"
+            f"💰 Всего скачиваний: {total_credits:,}\n"
+            f"💎 Всего AI скачиваний: {total_ai_credits:,}"
         )
     else:
         text += "Нет данных о выданных бонусах"
@@ -216,7 +243,7 @@ async def bonus_create_description(message: types.Message, state: FSMContext):
     await state.update_data(bonus_description=description)
     await state.set_state(AdminStates.waiting_for_bonus_credits)
     await message.answer(
-        "✅ Описание сохранено\n\n" "Шаг 4/5: Введите количество обычных кредитов (или 0):",
+        "✅ Описание сохранено\n\n" "Шаг 4/5: Введите количество обычных скачиваний (или 0):",
         parse_mode="HTML",
     )
 

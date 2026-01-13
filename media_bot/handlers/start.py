@@ -38,14 +38,13 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
 
     args = command.args  # Аргументы после /start (в 3.x так правильно)
 
-    is_new_user = False
     async for session in get_session():
         user_repo = UserRepository(session)
         bonus_repo = BonusRepository(session)
 
         user = await user_repo.get_by_telegram_id(telegram_id)
         if not user:
-            is_new_user = True
+            pass
             # Check if this user should be admin
             user_role = UserRole.USER
             if ADMIN and str(telegram_id) == str(ADMIN):
@@ -66,31 +65,37 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                     metadata={"registered_at": datetime.utcnow().isoformat()},
                 )
                 logger.info(
-                    f"REGISTRATION bonus: {registration_bonus.credits_granted} кредитов для {telegram_id}"
+                    f"REGISTRATION bonus: {registration_bonus.credits_granted} скачиваний для {telegram_id}"
                 )
             except Exception as e:
                 logger.error(f"Ошибка начисления REGISTRATION бонуса: {e}")
-                # Fallback: добавляем кредиты вручную
+                # Fallback: добавляем скачивания вручную
                 user.credits = 3
                 await session.commit()
 
             # Если есть реферальный код — создаем реферальную связь
             if args:
-                await user_repo.set_user_referrer(telegram_id, args)
-
-                # Начисляем бонус рефереру через ReferralService
                 try:
-                    referral_service = ReferralService(
-                        session, user_repo, bonus_repo, bonus_service
-                    )
+                    # Находим реферера по коду
+                    referrer = await user_repo.get_by_referral_code(args)
 
-                    # Получаем нового пользователя
-                    new_user = await user_repo.get_by_telegram_id(telegram_id)
-                    if new_user:
-                        await referral_service.create_referral_registration(
-                            referred_user_id=new_user.id, referral_code=args
+                    if referrer:
+                        # Устанавливаем связь
+                        await user_repo.set_user_referrer(telegram_id, args)
+
+                        # Создаем реферальную награду
+                        referral_service = ReferralService(
+                            session, user_repo, bonus_repo, bonus_service
                         )
-                        logger.info(f"Referral registration created for user {telegram_id}")
+
+                        await referral_service.create_referral_registration(
+                            referrer_id=referrer.id, referred_id=user.id
+                        )
+                        logger.info(
+                            f"Referral registration created: referrer={referrer.id}, referred={user.id}"
+                        )
+                    else:
+                        logger.warning(f"Referral code {args} not found")
                 except Exception as e:
                     logger.error(f"Failed to create referral registration: {e}")
         else:
@@ -99,34 +104,6 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                 user.role = UserRole.ADMIN
                 await session.commit()
                 logger.info(f"Updated user {telegram_id} to ADMIN role")
-
-        # Начисляем FIRST_LOGIN бонус для новых пользователей
-        if is_new_user:
-            try:
-                bonus_service = BonusService(bonus_repo, user_repo)
-
-                user = await user_repo.get_by_telegram_id(telegram_id)
-                if user:
-                    # Проверяем, можно ли начислить бонус
-                    can_claim = await bonus_service.can_claim_bonus(
-                        user_id=user.id, bonus_code="FIRST_LOGIN"
-                    )
-
-                    if can_claim:
-                        bonus = await bonus_service.claim_bonus(
-                            user_id=user.id, bonus_code="FIRST_LOGIN"
-                        )
-
-                        # Отправляем уведомление о бонусе
-                        bonus_message = (
-                            f"🎁 <b>Приветственный бонус!</b>\n\n"
-                            f"Вы получили {bonus.credits_granted} кредитов для загрузок!\n\n"
-                            f"Используйте их для загрузки медиа контента."
-                        )
-                        await message.answer(bonus_message, parse_mode=ParseMode.HTML)
-                        logger.info(f"FIRST_LOGIN bonus claimed by user {telegram_id}")
-            except Exception as e:
-                logger.error(f"Failed to claim FIRST_LOGIN bonus: {e}")
 
     await message.answer(
         WELCOME.format(name=message.from_user.first_name),

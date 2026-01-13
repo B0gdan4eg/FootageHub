@@ -76,20 +76,20 @@ async def cmd_referral(message: types.Message, bot: Bot):
             message_text = (
                 "🎁 <b>Реферальная программа</b>\n\n"
                 f"👥 Приглашено рефералов: <b>{stats['total_referrals']}</b>\n"
-                f"💰 Заработано бонусов: <b>{stats['total_credits_earned']} кредитов</b>\n"
+                f"💰 Заработано бонусов: <b>{stats['total_credits_earned']} скачиваний</b>\n"
                 f"✅ Активных рефералов: <b>{stats['active_referrals']}</b>\n\n"
                 "📋 <b>Ваша реферальная ссылка:</b>\n"
                 f"<code>{referral_link}</code>\n\n"
                 "🎯 <b>Как это работает:</b>\n"
                 "1️⃣ Поделитесь ссылкой с друзьями\n"
-                "2️⃣ Когда друг регистрируется — вы получаете <b>1 кредит</b>\n"
-                "3️⃣ Когда друг совершает первую покупку — вы получаете <b>5 кредитов</b>\n\n"
+                "2️⃣ Когда друг регистрируется — вы получаете <b>1 скачивание</b>\n"
+                "3️⃣ Когда друг совершает первую покупку — вы получаете <b>5 скачиваний</b>\n\n"
                 "🏆 <b>Milestone награды:</b>\n"
-                "• 5 рефералов → +5 кредитов\n"
-                "• 10 рефералов → +10 кредитов\n"
-                "• 25 рефералов → +25 кредитов\n"
-                "• 50 рефералов → +50 кредитов\n"
-                "• 100 рефералов → +100 кредитов\n"
+                "• 5 рефералов → +5 скачиваний\n"
+                "• 10 рефералов → +10 скачиваний\n"
+                "• 25 рефералов → +25 скачиваний\n"
+                "• 50 рефералов → +50 скачиваний\n"
+                "• 100 рефералов → +100 скачиваний\n"
             )
 
             # Добавляем последние награды, если есть
@@ -105,7 +105,7 @@ async def cmd_referral(message: types.Message, bot: Bot):
 
                     status_emoji = "✅" if reward.status == "COMPLETED" else "⏳"
                     message_text += (
-                        f"{status_emoji} {trigger_text}: " f"+{reward.credits_earned} кредитов\n"
+                        f"{status_emoji} {trigger_text}: " f"+{reward.credits_earned} скачиваний\n"
                     )
 
             await message.answer(message_text, parse_mode=ParseMode.HTML)
@@ -162,7 +162,7 @@ async def cmd_my_referrals(message: types.Message):
             message_text = (
                 f"👥 <b>Ваши рефералы ({stats['total_referrals']})</b>\n\n"
                 f"✅ Активных: {stats['active_referrals']}\n"
-                f"💰 Заработано: {stats['total_credits_earned']} кредитов\n\n"
+                f"💰 Заработано: {stats['total_credits_earned']} скачиваний\n\n"
             )
 
             # Получаем детальную информацию (первые 10)
@@ -239,7 +239,7 @@ async def cmd_referral_rewards(message: types.Message):
             # Формируем сообщение
             message_text = (
                 f"💎 <b>История реферальных наград</b>\n\n"
-                f"Всего заработано: <b>{total_earned} кредитов</b>\n"
+                f"Всего заработано: <b>{total_earned} скачиваний</b>\n"
                 f"Всего наград: <b>{len(rewards)}</b>\n\n"
             )
 
@@ -258,7 +258,7 @@ async def cmd_referral_rewards(message: types.Message):
                 message_text += (
                     f"\n{trigger_name}\n"
                     f"Количество: {len(trigger_rewards)} | "
-                    f"Сумма: {trigger_sum} кредитов\n"
+                    f"Сумма: {trigger_sum} скачиваний\n"
                 )
 
             message_text += (

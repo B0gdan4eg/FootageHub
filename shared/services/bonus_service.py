@@ -116,51 +116,6 @@ class ChannelSubscriptionBonus(BonusStrategy):
         return user_bonus
 
 
-class FirstLoginBonus(BonusStrategy):
-    """Strategy for first login bonus."""
-
-    async def can_apply(
-        self,
-        user_id: int,
-        bonus_type: BonusType,
-        metadata: Dict[str, Any],
-        bonus_repo: BonusRepository,
-        user_repo: UserRepository,
-    ) -> bool:
-        """Check if user hasn't claimed first login bonus."""
-        has_bonus = await bonus_repo.user_has_bonus(
-            user_id=user_id, bonus_type_id=bonus_type.id, status="COMPLETED"
-        )
-        return not has_bonus
-
-    async def apply_bonus(
-        self,
-        user_id: int,
-        bonus_type: BonusType,
-        metadata: Dict[str, Any],
-        bonus_repo: BonusRepository,
-        user_repo: UserRepository,
-    ) -> UserBonus:
-        """Apply first login bonus."""
-        user_bonus = await bonus_repo.create_user_bonus(
-            user_id=user_id,
-            bonus_type_id=bonus_type.id,
-            credits_granted=bonus_type.credits_amount,
-            ai_credits_granted=bonus_type.ai_credits_amount,
-            metadata=metadata,
-            status="COMPLETED",
-            completed_at=datetime.utcnow(),
-        )
-
-        await user_repo.add_credits(
-            user_id=user_id,
-            credits=bonus_type.credits_amount,
-            ai_credits=bonus_type.ai_credits_amount,
-        )
-
-        return user_bonus
-
-
 class ReferralBonus(BonusStrategy):
     """Strategy for referral bonuses."""
 
@@ -340,7 +295,6 @@ class BonusService:
         # Регистрируем стратегии для каждого типа бонуса
         self._strategies: Dict[str, BonusStrategy] = {
             "CHANNEL_SUBSCRIPTION": ChannelSubscriptionBonus(),
-            "FIRST_LOGIN": FirstLoginBonus(),
             "REGISTRATION": RegistrationBonus(),
             "REFERRAL_REGISTRATION": ReferralBonus(),
             "REFERRAL_FIRST_PAYMENT": ReferralBonus(),

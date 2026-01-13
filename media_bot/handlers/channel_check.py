@@ -112,7 +112,7 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                                 metadata={"channel_id": CHANNEL_ID},
                             )
                             bonuses_text.append(
-                                f"💰 Вам начислено {bonus.credits_granted} кредита за подписку!"
+                                f"💰 Вам начислено {bonus.credits_granted} скачивания за подписку!"
                             )
                             logger.info(f"CHANNEL_SUBSCRIPTION bonus claimed by user {user_id}")
                         else:
@@ -127,7 +127,7 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                             )
                             if referral_bonus:
                                 bonuses_text.append(
-                                    f"🎁 Ваш реферер получил {referral_bonus.credits_granted} кредитов за вашу подписку!"
+                                    f"🎁 Ваш реферер получил {referral_bonus.credits_granted} скачиваний за вашу подписку!"
                                 )
                                 logger.info(f"Referral bonus granted for referred user {user_id}")
                         except Exception as e:
@@ -146,7 +146,7 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                             if user_obj:
                                 user_obj.credits += CHANNEL_BONUS_CREDITS
                                 await session.commit()
-                                text = f"{CHANEL_APPLY}\n💰 Вам начислено {CHANNEL_BONUS_CREDITS} кредита за подписку!"
+                                text = f"{CHANEL_APPLY}\n💰 Вам начислено {CHANNEL_BONUS_CREDITS} скачивания за подписку!"
                         else:
                             text = f"{CHANEL_APPLY}\n❌ Бонус за подписку вы уже получали ранее."
 

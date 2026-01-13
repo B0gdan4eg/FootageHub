@@ -33,6 +33,7 @@ from media_bot.utils.freepik_utils.logger import logger as error_logger
 from media_bot.webhook.server_start import start_server
 from shared.core.logger import get_logger
 from shared.db.base import create_tables, run_migrations
+from shared.db.init_bonuses import initialize_bonuses
 
 # Setup centralized logging
 logger = get_logger("media_bot", level=logging.INFO)
@@ -97,13 +98,24 @@ async def main():
         logger.info("Создаю таблицы напрямую...")
         await create_tables()
 
+    # 2. Инициализация бонусов
+    try:
+        logger.info("Инициализация бонусной системы...")
+        bonus_stats = await initialize_bonuses()
+        logger.info(
+            f"🎁 Бонусы инициализированы: создано {bonus_stats['created']}, "
+            f"обновлено {bonus_stats['updated']}"
+        )
+    except Exception as e:
+        logger.error(f"❌ Ошибка инициализации бонусов: {e}")
+
     await set_bot_commands(bot)
 
-    # 2. Запуск LinkProcessor для Envato и Freepik
+    # 3. Запуск LinkProcessor для Envato и Freepik
     logger.info("Запуск LinkProcessor (Envato + Freepik)...")
     await BotServices.link_processor.start()
 
-    # 3. Планировщик
+    # 4. Планировщик
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
     # Еженедельное начисление бесплатных кредитов (каждый понедельник в 03:00)
     scheduler.add_job(scheduler_job, "cron", day_of_week="wed", hour=3, minute=0, args=[bot])
@@ -124,7 +136,7 @@ async def main():
     logger.info("  - Playwright cleanup: Every hour")
 
     try:
-        # 4. Запуск сервера и бота параллельно
+        # 5. Запуск сервера и бота параллельно
         await asyncio.gather(start_server(), start_bot())
     finally:
         # Остановка LinkProcessor при завершении
