@@ -79,7 +79,7 @@ async def admin_bonuses_callback(callback: types.CallbackQuery):
     print("[DEBUG] Calling manage_bonuses...")
     from media_bot.handlers.admin.bonuses import manage_bonuses
 
-    await manage_bonuses(callback.message)
+    await manage_bonuses(callback)
     print("[DEBUG] manage_bonuses completed")
 
 
@@ -98,7 +98,7 @@ async def admin_broadcast_callback(callback: types.CallbackQuery, state: FSMCont
     print("[DEBUG] Calling broadcast_start...")
     from media_bot.handlers.admin.broadcast import broadcast_start
 
-    await broadcast_start(callback.message, state)
+    await broadcast_start(callback, state)
     print("[DEBUG] broadcast_start completed")
 
 

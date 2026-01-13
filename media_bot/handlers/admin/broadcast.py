@@ -16,13 +16,13 @@ from shared.db.session import get_session
 router = Router()
 
 
-async def broadcast_start(message: types.Message, state: FSMContext):
+async def broadcast_start(callback: types.CallbackQuery, state: FSMContext):
     """Начало рассылки сообщений"""
-    if not await is_admin(message.from_user.id):
+    if not await is_admin(callback.from_user.id):
         return
 
     await state.set_state(AdminStates.waiting_for_broadcast_text)
-    await message.answer(
+    await callback.message.answer(
         "📢 <b>Рассылка сообщений</b>\n\n"
         "Отправьте сообщение для рассылки всем пользователям:\n\n"
         "⚠️ Сообщение будет отправлено всем пользователям бота!",

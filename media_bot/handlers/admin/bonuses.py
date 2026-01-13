@@ -16,9 +16,9 @@ from shared.db.session import get_session
 router = Router()
 
 
-async def manage_bonuses(message: types.Message):
+async def manage_bonuses(callback: types.CallbackQuery):
     """Show bonus management menu"""
-    if not await is_admin(message.from_user.id):
+    if not await is_admin(callback.from_user.id):
         return
 
     keyboard = InlineKeyboardMarkup(
@@ -36,7 +36,7 @@ async def manage_bonuses(message: types.Message):
         ]
     )
 
-    await message.answer(
+    await callback.message.answer(
         "🎉 <b>Управление бонусной системой</b>\n\n" "Выберите действие:",
         reply_markup=keyboard,
         parse_mode="HTML",
