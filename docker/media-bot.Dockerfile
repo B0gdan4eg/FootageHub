@@ -39,11 +39,8 @@ RUN playwright install chromium
 # Copy shared code
 COPY shared/ /app/shared/
 
-# Copy media bot code
+# Copy media bot code (includes utils inside media_bot/utils/)
 COPY media_bot/ /app/media_bot/
-COPY envato_utils/ /app/envato_utils/
-COPY freepik_utils/ /app/freepik_utils/
-COPY motion_utils/ /app/motion_utils/
 
 # Copy migrations
 COPY migrations/ /app/migrations/
