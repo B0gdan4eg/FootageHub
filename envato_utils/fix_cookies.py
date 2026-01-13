@@ -9,10 +9,11 @@ import json
 import sys
 from pathlib import Path
 
+from utils.cookie_fixer import fix_cookies_file, print_cookie_stats
+
 # Добавляем корневую директорию в путь для импорта
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from utils.cookie_fixer import fix_cookies_file, print_cookie_stats
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 INPUT_COOKIE_FILE = SCRIPT_DIR / "new_cookies.json"

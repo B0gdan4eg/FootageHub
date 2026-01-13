@@ -7,11 +7,7 @@ Subscription Service для MediaBot
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from shared.core.exceptions import (
-    InsufficientCreditsError,
-    SubscriptionException,
-    UserNotFoundError,
-)
+from shared.core.exceptions import SubscriptionException
 from shared.core.logger import get_logger
 from shared.db.models import ServiceType, Subscription
 from shared.db.repositories.subscription_repository import SubscriptionRepository

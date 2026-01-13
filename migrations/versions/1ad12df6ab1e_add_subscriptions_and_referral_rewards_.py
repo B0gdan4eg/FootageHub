@@ -170,7 +170,7 @@ def upgrade() -> None:
     # Проверяем constraint перед созданием
     try:
         op.create_foreign_key(None, "downloads", "subscriptions", ["subscription_id"], ["id"])
-    except:
+    except BaseException:
         pass  # Constraint уже существует
 
     # ВАЖНО: Проверяем колонки в users ДО попытки удалить constraint
@@ -183,14 +183,12 @@ def upgrade() -> None:
         except Exception as e:
             # Constraint может не существовать или уже удален
             print(f"Warning: Could not drop constraint: {e}")
-            pass
 
         try:
             op.drop_column("users", "referred_by_id")
         except Exception as e:
             # Колонка может уже быть удалена
             print(f"Warning: Could not drop column: {e}")
-            pass
     # ### end Alembic commands ###
 
 

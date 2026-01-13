@@ -150,14 +150,12 @@ class EnvatoDownloader:
             await page.goto(asset_url, wait_until="load", timeout=15000)
 
             # Wait for redirect to app.envato.com if needed
-            redirected = False
             if "elements.envato.com" in page.url:
                 try:
                     await page.wait_for_url("**/app.envato.com/**", timeout=3000)
-                    redirected = True
                 except Exception:
                     # No redirect happened - staying on old format (elements.envato.com)
-                    redirected = False
+                    pass
 
             # Click download button - универсальный селектор для обоих форматов
             download_button_selectors = [
@@ -186,7 +184,7 @@ class EnvatoDownloader:
                     await page.click(
                         "button[data-testid='download-without-license-button']", delay=0
                     )
-                except:
+                except BaseException:
                     pass
 
             # Wait for download event with timeout

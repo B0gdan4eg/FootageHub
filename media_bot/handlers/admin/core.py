@@ -7,7 +7,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 
-from media_bot.keyboards import get_admin_menu_kb, main_menu_kb
+from media_bot.keyboards import get_admin_menu_kb
 from media_bot.state import AdminStates
 from shared.db.models import User, UserRole
 from shared.db.session import get_session
@@ -158,7 +158,6 @@ async def user_give_sub_callback(callback: types.CallbackQuery, state: FSMContex
         return
 
     await callback.answer()
-    from media_bot.handlers.admin.subscriptions import give_subscription_start
     from media_bot.state import AdminStates
 
     # Set user_id in state for subscription handler
@@ -277,8 +276,6 @@ async def user_credits_callback(callback: types.CallbackQuery, state: FSMContext
             f"💰 Обычных кредитов: <b>{user.credits:,}</b>\n\n"
             "Введите количество кредитов для добавления (или отрицательное число для вычитания):"
         )
-
-        from media_bot.state import AdminStates
 
         await state.update_data(user_id=user_id)
         await state.set_state(AdminStates.waiting_for_credits_amount)

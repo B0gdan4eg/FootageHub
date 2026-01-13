@@ -6,11 +6,12 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine
+
+from shared.db.models import Base
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from shared.db.models import Base
 
 # Get DATABASE_URL from environment
 DATABASE_URL = os.getenv("DATABASE_URL")

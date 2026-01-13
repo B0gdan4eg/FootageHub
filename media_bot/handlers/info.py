@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import func, select
 
-from shared.db.models import Download, User
+from shared.db.models import Download
 from shared.db.repositories import DownloadRepository, SubscriptionRepository, UserRepository
 from shared.db.session import get_session
 
@@ -41,7 +41,7 @@ async def info(message: types.Message, state: FSMContext):
         downloads_24h = result.scalar()
 
         # Общее количество пользователей
-        total_users = len(await user_repo.get_all_users())
+        len(await user_repo.get_all_users())
 
         # Получаем активную подписку
         subscription_repo = SubscriptionRepository(session)

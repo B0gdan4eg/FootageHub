@@ -164,7 +164,7 @@ async def restore_db_start(callback: types.CallbackQuery, state: FSMContext):
         parse_mode="HTML",
     )
     await callback.answer()
-    print(f"[DEBUG] Restore mode selection shown")
+    print("[DEBUG] Restore mode selection shown")
     logger.info(f"Restore mode selection shown for user: {callback.from_user.id}")
 
 
@@ -236,14 +236,14 @@ async def restore_mode_cancel_callback(callback: types.CallbackQuery, state: FSM
 @router.message(AdminStates.waiting_for_restore_xlsx, F.content_type == "document")
 async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: Bot):
     """Обработка загруженного XLSX файла для восстановления базы"""
-    print(f"[DEBUG] ========== RESTORE DB FILE RECEIVED ==========")
+    print("[DEBUG] ========== RESTORE DB FILE RECEIVED ==========")
     print(f"[DEBUG] User: {message.from_user.id}, File: {message.document.file_name}")
     logger.info(
         f"Restore DB file received from user: {message.from_user.id}, file: {message.document.file_name}"
     )
     try:
         # Скачиваем файл
-        print(f"[DEBUG] Getting file from Telegram...")
+        print("[DEBUG] Getting file from Telegram...")
         file = await bot.get_file(message.document.file_id)
         file_path = file.file_path
         print(f"[DEBUG] File path from Telegram: {file_path}")
@@ -257,9 +257,9 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
         )
         print(f"[DEBUG] Local file path: {local_file_path}")
 
-        print(f"[DEBUG] Downloading file...")
+        print("[DEBUG] Downloading file...")
         await bot.download_file(file_path, local_file_path)
-        print(f"[DEBUG] File downloaded successfully!")
+        print("[DEBUG] File downloaded successfully!")
         logger.info(f"File downloaded to: {local_file_path}")
 
         # Проверяем, что это XLSX файл
@@ -269,16 +269,16 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
             local_file_path.unlink(missing_ok=True)
             return await message.answer("❌ Файл должен быть в формате XLSX")
 
-        print(f"[DEBUG] File format is valid")
+        print("[DEBUG] File format is valid")
         # Отправляем сообщение о начале восстановления
         status_msg = await message.answer(
             "⏳ <b>Восстановление базы данных...</b>\n\n" "Это может занять некоторое время.",
             parse_mode="HTML",
         )
-        print(f"[DEBUG] Status message sent")
+        print("[DEBUG] Status message sent")
 
         # Импортируем функцию восстановления
-        print(f"[DEBUG] Importing restore_database function...")
+        print("[DEBUG] Importing restore_database function...")
         from shared.db.from_xlsx import restore_database
 
         # Получаем выбранный режим из state
@@ -290,13 +290,13 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
         logger.info(f"Restore mode: {restore_mode}, Clear before: {clear_before}")
 
         # Запускаем восстановление
-        print(f"[DEBUG] Starting database restore...")
+        print("[DEBUG] Starting database restore...")
         logger.info(f"Starting database restore from file: {local_file_path}")
         try:
             await restore_database(
                 str(local_file_path), mode=restore_mode, clear_before=clear_before
             )
-            print(f"[DEBUG] Database restore completed successfully!")
+            print("[DEBUG] Database restore completed successfully!")
 
             if restore_mode == "full":
                 result_text = (
@@ -314,14 +314,14 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
                 )
 
             await status_msg.edit_text(result_text, parse_mode="HTML")
-            print(f"[DEBUG] Success message sent to user")
+            print("[DEBUG] Success message sent to user")
             logger.info(f"Database restore completed successfully for user: {message.from_user.id}")
         except Exception as e:
             print(f"[DEBUG] ERROR during database restore: {e}")
             import html
             import traceback
 
-            print(f"[DEBUG] Traceback:")
+            print("[DEBUG] Traceback:")
             traceback.print_exc()
 
             # Экранируем HTML теги в сообщении об ошибке
@@ -336,7 +336,7 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
             # Удаляем временный файл
             print(f"[DEBUG] Removing temporary file: {local_file_path}")
             local_file_path.unlink(missing_ok=True)
-            print(f"[DEBUG] Temporary file removed")
+            print("[DEBUG] Temporary file removed")
             logger.info(f"Temporary file removed: {local_file_path}")
 
     except Exception as e:
@@ -344,7 +344,7 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
         import html
         import traceback
 
-        print(f"[DEBUG] Traceback:")
+        print("[DEBUG] Traceback:")
         traceback.print_exc()
         logger.error(f"Error processing restore file: {e}", exc_info=True)
 
@@ -355,10 +355,10 @@ async def receive_restore_xlsx(message: types.Message, state: FSMContext, bot: B
             f"❌ Ошибка при обработке файла:\n\n" f"<code>{error_msg}</code>", parse_mode="HTML"
         )
 
-    print(f"[DEBUG] Clearing state...")
+    print("[DEBUG] Clearing state...")
     await state.clear()
-    print(f"[DEBUG] State cleared successfully")
-    print(f"[DEBUG] ========== RESTORE DB FINISHED ==========")
+    print("[DEBUG] State cleared successfully")
+    print("[DEBUG] ========== RESTORE DB FINISHED ==========")
     logger.info(f"Restore DB state cleared for user: {message.from_user.id}")
 
 

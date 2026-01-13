@@ -6,7 +6,6 @@
 
 import logging
 import sys
-from datetime import datetime
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from pathlib import Path
 from typing import Optional

@@ -4,7 +4,6 @@ AI Bot Configuration
 Environment variables and settings for AI Bot
 """
 import os
-from typing import Optional
 
 from dotenv import load_dotenv
 

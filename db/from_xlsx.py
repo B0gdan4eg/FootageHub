@@ -2,13 +2,11 @@
 Скрипт для восстановления базы данных из Excel файла
 Использование: python -m db.from_xlsx
 """
-import asyncio
 from datetime import datetime
 from pathlib import Path
 
 import openpyxl
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 
 from db.models import (
     Download,
@@ -293,7 +291,7 @@ async def restore_database(xlsx_path: str):
     # Открываем Excel файл
     try:
         wb = openpyxl.load_workbook(xlsx_path)
-        print(f"[OK] Excel файл загружен")
+        print("[OK] Excel файл загружен")
         print(f"[INFO] Листов в файле: {len(wb.sheetnames)}")
     except Exception as e:
         print(f"[ERROR] Ошибка при открытии файла: {e}")

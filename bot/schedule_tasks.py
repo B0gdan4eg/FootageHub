@@ -10,7 +10,6 @@ from bot.config import DAILY_FREE_CREDITS
 from db.base import backup_database
 from db.models import Subscription, SubscriptionType, User
 from db.session import get_session
-from db.user_crud import add_daily_credits
 
 
 async def scheduler_job(bot: Bot):
@@ -31,7 +30,7 @@ async def scheduler_job(bot: Bot):
             .where(
                 and_(
                     Subscription.subscription_type == SubscriptionType.DAILY_30,
-                    Subscription.is_active == True,
+                    Subscription.is_active,
                     Subscription.end_date > datetime.utcnow(),
                 )
             )
@@ -66,7 +65,7 @@ async def process_monthly_subscriptions(bot: Bot):
                             SubscriptionType.MONTHLY_400,
                         ]
                     ),
-                    Subscription.is_active == True,
+                    Subscription.is_active,
                     Subscription.end_date > datetime.utcnow(),
                 )
             )
@@ -119,7 +118,7 @@ async def check_expired_subscriptions(bot: Bot):
         # Находим все активные подписки, срок которых истек
         result = await session.execute(
             select(Subscription).where(
-                and_(Subscription.is_active == True, Subscription.end_date <= datetime.utcnow())
+                and_(Subscription.is_active, Subscription.end_date <= datetime.utcnow())
             )
         )
         expired_subscriptions = result.scalars().all()

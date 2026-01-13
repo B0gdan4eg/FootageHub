@@ -93,7 +93,7 @@ async def handle_perpetual_credits_purchase(session, user_id: int, order_id: str
         except Exception as e:
             logger.error(f"⚠️ [WEBPAY] Failed to send perpetual credits notification: {e}")
     else:
-        logger.warning(f"⚠️ [WEBPAY] BotServices.bot not initialized, notification not sent")
+        logger.warning("⚠️ [WEBPAY] BotServices.bot not initialized, notification not sent")
 
 
 @router.post("/api/webpay/webhook")
@@ -165,9 +165,7 @@ async def webpay_webhook(request: Request):
 
             # Проверяем, является ли это покупкой perpetual credits
             if plan_key and plan_key.startswith("perpetual_credits_"):
-                logger.info(
-                    f"💎 [WEBPAY] Detected perpetual credits purchase, delegating to handler"
-                )
+                logger.info("💎 [WEBPAY] Detected perpetual credits purchase, delegating to handler")
                 # Обрабатываем покупку несгораемых кредитов
                 await handle_perpetual_credits_purchase(session, user_id, order_id, plan_key)
                 return Response(content='{"code": 200}', status_code=200)
@@ -252,7 +250,7 @@ async def webpay_webhook(request: Request):
                     )
             else:
                 logger.warning(
-                    f"⚠️ [WEBPAY] BotServices.bot не инициализирован, уведомление не отправлено"
+                    "⚠️ [WEBPAY] BotServices.bot не инициализирован, уведомление не отправлено"
                 )
 
         # Возвращаем успешный ответ

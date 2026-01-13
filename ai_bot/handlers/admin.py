@@ -7,7 +7,7 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import Message
 from sqlalchemy import func, select
 
 from ai_bot.config import config
@@ -85,7 +85,7 @@ async def admin_statistics(message: Message):
                 f"   💵 ${kie_balance_usd:.2f}\n"
             )
         else:
-            kie_balance_text = f"🌐 Kie.ai баланс: <i>недоступен (API ключ не настроен)</i>\n"
+            kie_balance_text = "🌐 Kie.ai баланс: <i>недоступен (API ключ не настроен)</i>\n"
     except Exception as e:
         kie_balance_text = f"🌐 Kie.ai баланс: <i>недоступен ({str(e)[:50]})</i>\n"
 
@@ -263,8 +263,6 @@ async def admin_broadcast_message_received(message: Message, state: FSMContext):
         reply_markup=admin_menu_kb,
     )
 
-    from aiogram import Bot
-
     bot = message.bot
 
     for user_id in user_ids:
@@ -343,7 +341,7 @@ async def admin_kie_balance(message: Message):
 
         # Image models
         balance_text += "\n🎨 <b>Изображения:</b>\n"
-        for model_id, info in models.items():
+        for _, info in models.items():
             if info["type"] == "image":
                 usd = pricing_service.credits_to_usd(info["credits"])
                 generations = int(kie_balance / info["credits"])
@@ -351,7 +349,7 @@ async def admin_kie_balance(message: Message):
 
         # Video models
         balance_text += "\n🎬 <b>Видео:</b>\n"
-        for model_id, info in models.items():
+        for _, info in models.items():
             if info["type"] == "video":
                 usd = pricing_service.credits_to_usd(info["credits"])
                 generations = int(kie_balance / info["credits"])

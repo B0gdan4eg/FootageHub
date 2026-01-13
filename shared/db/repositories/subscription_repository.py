@@ -4,10 +4,10 @@ Subscription Repository - управление подписками пользо
 Реализует паттерн Repository для работы с моделью Subscription.
 """
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.db.models import ServiceType, Subscription, SubscriptionType
@@ -35,7 +35,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
             .where(
                 and_(
                     Subscription.user_id == user_id,
-                    Subscription.is_active == True,
+                    Subscription.is_active,
                     Subscription.end_date > datetime.utcnow(),
                 )
             )
@@ -60,7 +60,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
             .where(
                 and_(
                     Subscription.user_id == user_id,
-                    Subscription.is_active == True,
+                    Subscription.is_active,
                     Subscription.end_date > datetime.utcnow(),
                 )
             )
@@ -208,7 +208,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
             Список истекших подписок
         """
         query = select(Subscription).where(
-            and_(Subscription.is_active == True, Subscription.end_date <= datetime.utcnow())
+            and_(Subscription.is_active, Subscription.end_date <= datetime.utcnow())
         )
 
         result = await self.session.execute(query)
@@ -224,7 +224,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
         today = datetime.utcnow().date()
         query = select(Subscription).where(
             and_(
-                Subscription.is_active == True,
+                Subscription.is_active,
                 Subscription.daily_limit.isnot(None),
                 Subscription.last_reset_date < today,
             )
@@ -311,7 +311,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
         query = select(func.count(Subscription.id)).where(
             and_(
                 Subscription.user_id == user_id,
-                Subscription.is_active == True,
+                Subscription.is_active,
                 Subscription.end_date > datetime.utcnow(),
             )
         )
@@ -361,7 +361,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
         result = await self.session.execute(
             select(func.count())
             .select_from(Subscription)
-            .where(and_(Subscription.is_active == True, Subscription.end_date > datetime.utcnow()))
+            .where(and_(Subscription.is_active, Subscription.end_date > datetime.utcnow()))
         )
         return result.scalar()
 
@@ -413,7 +413,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
 
         if not include_expired:
             query = query.where(
-                and_(Subscription.is_active == True, Subscription.end_date > datetime.utcnow())
+                and_(Subscription.is_active, Subscription.end_date > datetime.utcnow())
             )
 
         result = await self.session.execute(query)

@@ -133,7 +133,7 @@ def print_cookie_stats(cookies: List[Dict], important_names: Optional[List[str]]
         cookies: Список cookies
         important_names: Список важных имен cookies для проверки
     """
-    print(f"\n📊 Статистика:")
+    print("\n📊 Статистика:")
     print(f"   Всего cookies: {len(cookies)}")
 
     # Статистика по sameSite
@@ -149,9 +149,9 @@ def print_cookie_stats(cookies: List[Dict], important_names: Optional[List[str]]
     if important_names:
         found_important = [c["name"] for c in cookies if c["name"] in important_names]
         if found_important:
-            print(f"\n🔑 Важные cookies найдены:")
+            print("\n🔑 Важные cookies найдены:")
             for name in found_important:
                 print(f"   ✅ {name}")
         else:
-            print(f"\n⚠️  Важные cookies не найдены")
+            print("\n⚠️  Важные cookies не найдены")
             print(f"   Ожидаемые: {', '.join(important_names)}")

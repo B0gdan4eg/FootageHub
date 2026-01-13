@@ -64,7 +64,7 @@ async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: B
 async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bot):
     """Обработка ссылки на Freepik файл"""
     url = message.text.strip()
-    if not "freepik.com" in url.lower():
+    if "freepik.com" not in url.lower():
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]]
         )

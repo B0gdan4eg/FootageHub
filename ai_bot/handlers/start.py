@@ -3,7 +3,7 @@ Start command handler for AI Bot
 """
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message, ReplyKeyboardRemove
+from aiogram.types import Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from ai_bot.keyboards import main_menu_kb, tools_menu_kb
@@ -110,7 +110,7 @@ async def text_balance(message: Message):
                 kie_credits = await pricing_service.get_kie_credits()
                 if kie_credits is not None:
                     balance_text += f"\n\n🌐 Kie.ai баланс: <b>{kie_credits:,} кредитов</b>"
-            except:
+            except BaseException:
                 pass
 
     await message.answer(balance_text, parse_mode="HTML")
@@ -131,7 +131,7 @@ async def text_pricing(message: Message):
     image_models = {k: v for k, v in models.items() if v["type"] == "image"}
     if image_models:
         pricing_text += "<b>🎨 Изображения:</b>\n"
-        for model_id, info in image_models.items():
+        for _, info in image_models.items():
             usd = pricing_service.credits_to_usd(info["credits"])
             pricing_text += f"• {info['name']}: {info['credits']} кредитов (${usd:.3f})\n"
         pricing_text += "\n"
@@ -140,7 +140,7 @@ async def text_pricing(message: Message):
     video_models = {k: v for k, v in models.items() if v["type"] == "video"}
     if video_models:
         pricing_text += "<b>🎬 Видео:</b>\n"
-        for model_id, info in video_models.items():
+        for _, info in video_models.items():
             usd = pricing_service.credits_to_usd(info["credits"])
             pricing_text += f"• {info['name']}: {info['credits']} кредитов (${usd:.2f})\n"
 
@@ -179,7 +179,7 @@ async def text_info(message: Message):
             f"• Видео Kling: {kling_price} кредитов (${pricing_service.credits_to_usd(kling_price):.2f})\n"
             f"• Видео VEO: {veo_price} кредитов (${pricing_service.credits_to_usd(veo_price):.2f})\n"
         )
-    except:
+    except BaseException:
         info_text += "Используйте /pricing для просмотра цен\n"
 
     info_text += (
@@ -249,7 +249,7 @@ async def callback_info(callback):
             f"• Видео Kling: {kling_price} кредитов (${pricing_service.credits_to_usd(kling_price):.2f})\n"
             f"• Видео VEO: {veo_price} кредитов (${pricing_service.credits_to_usd(veo_price):.2f})\n"
         )
-    except:
+    except BaseException:
         info_text += "Используйте /pricing для просмотра цен\n"
 
     info_text += (
@@ -312,7 +312,7 @@ async def callback_show_balance(callback):
                 kie_credits = await pricing_service.get_kie_credits()
                 if kie_credits is not None:
                     balance_text += f"\n\n🌐 Kie.ai баланс: <b>{kie_credits:,} кредитов</b>"
-            except:
+            except BaseException:
                 pass
 
     builder = InlineKeyboardBuilder()
@@ -340,7 +340,7 @@ async def callback_show_pricing(callback):
     image_models = {k: v for k, v in models.items() if v["type"] == "image"}
     if image_models:
         pricing_text += "<b>🎨 Изображения:</b>\n"
-        for model_id, info in image_models.items():
+        for _, info in image_models.items():
             usd = pricing_service.credits_to_usd(info["credits"])
             pricing_text += f"• {info['name']}: {info['credits']} кредитов (${usd:.3f})\n"
         pricing_text += "\n"
@@ -349,7 +349,7 @@ async def callback_show_pricing(callback):
     video_models = {k: v for k, v in models.items() if v["type"] == "video"}
     if video_models:
         pricing_text += "<b>🎬 Видео:</b>\n"
-        for model_id, info in video_models.items():
+        for _, info in video_models.items():
             usd = pricing_service.credits_to_usd(info["credits"])
             pricing_text += f"• {info['name']}: {info['credits']} кредитов (${usd:.2f})\n"
 

@@ -4,11 +4,11 @@ Statistics functionality for admin panel.
 
 from datetime import datetime
 
-from aiogram import F, Router, types
+from aiogram import Router, types
 from sqlalchemy import func, select
 
 from media_bot.handlers.admin.core import is_admin
-from shared.db.models import Download, Payment, ServiceType, User
+from shared.db.models import Payment, ServiceType, User
 from shared.db.repositories import DownloadRepository, SubscriptionRepository, UserRepository
 from shared.db.session import get_session
 

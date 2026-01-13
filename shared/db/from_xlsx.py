@@ -2,13 +2,11 @@
 Скрипт для восстановления базы данных из Excel файла
 Использование: python -m shared.db.from_xlsx
 """
-import asyncio
 from datetime import datetime
 from pathlib import Path
 
 import openpyxl
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 
 from shared.core.logger import get_logger
 from shared.db.models import (
@@ -108,7 +106,7 @@ async def import_users(sheet, session, mode="full"):
             session.add(user)
             added += 1
 
-    print(f"[IMPORT_USERS] Коммит изменений в БД...")
+    print("[IMPORT_USERS] Коммит изменений в БД...")
     await session.commit()
     print(
         f"[IMPORT_USERS] Результат: Добавлено: {added}, Обновлено: {updated}, Пропущено: {skipped}"
@@ -418,31 +416,31 @@ async def import_referral_rewards(sheet, session, mode="full"):
 
 async def clear_all_tables(session):
     """Очистка всех таблиц в правильном порядке (обратном порядке зависимостей)"""
-    print(f"[CLEAR] Начало очистки всех таблиц...")
+    print("[CLEAR] Начало очистки всех таблиц...")
     logger.info("Очистка всех таблиц...")
 
     try:
         # Удаляем в обратном порядке зависимостей
-        print(f"[CLEAR] Удаление ReferralRewards...")
+        print("[CLEAR] Удаление ReferralRewards...")
         await session.execute(ReferralReward.__table__.delete())
 
-        print(f"[CLEAR] Удаление Downloads...")
+        print("[CLEAR] Удаление Downloads...")
         await session.execute(Download.__table__.delete())
 
-        print(f"[CLEAR] Удаление Subscriptions...")
+        print("[CLEAR] Удаление Subscriptions...")
         await session.execute(Subscription.__table__.delete())
 
-        print(f"[CLEAR] Удаление Payments...")
+        print("[CLEAR] Удаление Payments...")
         await session.execute(Payment.__table__.delete())
 
-        print(f"[CLEAR] Удаление Media...")
+        print("[CLEAR] Удаление Media...")
         await session.execute(Media.__table__.delete())
 
-        print(f"[CLEAR] Удаление Users...")
+        print("[CLEAR] Удаление Users...")
         await session.execute(User.__table__.delete())
 
         await session.commit()
-        print(f"[CLEAR] Все таблицы очищены успешно!")
+        print("[CLEAR] Все таблицы очищены успешно!")
         logger.info("Все таблицы очищены")
     except Exception as e:
         print(f"[CLEAR] ERROR при очистке таблиц: {e}")
@@ -459,7 +457,7 @@ async def restore_database(xlsx_path: str, mode: str = "full", clear_before: boo
         mode: "full" - полная перезапись с ID, "update" - обновление существующих
         clear_before: Очищать ли БД перед импортом (только для режима "full")
     """
-    print(f"[RESTORE] ========== НАЧАЛО ВОССТАНОВЛЕНИЯ ==========")
+    print("[RESTORE] ========== НАЧАЛО ВОССТАНОВЛЕНИЯ ==========")
     print(f"[RESTORE] Режим: {mode}")
     print(f"[RESTORE] Очистка перед импортом: {clear_before}")
     logger.info("=" * 60)
@@ -471,7 +469,7 @@ async def restore_database(xlsx_path: str, mode: str = "full", clear_before: boo
     file_path = Path(xlsx_path)
     print(f"[RESTORE] Проверка файла: {xlsx_path}")
     if not file_path.exists():
-        print(f"[RESTORE] ERROR: Файл не найден!")
+        print("[RESTORE] ERROR: Файл не найден!")
         logger.error(f"Файл не найден: {xlsx_path}")
         raise FileNotFoundError(f"Файл не найден: {xlsx_path}")
 
@@ -480,12 +478,12 @@ async def restore_database(xlsx_path: str, mode: str = "full", clear_before: boo
 
     # Открываем Excel файл
     try:
-        print(f"[RESTORE] Открытие Excel файла...")
+        print("[RESTORE] Открытие Excel файла...")
         wb = openpyxl.load_workbook(xlsx_path)
-        print(f"[RESTORE] Excel файл загружен успешно!")
+        print("[RESTORE] Excel файл загружен успешно!")
         print(f"[RESTORE] Листов в файле: {len(wb.sheetnames)}")
         print(f"[RESTORE] Список листов: {wb.sheetnames}")
-        logger.info(f"Excel файл загружен")
+        logger.info("Excel файл загружен")
         logger.info(f"Листов в файле: {len(wb.sheetnames)}")
     except Exception as e:
         print(f"[RESTORE] ERROR при открытии файла: {e}")
@@ -496,60 +494,60 @@ async def restore_database(xlsx_path: str, mode: str = "full", clear_before: boo
         raise
 
     # Импортируем данные в правильном порядке (из-за внешних ключей)
-    print(f"[RESTORE] Получение сессии БД...")
+    print("[RESTORE] Получение сессии БД...")
     async for session in get_session():
         try:
-            print(f"[RESTORE] Сессия БД получена")
+            print("[RESTORE] Сессия БД получена")
 
             # Очистка БД перед полным импортом
             if mode == "full" and clear_before:
                 await clear_all_tables(session)
 
-            print(f"[RESTORE] Начало импорта...")
+            print("[RESTORE] Начало импорта...")
 
             # 1. Users (независимая таблица)
             if "Users" in wb.sheetnames:
-                print(f"[RESTORE] Импорт таблицы Users...")
+                print("[RESTORE] Импорт таблицы Users...")
                 await import_users(wb["Users"], session, mode=mode)
             else:
-                print(f"[RESTORE] WARNING: Лист Users не найден")
+                print("[RESTORE] WARNING: Лист Users не найден")
 
             # 2. Media (независимая таблица)
             if "Media" in wb.sheetnames:
-                print(f"[RESTORE] Импорт таблицы Media...")
+                print("[RESTORE] Импорт таблицы Media...")
                 await import_media(wb["Media"], session, mode=mode)
             else:
-                print(f"[RESTORE] WARNING: Лист Media не найден")
+                print("[RESTORE] WARNING: Лист Media не найден")
 
             # 3. Payments (зависит от Users)
             if "Payments" in wb.sheetnames:
-                print(f"[RESTORE] Импорт таблицы Payments...")
+                print("[RESTORE] Импорт таблицы Payments...")
                 await import_payments(wb["Payments"], session, mode=mode)
             else:
-                print(f"[RESTORE] WARNING: Лист Payments не найден")
+                print("[RESTORE] WARNING: Лист Payments не найден")
 
             # 4. Subscriptions (зависит от Users и Payments)
             if "Subscriptions" in wb.sheetnames:
-                print(f"[RESTORE] Импорт таблицы Subscriptions...")
+                print("[RESTORE] Импорт таблицы Subscriptions...")
                 await import_subscriptions(wb["Subscriptions"], session, mode=mode)
             else:
-                print(f"[RESTORE] WARNING: Лист Subscriptions не найден")
+                print("[RESTORE] WARNING: Лист Subscriptions не найден")
 
             # 5. Downloads (зависит от Users, Media, Subscriptions)
             if "Downloads" in wb.sheetnames:
-                print(f"[RESTORE] Импорт таблицы Downloads...")
+                print("[RESTORE] Импорт таблицы Downloads...")
                 await import_downloads(wb["Downloads"], session, mode=mode)
             else:
-                print(f"[RESTORE] WARNING: Лист Downloads не найден")
+                print("[RESTORE] WARNING: Лист Downloads не найден")
 
             # 6. ReferralRewards (зависит от Users)
             if "ReferralRewards" in wb.sheetnames:
-                print(f"[RESTORE] Импорт таблицы ReferralRewards...")
+                print("[RESTORE] Импорт таблицы ReferralRewards...")
                 await import_referral_rewards(wb["ReferralRewards"], session, mode=mode)
             else:
-                print(f"[RESTORE] WARNING: Лист ReferralRewards не найден")
+                print("[RESTORE] WARNING: Лист ReferralRewards не найден")
 
-            print(f"[RESTORE] ========== ВОССТАНОВЛЕНИЕ ЗАВЕРШЕНО ==========")
+            print("[RESTORE] ========== ВОССТАНОВЛЕНИЕ ЗАВЕРШЕНО ==========")
             logger.info("=" * 60)
             logger.info("ВОССТАНОВЛЕНИЕ ЗАВЕРШЕНО")
             logger.info("=" * 60)

@@ -27,19 +27,16 @@ class AbstractAIProvider(ABC):
     @abstractmethod
     def provider_name(self) -> str:
         """Provider name (e.g., 'KIE_AI', 'KLING')"""
-        pass
 
     @property
     @abstractmethod
     def model_name(self) -> str:
         """Model name (e.g., 'nano-banana', 'kling-2.6')"""
-        pass
 
     @property
     @abstractmethod
     def generation_type(self) -> GenerationType:
         """Type of generation this provider supports"""
-        pass
 
     @abstractmethod
     async def generate(self, prompt: str, **kwargs) -> Optional[str]:
@@ -53,7 +50,6 @@ class AbstractAIProvider(ABC):
         Returns:
             URL to generated content or None if failed
         """
-        pass
 
     @abstractmethod
     async def check_status(self, task_id: str) -> Dict[str, Any]:
@@ -66,7 +62,6 @@ class AbstractAIProvider(ABC):
         Returns:
             Dictionary with task status information
         """
-        pass
 
     def get_cost(self) -> int:
         """

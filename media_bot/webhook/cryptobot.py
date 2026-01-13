@@ -1,6 +1,5 @@
 import json
 import logging
-from datetime import datetime
 
 from aiogram.enums.parse_mode import ParseMode
 from fastapi import APIRouter, Request
@@ -133,7 +132,7 @@ async def webhook(request: Request):
                 except Exception as e:
                     print(f"⚠️ Не удалось отправить уведомление пользователю {user_id}: {e}")
             else:
-                print(f"⚠️ BotServices.bot не инициализирован, уведомление не отправлено")
+                print("⚠️ BotServices.bot не инициализирован, уведомление не отправлено")
 
     except Exception as e:
         print(f"❌ Ошибка при обработке платежа {invoice_id}: {e}")

@@ -3,11 +3,11 @@ Unit tests for BonusService.
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from shared.core.exceptions import BonusAlreadyClaimedError, BonusNotFoundError
+from shared.core.exceptions import BonusAlreadyClaimedError
 from shared.db.models import BonusType, UserBonus
 from shared.db.repositories.bonus_repository import BonusRepository
 from shared.db.repositories.user_repository import UserRepository

@@ -1,4 +1,4 @@
-from aiosend import MAINNET, TESTNET, CryptoPay
+from aiosend import MAINNET, CryptoPay
 
 from bot.config import CRYPTO_BOT_API_KEY
 

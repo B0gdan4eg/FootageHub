@@ -11,7 +11,7 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.core.exceptions import BonusAlreadyClaimedError
-from shared.db.models import BonusStatus, BonusType, User
+from shared.db.models import BonusStatus, BonusType
 from shared.db.repositories.bonus_repository import BonusRepository
 from shared.db.repositories.user_repository import UserRepository
 from shared.services.bonus_service import BonusService

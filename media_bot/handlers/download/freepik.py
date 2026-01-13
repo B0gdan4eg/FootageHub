@@ -28,6 +28,7 @@ from media_bot.handlers.messages import (
     USER_NOT_FOUND,
     USER_NOT_REGISTERED,
 )
+from media_bot.services import BotServices
 from media_bot.state import DownloadFlow
 from shared.db.models import ServiceType
 from shared.db.repositories import (
@@ -68,7 +69,7 @@ async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: B
 async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bot):
     """Обработка ссылки на Freepik файл"""
     url = message.text.strip()
-    if not "freepik.com" in url.lower():
+    if "freepik.com" not in url.lower():
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]]
         )
@@ -98,9 +99,6 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
         print(downloaded)
         if downloaded:
             await message.answer(ALREADY_DOWNLOADED)
-
-            # Get link_processor from BotServices
-            from media_bot.services import BotServices
 
             link_processor = BotServices.link_processor
             file_path = await link_processor.submit(url, platform="freepik")
@@ -153,9 +151,6 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
 
         # Отправляем сообщение о загрузке
         thinking_msg = await message.answer(PROCESSING_LINK)
-
-        # Get link_processor from BotServices
-        from media_bot.services import BotServices
 
         link_processor = BotServices.link_processor
         file_path = await link_processor.submit(url, platform="freepik")

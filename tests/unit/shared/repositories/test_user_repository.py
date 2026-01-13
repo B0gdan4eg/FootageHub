@@ -2,7 +2,6 @@
 Unit tests for UserRepository.
 """
 
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -133,7 +132,7 @@ class TestUserRepository:
         mock_session.commit = AsyncMock()
         mock_session.refresh = AsyncMock()
 
-        result = await repo.get_or_create_by_telegram_id(555666, "newuser", "NEWREF")
+        await repo.get_or_create_by_telegram_id(555666, "newuser", "NEWREF")
 
         # Verify create was called
         mock_session.add.assert_called_once()

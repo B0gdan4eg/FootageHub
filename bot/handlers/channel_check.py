@@ -10,7 +10,6 @@ from aiogram.enums.parse_mode import ParseMode
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.config import CHANNEL_BONUS_CREDITS, CHANNEL_ID
 from bot.handlers.messages import CHANEL_APPLY, CHANEL_CANCLE

@@ -3,14 +3,10 @@ Bonus service with Strategy pattern for different bonus types.
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, Optional
 
-from shared.core.exceptions import (
-    BonusAlreadyClaimedError,
-    BonusConditionNotMetError,
-    BonusNotFoundError,
-)
+from shared.core.exceptions import BonusAlreadyClaimedError, BonusNotFoundError
 from shared.db.models import BonusType, UserBonus
 from shared.db.repositories.bonus_repository import BonusRepository
 from shared.db.repositories.user_repository import UserRepository
@@ -47,7 +43,6 @@ class BonusStrategy(ABC):
         Returns:
             True if bonus can be applied
         """
-        pass
 
     @abstractmethod
     async def apply_bonus(
@@ -71,7 +66,6 @@ class BonusStrategy(ABC):
         Returns:
             Created UserBonus
         """
-        pass
 
 
 class ChannelSubscriptionBonus(BonusStrategy):

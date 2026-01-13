@@ -1,6 +1,5 @@
 # channel_check.py
 import json
-import logging
 import os
 
 import aiofiles
@@ -10,7 +9,6 @@ from aiogram.enums.parse_mode import ParseMode
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from media_bot.config import CHANNEL_BONUS_CREDITS, CHANNEL_ID
 from media_bot.handlers.messages import CHANEL_APPLY, CHANEL_CANCLE
@@ -158,7 +156,7 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                             parse_mode=ParseMode.HTML,
                             disable_web_page_preview=True,
                         )
-                        logger.debug(f"Message edited successfully")
+                        logger.debug("Message edited successfully")
                     except TelegramBadRequest as e:
                         # Игнорируем ошибку, если сообщение не изменилось
                         if "message is not modified" not in str(e):
@@ -171,7 +169,7 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
             traceback.print_exc()
 
     await callback.answer()  # убирает "часики"
-    logger.debug(f"Callback answered")
+    logger.debug("Callback answered")
 
     # ------------------------------------------------------------
 

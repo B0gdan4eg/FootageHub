@@ -62,14 +62,14 @@ async def cmd_check_balance(message: Message):
         # Show image models
         if image_models:
             text += "\n🎨 <b>Изображения:</b>\n"
-            for model_id, info in image_models.items():
+            for _, info in image_models.items():
                 usd = pricing_service.credits_to_usd(info["credits"])
                 text += f"  • {info['name']}: {info['credits']} кредитов (${usd:.3f})\n"
 
         # Show video models
         if video_models:
             text += "\n🎬 <b>Видео:</b>\n"
-            for model_id, info in video_models.items():
+            for _, info in video_models.items():
                 usd = pricing_service.credits_to_usd(info["credits"])
                 text += f"  • {info['name']}: {info['credits']} кредитов (${usd:.2f})\n"
 
@@ -99,7 +99,7 @@ async def cmd_pricing_info(message: Message):
         if type_models:
             text += f"<b>{type_name}</b>\n"
 
-            for model_id, info in type_models.items():
+            for _, info in type_models.items():
                 usd = pricing_service.credits_to_usd(info["credits"])
                 text += (
                     f"\n📌 <b>{info['name']}</b>\n"

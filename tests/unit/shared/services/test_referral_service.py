@@ -8,21 +8,13 @@ Unit тесты для ReferralService.
 - Статистику рефералов
 """
 
-from datetime import datetime
-from typing import Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from shared.core.constants import BonusCodes, ReferralRewards
+from shared.core.constants import ReferralRewards
 from shared.core.exceptions import BonusException, ReferralException, UserNotFoundException
-from shared.db.models import (
-    ReferralReward,
-    ReferralRewardStatus,
-    ReferralTriggerType,
-    User,
-    UserBonus,
-)
+from shared.db.models import ReferralRewardStatus, ReferralTriggerType
 from shared.services.referral_service import ReferralService
 
 

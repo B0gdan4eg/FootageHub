@@ -8,7 +8,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select
 
 from bot.state import AdminStates
-from db.models import ServiceType, Subscription, SubscriptionType, User
+from db.models import ServiceType, Subscription, SubscriptionType
 from db.session import get_session
 from db.subscription_crud import create_subscription, delete_all_subscriptions
 from db.user_crud import get_user_by_telegram_id

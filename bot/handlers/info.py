@@ -8,7 +8,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import func, select
 
 from db.downloaded_file_crud import count_downloads_by_user
-from db.models import Download, User
+from db.models import Download
 from db.session import get_session
 from db.subscription_crud import get_active_subscription
 from db.user_crud import get_all_users, get_user_by_telegram_id
@@ -41,7 +41,7 @@ async def info(message: types.Message, state: FSMContext):
         downloads_24h = result.scalar()
 
         # Общее количество пользователей
-        total_users = len(await get_all_users(session))
+        len(await get_all_users(session))
 
         # Получаем активную подписку
         subscription = await get_active_subscription(session, user.id)

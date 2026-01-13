@@ -315,7 +315,7 @@ class UserRepository(BaseRepository[User]):
         result = await self.session.execute(
             select(func.count())
             .select_from(Subscription)
-            .where(and_(Subscription.is_active == True, Subscription.end_date > datetime.utcnow()))
+            .where(and_(Subscription.is_active, Subscription.end_date > datetime.utcnow()))
         )
         return result.scalar() or 0
 
@@ -450,8 +450,8 @@ class UserRepository(BaseRepository[User]):
         # Disable expired subscriptions
         expired_result = await self.session.execute(
             select(User).where(
-                User.is_subscribed == True,
-                User.subscription_until != None,
+                User.is_subscribed,
+                User.subscription_until is not None,
                 User.subscription_until <= now,
             )
         )
@@ -462,8 +462,8 @@ class UserRepository(BaseRepository[User]):
         # Add credits to active subscribers
         active_result = await self.session.execute(
             select(User).where(
-                User.is_subscribed == True,
-                User.subscription_until != None,
+                User.is_subscribed,
+                User.subscription_until is not None,
                 User.subscription_until > now,
             )
         )

@@ -81,7 +81,7 @@ async def get_active_subscription(
     query = select(Subscription).where(
         and_(
             Subscription.user_id == user_id,
-            Subscription.is_active == True,
+            Subscription.is_active,
             Subscription.end_date > datetime.utcnow(),
         )
     )
@@ -185,9 +185,7 @@ async def get_user_subscriptions(
     query = select(Subscription).where(Subscription.user_id == user_id)
 
     if not include_expired:
-        query = query.where(
-            and_(Subscription.is_active == True, Subscription.end_date > datetime.utcnow())
-        )
+        query = query.where(and_(Subscription.is_active, Subscription.end_date > datetime.utcnow()))
 
     result = await session.execute(query)
     return result.scalars().all()

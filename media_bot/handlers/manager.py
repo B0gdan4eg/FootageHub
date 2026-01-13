@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 
 from media_bot.handlers.admin import is_admin
 from media_bot.services import BotServices
-from shared.db.models import Download, Payment, ServiceType, User, UserRole
+from shared.db.models import Payment, ServiceType, User, UserRole
 from shared.db.repositories import DownloadRepository, SubscriptionRepository, UserRepository
 from shared.db.session import get_session
 

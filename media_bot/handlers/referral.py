@@ -7,7 +7,6 @@ Referral System Handler для MediaBot
 - История наград
 """
 
-from typing import List
 
 from aiogram import Bot, Router, types
 from aiogram.enums.parse_mode import ParseMode

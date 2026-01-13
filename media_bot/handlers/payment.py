@@ -1,16 +1,12 @@
 import json
 import logging
-import os
 import uuid
-from datetime import datetime
-from pathlib import Path
 
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from media_bot.handlers.messages import (
-    ALREADY_HAS_SUBSCRIPTION,
     SUB_PAYMENT_DAILY,
     SUB_PAYMENT_MONTHLY_50,
     SUB_PAYMENT_MONTHLY_150,

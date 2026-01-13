@@ -2,7 +2,7 @@
 Credits management functionality for admin panel.
 """
 
-from aiogram import F, Router, types
+from aiogram import Router, types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 

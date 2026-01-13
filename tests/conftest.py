@@ -2,8 +2,7 @@
 Global pytest fixtures for all tests.
 """
 
-import asyncio
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio

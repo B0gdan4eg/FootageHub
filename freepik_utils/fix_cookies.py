@@ -7,10 +7,11 @@ import json
 import sys
 from pathlib import Path
 
+from utils.cookie_fixer import fix_cookies_file, print_cookie_stats
+
 # Добавляем корневую директорию в путь для импорта
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from utils.cookie_fixer import fix_cookies_file, print_cookie_stats
 
 COOKIE_FILE = Path(__file__).resolve().parent / "freepik_cookies.json"
 

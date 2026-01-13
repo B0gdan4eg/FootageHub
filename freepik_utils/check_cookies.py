@@ -3,7 +3,6 @@
 Скрипт для проверки cookies Freepik
 """
 import json
-import os
 from pathlib import Path
 
 COOKIE_FILE = Path(__file__).resolve().parent / "freepik_cookies.json"

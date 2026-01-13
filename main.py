@@ -26,7 +26,6 @@ from bot.schedule_tasks import (
     scheduler_job,
 )
 from bot.services import BotServices
-from bot.webhook.server_start import start_server
 from db.base import create_tables, run_migrations
 from envato_utils.test_env import LinkProcessor
 from freepik_utils.logger import logger

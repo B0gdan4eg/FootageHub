@@ -39,7 +39,7 @@ class BonusRepository(BaseRepository[BonusType]):
         Returns:
             List of active bonus types
         """
-        result = await self.session.execute(select(BonusType).where(BonusType.is_active == True))
+        result = await self.session.execute(select(BonusType).where(BonusType.is_active))
         return list(result.scalars().all())
 
     async def create_user_bonus(

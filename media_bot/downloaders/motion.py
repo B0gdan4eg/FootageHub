@@ -55,7 +55,6 @@ class MotionDownloader(AbstractDownloader):
         при каждом вызове download(). Отдельный метод ротации не требуется.
         """
         # Ротация происходит автоматически в motion_utils.motion.get_next_cookie_file()
-        pass
 
     def get_platform_name(self) -> str:
         """

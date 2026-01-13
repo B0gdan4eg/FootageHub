@@ -50,7 +50,7 @@ async def count_active_subs(session: AsyncSession):
     result = await session.execute(
         select(func.count())
         .select_from(Subscription)
-        .where(and_(Subscription.is_active == True, Subscription.end_date > datetime.utcnow()))
+        .where(and_(Subscription.is_active, Subscription.end_date > datetime.utcnow()))
     )
     return result.scalar()
 
@@ -116,8 +116,8 @@ async def add_daily_credits(session: AsyncSession, bot):
     # 1. Отключаем просроченные подписки
     expired_result = await session.execute(
         select(User).where(
-            User.is_subscribed == True,
-            User.subscription_until != None,
+            User.is_subscribed,
+            User.subscription_until is not None,
             User.subscription_until <= now,
         )
     )
@@ -128,8 +128,8 @@ async def add_daily_credits(session: AsyncSession, bot):
     # 2. Начисляем кредиты активным подписчикам
     active_result = await session.execute(
         select(User).where(
-            User.is_subscribed == True,
-            User.subscription_until != None,
+            User.is_subscribed,
+            User.subscription_until is not None,
             User.subscription_until > now,
         )
     )

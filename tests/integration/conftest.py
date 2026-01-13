@@ -6,12 +6,10 @@ These fixtures set up a real database with all tables and seed data.
 
 import os
 
-import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
 
 from shared.db.models import Base
 

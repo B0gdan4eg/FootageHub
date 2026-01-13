@@ -32,12 +32,35 @@ repos:
       - id: isort
         args: ['--settings-path', 'pyproject.toml']
 
+  # Remove unused imports and variables
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-all-unused-imports
+          - --remove-unused-variables
+          - --remove-duplicate-keys
+          - --ignore-init-module-imports
+
+  # Auto-fix PEP 8 issues
+  - repo: https://github.com/hhatto/autopep8
+    rev: v2.0.4
+    hooks:
+      - id: autopep8
+        args:
+          - --in-place
+          - --aggressive
+          - --aggressive
+          - --max-line-length=120
+
   # Linting with flake8
   - repo: https://github.com/PyCQA/flake8
     rev: 7.0.0
     hooks:
       - id: flake8
-        args: ['--config', '.flake8', '--extend-ignore=D,F841,F401,F402,F541,E501,E402,E711,E712,E713,E722,C901,B001,B007,B014']
+        args: ['--config', '.flake8']
         additional_dependencies:
           - flake8-docstrings
           - flake8-bugbear

@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

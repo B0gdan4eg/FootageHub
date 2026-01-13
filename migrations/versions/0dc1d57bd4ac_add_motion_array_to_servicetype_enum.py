@@ -7,7 +7,6 @@ Create Date: 2025-12-23 23:13:17.087084
 """
 from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -27,4 +26,3 @@ def downgrade() -> None:
     """Downgrade schema."""
     # Note: PostgreSQL doesn't support removing enum values easily
     # You would need to recreate the enum type and update all tables
-    pass

@@ -5,7 +5,6 @@ Tests the complete AI generation workflow including credits management.
 """
 
 import random
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +43,7 @@ class TestAIBotGenerationFlow:
         """Test that AI credits are properly deducted during generation."""
         # Setup repositories and services
         user_repo = UserRepository(async_session)
-        bonus_repo = BonusRepository(async_session)
+        BonusRepository(async_session)
         credit_service = CreditService(async_session, user_repo)
 
         # Create user with AI credits

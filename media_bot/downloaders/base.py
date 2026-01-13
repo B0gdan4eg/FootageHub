@@ -34,7 +34,6 @@ class AbstractDownloader(ABC):
             InvalidUrlError: Если URL некорректен
             DownloadError: Если произошла ошибка при загрузке
         """
-        pass
 
     @abstractmethod
     async def check_auth(self) -> bool:
@@ -44,7 +43,6 @@ class AbstractDownloader(ABC):
         Returns:
             bool: True если авторизация действительна, False иначе
         """
-        pass
 
     @abstractmethod
     async def rotate_cookies(self) -> None:
@@ -54,7 +52,6 @@ class AbstractDownloader(ABC):
         Используется когда текущие cookies перестали работать
         или для распределения нагрузки между аккаунтами.
         """
-        pass
 
     @abstractmethod
     def get_platform_name(self) -> str:
@@ -64,4 +61,3 @@ class AbstractDownloader(ABC):
         Returns:
             str: Название платформы (например, "Envato", "Freepik")
         """
-        pass

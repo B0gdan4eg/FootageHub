@@ -96,26 +96,27 @@ class WebPayAPI:
         amount_byn = round(amount * 0.037, 2)
 
         # Форматируем amount для подписи по документации WebPay:
-        # если поле содержит дробную часть (например, 1.00), используйте значение с нулями
-        # если поле не содержит дробную часть (например, 1), используйте значение без нулей
-        amount_byn_for_signature = f"{amount_byn:.2f}"
+        # Всегда используем строку с 2 знаками после запятой для консистентности
+        amount_byn_str = f"{amount_byn:.2f}"
 
         # Вычисляем подпись
         # Формат: seed + storeid + order_num + test + currency_id + total + signing_key
         test_mode = 1 if self.sandbox else 0
-        signature_string = f"{seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_for_signature}{self.signing_key}"
+        signature_string = (
+            f"{seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_str}{self.signing_key}"
+        )
         signature = hashlib.sha1(
             signature_string.encode("utf-8"), usedforsecurity=False
         ).hexdigest()
 
         logger.info(
-            f"💳 [WEBPAY] Creating invoice: order_id={order_id}, amount_rub={amount}, amount_byn={amount_byn}"
+            f"💳 [WEBPAY] Creating invoice: order_id={order_id}, amount_rub={amount}, amount_byn={amount_byn_str}"
         )
         logger.debug(
-            f"💳 [WEBPAY] Signature string (without secret): {seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_for_signature}***"
+            f"💳 [WEBPAY] Signature string (without secret): {seed}{self.merchant_id}{order_id}{test_mode}BYN{amount_byn_str}***"
         )
 
-        # Формируем payload
+        # Формируем payload - используем строковый формат для консистентности с подписью
         payload = {
             "wsb_storeid": int(self.merchant_id),
             "wsb_order_num": order_id,
@@ -125,8 +126,8 @@ class WebPayAPI:
             "wsb_test": test_mode,
             "wsb_invoice_item_name": [description],
             "wsb_invoice_item_quantity": [1],
-            "wsb_invoice_item_price": [amount_byn],
-            "wsb_total": amount_byn,
+            "wsb_invoice_item_price": [amount_byn_str],
+            "wsb_total": amount_byn_str,
             "wsb_signature": signature,
             "wsb_return_url": return_url,
             "wsb_cancel_return_url": cancel_url,
@@ -210,7 +211,7 @@ class WebPayAPI:
 
         # Логируем только ошибки
         if not match:
-            logger.error(f"[WEBPAY] ❌ Signature mismatch!")
+            logger.error("[WEBPAY] ❌ Signature mismatch!")
             logger.error(f"  Expected: {expected_signature}")
             logger.error(f"  Received: {received_signature}")
             logger.error(f"  String to sign (without secret): {''.join(str(f) for f in fields)}***")

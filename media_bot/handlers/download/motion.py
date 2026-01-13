@@ -28,6 +28,7 @@ from media_bot.handlers.messages import (
     USER_NOT_FOUND,
     USER_NOT_REGISTERED,
 )
+from media_bot.services import BotServices
 from media_bot.state import DownloadFlow
 from shared.db.models import ServiceType
 from shared.db.repositories import (
@@ -101,9 +102,6 @@ async def handle_motion_link(message: types.Message, state: FSMContext, bot: Bot
         if downloaded:
             await message.answer(ALREADY_DOWNLOADED)
 
-            # Get link_processor from BotServices
-            from media_bot.services import BotServices
-
             link_processor = BotServices.link_processor
             file_path = await link_processor.submit(url, platform="motion")
 
@@ -155,9 +153,6 @@ async def handle_motion_link(message: types.Message, state: FSMContext, bot: Bot
 
         # Отправляем сообщение о загрузке
         thinking_msg = await message.answer(PROCESSING_LINK)
-
-        # Get link_processor from BotServices (no circular import)
-        from media_bot.services import BotServices
 
         link_processor = BotServices.link_processor
         file_path = await link_processor.submit(url, platform="motion")

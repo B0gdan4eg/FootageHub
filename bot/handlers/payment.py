@@ -1,9 +1,6 @@
 import json
 import logging
-import os
 import uuid
-from datetime import datetime
-from pathlib import Path
 
 from aiogram import F, Router, types
 from aiogram.filters import Command

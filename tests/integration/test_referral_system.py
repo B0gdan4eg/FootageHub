@@ -11,7 +11,7 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.db.models import BonusType, ReferralReward, User
+from shared.db.models import BonusType, ReferralReward
 from shared.db.repositories.bonus_repository import BonusRepository
 from shared.db.repositories.user_repository import UserRepository
 from shared.services.bonus_service import BonusService
@@ -200,7 +200,7 @@ class TestReferralSystemIntegration:
         )
         await async_session.commit()
 
-        initial_credits = referrer.credits
+        referrer.credits
 
         # Create and register first referred user
         referred1_tg_id = unique_tg_id + 100
