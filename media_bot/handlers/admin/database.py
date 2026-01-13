@@ -14,7 +14,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from media_bot.state import AdminStates
 from shared.core.logger import get_logger
-from shared.db.models import Download, Media, Payment, ReferralReward, Subscription, User
+from shared.db.models import (
+    AIGenerationLog,
+    BonusType,
+    Download,
+    Media,
+    Payment,
+    ReferralReward,
+    Subscription,
+    User,
+    UserBonus,
+)
 from shared.db.session import get_session
 
 # Create a separate router for database functions
@@ -41,6 +51,9 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
         (Payment, "Payments"),
         (Subscription, "Subscriptions"),
         (ReferralReward, "ReferralRewards"),
+        (BonusType, "BonusTypes"),
+        (UserBonus, "UserBonuses"),
+        (AIGenerationLog, "AIGenerationLogs"),
     ]
 
     for model, sheet_name in tables:

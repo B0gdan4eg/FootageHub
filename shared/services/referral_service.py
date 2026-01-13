@@ -91,8 +91,27 @@ class ReferralService:
         await self.session.flush()
         await self.session.refresh(referral_reward)
 
-        # НЕ начисляем бонус автоматически
-        # Бонус будет начислен когда реферал подпишется на канал (см. trigger_channel_subscription)
+        # Начисляем бонус сразу при регистрации
+        try:
+            user_bonus = await self._bonus_service.claim_bonus(
+                user_id=referrer_id,
+                bonus_code=BonusCodes.REFERRAL_REGISTRATION,
+                metadata={
+                    "referral_reward_id": referral_reward.id,
+                    "referred_user_id": referred_id,
+                },
+            )
+
+            # Обновляем статус реферальной награды
+            referral_reward.bonus_id = user_bonus.id
+            referral_reward.status = ReferralRewardStatus.COMPLETED
+            referral_reward.rewarded_at = datetime.utcnow()
+            referral_reward.completed_at = datetime.utcnow()
+            await self.session.flush()
+
+        except BonusException as e:
+            # Если не удалось начислить бонус, оставляем награду в статусе PENDING
+            print(f"Failed to apply referral registration bonus: {e}")
 
         return referral_reward
 
@@ -270,53 +289,33 @@ class ReferralService:
         """
         Триггер подписки реферала на канал.
 
-        Начисляет бонус рефереру когда приглашенный пользователь подписывается на канал.
+        ВНИМАНИЕ: Бонус за регистрацию теперь начисляется сразу при регистрации.
+        Этот метод больше не начисляет бонус, только проверяет майлстоуны.
 
         Args:
             referred_user_id: ID реферала (приглашенного пользователя)
 
         Returns:
-            Созданный UserBonus для реферера или None
+            None (бонус уже начислен при регистрации)
         """
         # Найти реферальную связь где referred_user_id = referred_id
         referral_reward = await self._get_referral_for_referred(referred_user_id)
         if not referral_reward:
             return None
 
-        # Проверить, не был ли уже начислен бонус
-        if referral_reward.bonus_id:
-            return None
+        # Бонус уже должен быть начислен при регистрации
+        # Проверяем только майлстоуны
+        if referral_reward.status == ReferralRewardStatus.COMPLETED:
+            try:
+                milestone_bonuses = await self.check_milestone_rewards(referral_reward.referrer_id)
+                if milestone_bonuses:
+                    print(
+                        f"Начислено {len(milestone_bonuses)} майлстоун-бонусов пользователю {referral_reward.referrer_id}"
+                    )
+            except Exception as e:
+                print(f"Failed to check milestone rewards: {e}")
 
-        # Начислить бонус рефереру
-        try:
-            user_bonus = await self._bonus_service.claim_bonus(
-                user_id=referral_reward.referrer_id,
-                bonus_code=BonusCodes.REFERRAL_REGISTRATION,
-                metadata={
-                    "referral_reward_id": referral_reward.id,
-                    "referred_user_id": referred_user_id,
-                },
-            )
-
-            # Обновить статус реферальной награды
-            referral_reward.bonus_id = user_bonus.id
-            referral_reward.status = ReferralRewardStatus.COMPLETED
-            referral_reward.rewarded_at = datetime.utcnow()
-            referral_reward.completed_at = datetime.utcnow()
-            await self.session.flush()
-
-            # Проверяем майлстоуны
-            milestone_bonuses = await self.check_milestone_rewards(referral_reward.referrer_id)
-            if milestone_bonuses:
-                print(
-                    f"Начислено {len(milestone_bonuses)} майлстоун-бонусов пользователю {referral_reward.referrer_id}"
-                )
-
-            return user_bonus
-
-        except BonusException as e:
-            print(f"Failed to apply referral registration bonus: {e}")
-            return None
+        return None
 
     async def check_milestone_rewards(self, referrer_id: int) -> List[UserBonus]:
         """

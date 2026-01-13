@@ -118,20 +118,13 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                         else:
                             bonuses_text.append("✅ Бонус за подписку вы уже получали ранее.")
 
-                        # Проверяем реферальный бонус - начисляем рефереру если этот пользователь был приглашен
+                        # Проверяем майлстоуны для реферера (бонус за регистрацию уже начислен)
                         try:
-                            referral_bonus = (
-                                await referral_service.trigger_referred_channel_subscription(
-                                    referred_user_id=user.id
-                                )
+                            await referral_service.trigger_referred_channel_subscription(
+                                referred_user_id=user.id
                             )
-                            if referral_bonus:
-                                bonuses_text.append(
-                                    f"🎁 Ваш реферер получил {referral_bonus.credits_granted} скачиваний за вашу подписку!"
-                                )
-                                logger.info(f"Referral bonus granted for referred user {user_id}")
                         except Exception as e:
-                            logger.error(f"Failed to grant referral bonus: {e}")
+                            logger.error(f"Failed to check referral milestones: {e}")
 
                         text = f"{CHANEL_APPLY}\n" + "\n".join(bonuses_text)
                     except Exception as e:

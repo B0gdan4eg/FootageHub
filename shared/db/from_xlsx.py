@@ -10,6 +10,12 @@ from sqlalchemy import select
 
 from shared.core.logger import get_logger
 from shared.db.models import (
+    AIGenerationLog,
+    AIGenerationStatus,
+    AIGenerationType,
+    BonusRewardType,
+    BonusStatus,
+    BonusType,
     Download,
     Media,
     Payment,
@@ -19,6 +25,7 @@ from shared.db.models import (
     Subscription,
     SubscriptionType,
     User,
+    UserBonus,
     UserRole,
 )
 from shared.db.session import get_session
@@ -414,6 +421,214 @@ async def import_referral_rewards(sheet, session, mode="full"):
     logger.info(f"ReferralRewards: Добавлено: {added}, Пропущено: {skipped}")
 
 
+async def import_bonus_types(sheet, session, mode="full"):
+    """Импорт типов бонусов из листа BonusTypes"""
+    logger.info(f"Импорт типов бонусов (режим: {mode})...")
+
+    headers = [cell.value for cell in sheet[1]]
+    added = 0
+    updated = 0
+    skipped = 0
+
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        if not row or not row[0]:
+            continue
+
+        data = dict(zip(headers, row))
+
+        if mode == "update":
+            # Проверяем существование по коду
+            existing = await session.scalar(select(BonusType).where(BonusType.code == data["code"]))
+
+            if existing:
+                # Обновляем существующий тип
+                existing.name = data.get("name")
+                existing.description = data.get("description")
+                existing.credits_amount = data.get("credits_amount", 0) or 0
+                existing.ai_credits_amount = data.get("ai_credits_amount", 0) or 0
+                existing.is_active = bool(data.get("is_active", True))
+                existing.is_repeatable = bool(data.get("is_repeatable", False))
+                existing.cooldown_days = data.get("cooldown_days")
+                existing.conditions = data.get("conditions")
+                updated += 1
+                continue
+
+        # Конвертируем reward_type
+        reward_type_value = data.get("reward_type")
+        if reward_type_value:
+            if isinstance(reward_type_value, str):
+                reward_type_value = reward_type_value.upper()
+            reward_type = BonusRewardType(reward_type_value)
+        else:
+            reward_type = BonusRewardType.CREDITS
+
+        bonus_type = BonusType(
+            id=data["id"],
+            code=data["code"],
+            name=data["name"],
+            description=data.get("description"),
+            reward_type=reward_type,
+            credits_amount=data.get("credits_amount", 0) or 0,
+            ai_credits_amount=data.get("ai_credits_amount", 0) or 0,
+            is_active=bool(data.get("is_active", True)),
+            is_repeatable=bool(data.get("is_repeatable", False)),
+            cooldown_days=data.get("cooldown_days"),
+            conditions=data.get("conditions"),
+            created_at=data.get("created_at") or datetime.utcnow(),
+            updated_at=data.get("updated_at") or datetime.utcnow(),
+        )
+
+        session.add(bonus_type)
+        added += 1
+
+    await session.commit()
+    logger.info(f"BonusTypes: Добавлено: {added}, Обновлено: {updated}, Пропущено: {skipped}")
+
+
+async def import_user_bonuses(sheet, session, mode="full"):
+    """Импорт пользовательских бонусов из листа UserBonuses"""
+    logger.info(f"Импорт пользовательских бонусов (режим: {mode})...")
+
+    headers = [cell.value for cell in sheet[1]]
+    added = 0
+    skipped = 0
+
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        if not row or not row[0]:
+            continue
+
+        data = dict(zip(headers, row))
+
+        if mode == "update":
+            # Проверяем существование
+            existing = await session.scalar(select(UserBonus).where(UserBonus.id == data["id"]))
+            if existing:
+                skipped += 1
+                continue
+
+        # Проверяем существование user_id
+        user_exists = await session.scalar(select(User.id).where(User.id == data["user_id"]))
+        if not user_exists:
+            logger.warning(
+                f"Пропуск user_bonus id={data['id']}: user_id={data['user_id']} не найден"
+            )
+            skipped += 1
+            continue
+
+        # Проверяем существование bonus_type_id
+        bonus_type_exists = await session.scalar(
+            select(BonusType.id).where(BonusType.id == data["bonus_type_id"])
+        )
+        if not bonus_type_exists:
+            logger.warning(
+                f"Пропуск user_bonus id={data['id']}: bonus_type_id={data['bonus_type_id']} не найден"
+            )
+            skipped += 1
+            continue
+
+        # Конвертируем status
+        status_value = data.get("status")
+        if status_value:
+            if isinstance(status_value, str):
+                status_value = status_value.upper()
+            status = BonusStatus(status_value)
+        else:
+            status = BonusStatus.PENDING
+
+        user_bonus = UserBonus(
+            id=data["id"],
+            user_id=data["user_id"],
+            bonus_type_id=data["bonus_type_id"],
+            status=status,
+            credits_granted=data.get("credits_granted", 0) or 0,
+            ai_credits_granted=data.get("ai_credits_granted", 0) or 0,
+            extra_data=data.get("metadata") or data.get("extra_data"),
+            created_at=data.get("created_at") or datetime.utcnow(),
+            completed_at=data.get("completed_at"),
+            expires_at=data.get("expires_at"),
+        )
+
+        session.add(user_bonus)
+        added += 1
+
+    await session.commit()
+    logger.info(f"UserBonuses: Добавлено: {added}, Пропущено: {skipped}")
+
+
+async def import_ai_generation_logs(sheet, session, mode="full"):
+    """Импорт логов AI генераций из листа AIGenerationLogs"""
+    logger.info(f"Импорт логов AI генераций (режим: {mode})...")
+
+    headers = [cell.value for cell in sheet[1]]
+    added = 0
+    skipped = 0
+
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        if not row or not row[0]:
+            continue
+
+        data = dict(zip(headers, row))
+
+        if mode == "update":
+            # Проверяем существование
+            existing = await session.scalar(
+                select(AIGenerationLog).where(AIGenerationLog.id == data["id"])
+            )
+            if existing:
+                skipped += 1
+                continue
+
+        # Проверяем существование user_id
+        user_exists = await session.scalar(select(User.id).where(User.id == data["user_id"]))
+        if not user_exists:
+            logger.warning(
+                f"Пропуск ai_generation_log id={data['id']}: user_id={data['user_id']} не найден"
+            )
+            skipped += 1
+            continue
+
+        # Конвертируем generation_type
+        gen_type_value = data.get("generation_type")
+        if gen_type_value:
+            if isinstance(gen_type_value, str):
+                gen_type_value = gen_type_value.upper()
+            generation_type = AIGenerationType(gen_type_value)
+        else:
+            generation_type = AIGenerationType.IMAGE
+
+        # Конвертируем status
+        status_value = data.get("status")
+        if status_value:
+            if isinstance(status_value, str):
+                status_value = status_value.upper()
+            status = AIGenerationStatus(status_value)
+        else:
+            status = AIGenerationStatus.PENDING
+
+        ai_log = AIGenerationLog(
+            id=data["id"],
+            user_id=data["user_id"],
+            provider=data["provider"],
+            model=data["model"],
+            generation_type=generation_type,
+            prompt=data["prompt"],
+            parameters=data.get("parameters"),
+            status=status,
+            result_url=data.get("result_url"),
+            error_message=data.get("error_message"),
+            ai_credits_spent=data.get("ai_credits_spent", 1) or 1,
+            processing_time_seconds=data.get("processing_time_seconds"),
+            created_at=data.get("created_at") or datetime.utcnow(),
+            completed_at=data.get("completed_at"),
+        )
+
+        session.add(ai_log)
+        added += 1
+
+    await session.commit()
+    logger.info(f"AIGenerationLogs: Добавлено: {added}, Пропущено: {skipped}")
+
+
 async def clear_all_tables(session):
     """Очистка всех таблиц в правильном порядке (обратном порядке зависимостей)"""
     print("[CLEAR] Начало очистки всех таблиц...")
@@ -421,6 +636,12 @@ async def clear_all_tables(session):
 
     try:
         # Удаляем в обратном порядке зависимостей
+        print("[CLEAR] Удаление AIGenerationLogs...")
+        await session.execute(AIGenerationLog.__table__.delete())
+
+        print("[CLEAR] Удаление UserBonuses...")
+        await session.execute(UserBonus.__table__.delete())
+
         print("[CLEAR] Удаление ReferralRewards...")
         await session.execute(ReferralReward.__table__.delete())
 
@@ -435,6 +656,9 @@ async def clear_all_tables(session):
 
         print("[CLEAR] Удаление Media...")
         await session.execute(Media.__table__.delete())
+
+        print("[CLEAR] Удаление BonusTypes...")
+        await session.execute(BonusType.__table__.delete())
 
         print("[CLEAR] Удаление Users...")
         await session.execute(User.__table__.delete())
@@ -540,12 +764,33 @@ async def restore_database(xlsx_path: str, mode: str = "full", clear_before: boo
             else:
                 print("[RESTORE] WARNING: Лист Downloads не найден")
 
-            # 6. ReferralRewards (зависит от Users)
+            # 6. BonusTypes (независимая таблица)
+            if "BonusTypes" in wb.sheetnames:
+                print("[RESTORE] Импорт таблицы BonusTypes...")
+                await import_bonus_types(wb["BonusTypes"], session, mode=mode)
+            else:
+                print("[RESTORE] WARNING: Лист BonusTypes не найден")
+
+            # 7. UserBonuses (зависит от Users и BonusTypes)
+            if "UserBonuses" in wb.sheetnames:
+                print("[RESTORE] Импорт таблицы UserBonuses...")
+                await import_user_bonuses(wb["UserBonuses"], session, mode=mode)
+            else:
+                print("[RESTORE] WARNING: Лист UserBonuses не найден")
+
+            # 8. ReferralRewards (зависит от Users)
             if "ReferralRewards" in wb.sheetnames:
                 print("[RESTORE] Импорт таблицы ReferralRewards...")
                 await import_referral_rewards(wb["ReferralRewards"], session, mode=mode)
             else:
                 print("[RESTORE] WARNING: Лист ReferralRewards не найден")
+
+            # 9. AIGenerationLogs (зависит от Users)
+            if "AIGenerationLogs" in wb.sheetnames:
+                print("[RESTORE] Импорт таблицы AIGenerationLogs...")
+                await import_ai_generation_logs(wb["AIGenerationLogs"], session, mode=mode)
+            else:
+                print("[RESTORE] WARNING: Лист AIGenerationLogs не найден")
 
             print("[RESTORE] ========== ВОССТАНОВЛЕНИЕ ЗАВЕРШЕНО ==========")
             logger.info("=" * 60)
