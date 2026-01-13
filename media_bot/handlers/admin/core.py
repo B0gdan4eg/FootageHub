@@ -8,6 +8,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 
 from media_bot.keyboards import get_admin_menu_kb, main_menu_kb
+from media_bot.state import AdminStates
 from shared.db.models import User, UserRole
 from shared.db.session import get_session
 
@@ -102,15 +103,9 @@ async def admin_restore_db_callback(callback: types.CallbackQuery, state: FSMCon
 
 
 # User edit menu handlers
-@router.message(F.text)
+@router.message(AdminStates.waiting_for_edit_user_id, F.text)
 async def handle_edit_user_id(message: types.Message, state: FSMContext):
     """Обработка введенного Telegram ID для редактирования пользователя"""
-    from media_bot.state import AdminStates
-
-    current_state = await state.get_state()
-    if current_state != AdminStates.waiting_for_edit_user_id:
-        return
-
     if not await is_admin(message.from_user.id):
         return
 

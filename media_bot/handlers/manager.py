@@ -193,7 +193,12 @@ async def refresh_stats(callback: types.CallbackQuery):
     await callback.answer("🔄 Обновление...")
 
     text = await get_stats_text()
-    await callback.message.edit_text(text, reply_markup=get_stats_keyboard(), parse_mode="HTML")
+    try:
+        await callback.message.edit_text(text, reply_markup=get_stats_keyboard(), parse_mode="HTML")
+    except Exception as e:
+        # Игнорируем ошибку, если сообщение не изменилось
+        if "message is not modified" not in str(e):
+            raise
 
 
 @router.callback_query(lambda c: c.data == "mgr_4h8n3q")
