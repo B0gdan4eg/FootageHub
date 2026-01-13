@@ -67,27 +67,39 @@ async def admin_edit_user_callback(callback: types.CallbackQuery, state: FSMCont
 @router.callback_query(lambda c: c.data == "adm_8c7j2n")
 async def admin_bonuses_callback(callback: types.CallbackQuery):
     """🎉 Управление бонусами - redirect to bonuses handler"""
+    print(
+        f"[DEBUG] Bonuses callback triggered! User: {callback.from_user.id}, Data: {callback.data}"
+    )
+
     if not await is_admin(callback.from_user.id):
         await callback.answer("🚫 Нет доступа", show_alert=True)
         return
 
     await callback.answer()
+    print("[DEBUG] Calling manage_bonuses...")
     from media_bot.handlers.admin.bonuses import manage_bonuses
 
     await manage_bonuses(callback.message)
+    print("[DEBUG] manage_bonuses completed")
 
 
 @router.callback_query(lambda c: c.data == "adm_6f1m4r")
 async def admin_broadcast_callback(callback: types.CallbackQuery, state: FSMContext):
     """📢 Рассылка - redirect to broadcast handler"""
+    print(
+        f"[DEBUG] Broadcast callback triggered! User: {callback.from_user.id}, Data: {callback.data}"
+    )
+
     if not await is_admin(callback.from_user.id):
         await callback.answer("🚫 Нет доступа", show_alert=True)
         return
 
     await callback.answer()
+    print("[DEBUG] Calling broadcast_start...")
     from media_bot.handlers.admin.broadcast import broadcast_start
 
     await broadcast_start(callback.message, state)
+    print("[DEBUG] broadcast_start completed")
 
 
 @router.callback_query(lambda c: c.data == "adm_7k5w9v")
@@ -127,7 +139,6 @@ async def handle_edit_user_id(message: types.Message, state: FSMContext):
 
         # Save user_id to state
         await state.update_data(edit_user_id=user_id)
-        await state.clear()
 
         from media_bot.keyboards import get_user_edit_menu_kb
 
