@@ -1,37 +1,83 @@
+# Python cache and compiled files
 __pycache__/
-.env
-*.sqlite3
-*.log
 *.pyc
 *.pyo
 *.pyd
-downloads/
+*.pyi
+
+# Python testing and coverage
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+*.db
+
+# Environment files
+.env
 .env.*
+!.env.example
+!.env.ai-bot.example
+
+# IDE and editor files
 .idea/
 .vscode/
 .cursor/
+.claude/
+*.swp
+*.swo
+*~
+
+# Dependencies
 node_modules/
-.json
+
+# Downloads and media
+downloads/
+debug_screenshots/
+
+# Logs
+*.log
+logs/
+
+# Database files
+*.sqlite3
+*.sql
+*.sql.gz
+*.dump
+
+# Backups (exclude from git, stored on server outside Docker)
+backups/
+
+# Security keys
 github-actions-key
 github-actions-key.pub
 key.pem
 cert.pem
+*.pem
+
+# Temporary and test files
+*.tmp
+*.temp
+test_integration.db
+
+# Deprecated modules
+bot.deprecated/
+db.deprecated/
+test.deprecated/
+main.deprecated.py
+
+# Specific excluded files
+.json
 test_link_processor.py
 services/st.py
 bot/handlers/group_st.py
-debug_screenshots/
 
-# Test and temporary files
-/test
+# Cookie indexes
 filesta/screenshots/
 filesta/filesta_cookie_index.txt
 freepik_utils/freepik_cookie_index.txt
 envato_utils/cookie_index.txt
 
-# Backups (exclude from git, stored on server outside Docker)
-backups/
-*.sql
-*.sql.gz
-*.dump
+# Shell scripts and images
 *.sh
 *.png
