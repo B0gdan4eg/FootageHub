@@ -82,6 +82,9 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
                     value = value.value  # Конвертируем enum в его значение
                 elif value is None:
                     value = ""
+                elif hasattr(value, "isoformat"):
+                    # Конвертируем datetime/date объекты в строку ISO format
+                    value = value.isoformat()
                 row_data.append(value)
             ws.append(row_data)
 
