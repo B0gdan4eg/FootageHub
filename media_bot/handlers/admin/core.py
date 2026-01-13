@@ -378,7 +378,7 @@ async def user_confirm_delete_callback(callback: types.CallbackQuery, state: FSM
 
     await callback.answer()
 
-    from shared.db.models import Download, Payment, Subscription
+    from shared.db.models import Download, Payment, ReferralReward, Subscription, UserBonus
 
     async for session in get_session():
         # Находим пользователя
@@ -421,7 +421,28 @@ async def user_confirm_delete_callback(callback: types.CallbackQuery, state: FSM
             for download in downloads:
                 await session.delete(download)
 
-            # 4. Удаляем самого пользователя
+            # 4. Удаляем реферальные награды (как referrer)
+            referral_rewards_referrer = await session.execute(
+                select(ReferralReward).where(ReferralReward.referrer_id == db_user_id)
+            )
+            for reward in referral_rewards_referrer.scalars().all():
+                await session.delete(reward)
+
+            # 5. Удаляем реферальные награды (как referred)
+            referral_rewards_referred = await session.execute(
+                select(ReferralReward).where(ReferralReward.referred_id == db_user_id)
+            )
+            for reward in referral_rewards_referred.scalars().all():
+                await session.delete(reward)
+
+            # 6. Удаляем бонусы пользователя
+            user_bonuses_result = await session.execute(
+                select(UserBonus).where(UserBonus.user_id == db_user_id)
+            )
+            for bonus in user_bonuses_result.scalars().all():
+                await session.delete(bonus)
+
+            # 7. Удаляем самого пользователя
             await session.delete(user)
 
             # Коммитим все изменения

@@ -192,7 +192,7 @@ async def callback_my_referrals(callback: CallbackQuery):
                         reg_date = ref["registered_at"].strftime("%d.%m.%Y")
 
                         message_text += (
-                            f"{idx}. ID: <code>{ref['telegram_id']}</code>\n"
+                            f"{idx}. ID: <b>{ref['telegram_id']}</b>\n"
                             f"   Канал: {channel_emoji} | Покупка: {payment_emoji} | {reg_date}\n"
                         )
 
