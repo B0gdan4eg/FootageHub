@@ -2,6 +2,7 @@
 Database export and restore functionality for admin panel.
 """
 
+import json
 from enum import Enum
 from pathlib import Path
 
@@ -85,6 +86,9 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
                 elif hasattr(value, "isoformat"):
                     # Конвертируем datetime/date объекты в строку ISO format
                     value = value.isoformat()
+                elif isinstance(value, (dict, list)):
+                    # Конвертируем JSON объекты (dict, list) в строку
+                    value = json.dumps(value, ensure_ascii=False)
                 row_data.append(value)
             ws.append(row_data)
 
