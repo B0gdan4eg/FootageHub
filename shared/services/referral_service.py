@@ -45,7 +45,7 @@ class ReferralService:
 
     async def create_referral_registration(
         self, referrer_id: int, referred_id: int
-    ) -> ReferralReward:
+    ) -> tuple[ReferralReward, Optional[UserBonus]]:
         """
         Создать реферальную награду за регистрацию.
 
@@ -113,8 +113,9 @@ class ReferralService:
         except BonusException as e:
             # Если не удалось начислить бонус, оставляем награду в статусе PENDING
             print(f"Failed to apply referral registration bonus: {e}")
+            return referral_reward, None
 
-        return referral_reward
+        return referral_reward, user_bonus
 
     async def _apply_registration_bonus(
         self, referrer_id: int, referral_reward_id: int

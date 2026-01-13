@@ -88,7 +88,10 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                             session, user_repo, bonus_repo, bonus_service
                         )
 
-                        referral_reward = await referral_service.create_referral_registration(
+                        (
+                            referral_reward,
+                            user_bonus,
+                        ) = await referral_service.create_referral_registration(
                             referrer_id=referrer.id, referred_id=user.id
                         )
                         logger.info(
@@ -96,21 +99,19 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                         )
 
                         # Отправляем уведомление рефереру о новом реферале
-                        if referral_reward and referral_reward.bonus_id:
+                        if user_bonus:
                             try:
-                                # Получаем информацию о бонусе
-                                user_bonus = await bonus_repo.get_by_id(referral_reward.bonus_id)
-                                if user_bonus:
-                                    await message.bot.send_message(
-                                        chat_id=referrer.tg_id,
-                                        text=f"🎉 <b>Поздравляем!</b>\n\n"
-                                        f"По вашей реферальной ссылке зарегистрировался новый пользователь!\n"
-                                        f"💰 Вам начислено <b>{user_bonus.credits_granted} скачиваний</b>",
-                                        parse_mode=ParseMode.HTML,
-                                    )
-                                    logger.info(
-                                        f"Referral bonus notification sent to referrer {referrer.tg_id}: {user_bonus.credits_granted} credits"
-                                    )
+                                await message.bot.send_message(
+                                    chat_id=referrer.tg_id,
+                                    text=f"🎉 <b>У вас новый реферал!</b>\n\n"
+                                    f"По вашей реферальной ссылке зарегистрировался новый пользователь.\n\n"
+                                    f"💰 Вам начислено <b>{user_bonus.credits_granted} скачиваний</b>\n\n"
+                                    f"Узнайте подробнее в разделе /referrals",
+                                    parse_mode=ParseMode.HTML,
+                                )
+                                logger.info(
+                                    f"Referral bonus notification sent to referrer {referrer.tg_id}: {user_bonus.credits_granted} credits"
+                                )
                             except Exception as e:
                                 logger.error(
                                     f"Failed to send referral notification to referrer: {e}"

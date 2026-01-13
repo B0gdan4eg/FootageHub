@@ -83,7 +83,7 @@ async def cmd_referral(message: types.Message, bot: Bot):
                 f"<code>{referral_link}</code>\n\n"
                 "🎯 <b>Как это работает:</b>\n"
                 "1️⃣ Поделитесь ссылкой с друзьями\n"
-                "2️⃣ Когда друг регистрируется — вы получаете <b>1 скачивание</b>\n"
+                "2️⃣ Когда друг регистрируется — вы получаете <b>3 скачивания</b>\n"
                 "3️⃣ Когда друг совершает первую покупку — вы получаете <b>5 скачиваний</b>\n\n"
                 "🏆 <b>Milestone награды:</b>\n"
                 "• 5 рефералов → +5 скачиваний\n"
@@ -106,7 +106,7 @@ async def cmd_referral(message: types.Message, bot: Bot):
 
                     status_emoji = "✅" if reward.status == "COMPLETED" else "⏳"
                     message_text += (
-                        f"{status_emoji} {trigger_text}: " f"+{reward.credits_earned} скачиваний\n"
+                        f"{status_emoji} {trigger_text}: " f"+{reward.reward_value} скачиваний\n"
                     )
 
             # Создаем инлайн-клавиатуру
@@ -250,7 +250,7 @@ async def callback_referral_rewards(callback: CallbackQuery):
                     if trigger not in rewards_by_type:
                         rewards_by_type[trigger] = []
                     rewards_by_type[trigger].append(reward)
-                    total_earned += reward.credits_earned
+                    total_earned += reward.reward_value
 
                 # Формируем сообщение
                 message_text = (
@@ -353,7 +353,7 @@ async def callback_ref_back(callback: CallbackQuery, bot: Bot):
                 f"<code>{referral_link}</code>\n\n"
                 "🎯 <b>Как это работает:</b>\n"
                 "1️⃣ Поделитесь ссылкой с друзьями\n"
-                "2️⃣ Когда друг регистрируется — вы получаете <b>1 скачивание</b>\n"
+                "2️⃣ Когда друг регистрируется — вы получаете <b>3 скачивания</b>\n"
                 "3️⃣ Когда друг совершает первую покупку — вы получаете <b>5 скачиваний</b>\n\n"
                 "🏆 <b>Milestone награды:</b>\n"
                 "• 5 рефералов → +5 скачиваний\n"
@@ -376,7 +376,7 @@ async def callback_ref_back(callback: CallbackQuery, bot: Bot):
 
                     status_emoji = "✅" if reward.status == "COMPLETED" else "⏳"
                     message_text += (
-                        f"{status_emoji} {trigger_text}: " f"+{reward.credits_earned} скачиваний\n"
+                        f"{status_emoji} {trigger_text}: " f"+{reward.reward_value} скачиваний\n"
                     )
 
             # Создаем инлайн-клавиатуру
