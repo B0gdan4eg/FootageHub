@@ -147,6 +147,17 @@ class FreepikDownloader:
                     break
                 await asyncio.sleep(0.1)
 
+            # Если download event не сработал, пробуем кликнуть ещё раз
+            if not download_info.get("url"):
+                print(f"[FREEPIK] Download event не сработал, повторный клик...")
+                await page.click("button[data-cy='download-button']", timeout=5000)
+
+                # Ждём ещё 5 секунд
+                for i in range(max_wait * 10):
+                    if download_info.get("url"):
+                        break
+                    await asyncio.sleep(0.1)
+
             # Получаем ссылку
             download_url = download_info.get("url")
 

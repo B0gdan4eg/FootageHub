@@ -600,7 +600,7 @@ class ReferralService:
 
             referrals_info.append(
                 {
-                    "telegram_id": referred_user.telegram_id,
+                    "telegram_id": referred_user.tg_id,
                     "username": referred_user.username,
                     "registered_at": reward.created_at,
                     "has_channel_subscription": has_channel_subscription,
