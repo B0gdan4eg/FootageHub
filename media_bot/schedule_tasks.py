@@ -63,7 +63,7 @@ async def scheduler_job(bot: Bot):
 
 
 async def process_monthly_subscriptions(bot: Bot):
-    """Обработка месячных подписок (MONTHLY_50, MONTHLY_150, MONTHLY_400) - начисление остатка и деактивация при исчерпании."""
+    """Обработка месячных подписок (MONTHLY_50, MONTHLY_150, MONTHLY_400) - сброс дневного лимита и деактивация при исчерпании."""
     print("🔄 Обработка месячных подписок (MONTHLY_50, MONTHLY_150, MONTHLY_400)...")
     async for session in get_session():
         # Получаем активные месячные подписки всех типов
@@ -84,29 +84,16 @@ async def process_monthly_subscriptions(bot: Bot):
         )
         monthly_subscriptions = result.scalars().all()
 
-        processed_count = 0
         deactivated_count = 0
 
         for subscription in monthly_subscriptions:
-            # Вычисляем остаток кредитов
-            remaining_credits = subscription.total_limit - subscription.used_total
-
-            if remaining_credits > 0:
-                # Обновляем кредиты до оставшегося количества
-                result = await session.execute(select(User).where(User.id == subscription.user_id))
-                user = result.scalar_one_or_none()
-                if user:
-                    user.credits = remaining_credits
-                    print(
-                        f"✅ Обновлены кредиты до {remaining_credits} для пользователя {subscription.user_id} ({subscription.subscription_type.value})"
-                    )
-                    processed_count += 1
-            else:
+            # Проверяем, исчерпан ли лимит
+            if subscription.total_limit <= subscription.used_total:
                 # Лимит исчерпан - деактивируем подписку
                 subscription.is_active = False
                 subscription.updated_at = datetime.utcnow()
                 print(
-                    f"⚠️ Подписка #{subscription.id} деактивирована (лимит исчерпан, пользователь {subscription.user_id})"
+                    f"⚠️ Подписка #{subscription.id} деактивирована (лимит исчерпан: {subscription.used_total}/{subscription.total_limit}, пользователь {subscription.user_id})"
                 )
                 deactivated_count += 1
 
@@ -115,12 +102,10 @@ async def process_monthly_subscriptions(bot: Bot):
 
         await session.commit()
 
-        if processed_count > 0 or deactivated_count > 0:
-            print(
-                f"✅ Обработка месячных подписок завершена: начислено {processed_count}, деактивировано {deactivated_count}"
-            )
+        if deactivated_count > 0:
+            print(f"✅ Обработка месячных подписок завершена: деактивировано {deactivated_count}")
         else:
-            print("✅ Нет активных месячных подписок для обработки")
+            print("✅ Нет месячных подписок с исчерпанным лимитом")
 
 
 async def check_expired_subscriptions(bot: Bot):
@@ -138,6 +123,23 @@ async def check_expired_subscriptions(bot: Bot):
         if expired_subscriptions:
             expired_count = 0
             for subscription in expired_subscriptions:
+                # Вычисляем неиспользованные кредиты (остаток лимита)
+                unused_credits = subscription.total_limit - subscription.used_total
+
+                # Если есть неиспользованные кредиты, отнимаем их от пользователя
+                if unused_credits > 0:
+                    result = await session.execute(
+                        select(User).where(User.id == subscription.user_id)
+                    )
+                    user = result.scalar_one_or_none()
+                    if user:
+                        # Отнимаем неиспользованные кредиты, но не допускаем отрицательных значений
+                        user.credits = max(0, user.credits - unused_credits)
+                        print(
+                            f"💳 Отнято {unused_credits} неиспользованных кредитов у пользователя {subscription.user_id} (осталось {user.credits})"
+                        )
+
+                # Деактивируем подписку
                 subscription.is_active = False
                 subscription.updated_at = datetime.utcnow()
                 print(

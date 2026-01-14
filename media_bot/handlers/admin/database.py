@@ -79,24 +79,30 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
         for row in rows:
             row_data = []
             for col_obj in column_objs:
-                # Безопасное получение значения: сначала пробуем __dict__, потом getattr
-                # Это нужно чтобы избежать конфликтов с зарезервированными именами SQLAlchemy (metadata)
-                if col_obj.name in row.__dict__:
-                    value = row.__dict__[col_obj.name]
-                else:
-                    value = getattr(row, col_obj.name, None)
+                try:
+                    # Безопасное получение значения: сначала пробуем __dict__, потом getattr
+                    # Это нужно чтобы избежать конфликтов с зарезервированными именами SQLAlchemy (metadata)
+                    if col_obj.name in row.__dict__:
+                        value = row.__dict__[col_obj.name]
+                    else:
+                        value = getattr(row, col_obj.name, None)
 
-                if isinstance(value, Enum):
-                    value = value.value  # Конвертируем enum в его значение
-                elif value is None:
-                    value = ""
-                elif hasattr(value, "isoformat"):
-                    # Конвертируем datetime/date объекты в строку ISO format
-                    value = value.isoformat()
-                elif isinstance(value, (dict, list)):
-                    # Конвертируем JSON объекты (dict, list) в строку
-                    value = json.dumps(value, ensure_ascii=False)
-                row_data.append(value)
+                    if isinstance(value, Enum):
+                        value = value.value  # Конвертируем enum в его значение
+                    elif value is None:
+                        value = ""
+                    elif hasattr(value, "isoformat"):
+                        # Конвертируем datetime/date объекты в строку ISO format
+                        value = value.isoformat()
+                    elif isinstance(value, (dict, list)):
+                        # Конвертируем JSON объекты (dict, list) в строку
+                        value = json.dumps(value, ensure_ascii=False)
+
+                    row_data.append(value)
+                except Exception as e:
+                    # Если не получается конвертировать значение, пропускаем и ставим пустую строку
+                    logger.warning(f"Failed to convert column {col_obj.name}: {e}")
+                    row_data.append("")
             ws.append(row_data)
 
     # Сохраняем в память
