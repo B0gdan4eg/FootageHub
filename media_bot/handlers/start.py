@@ -106,7 +106,7 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                                     text=f"🎉 <b>У вас новый реферал!</b>\n\n"
                                     f"По вашей реферальной ссылке зарегистрировался новый пользователь.\n\n"
                                     f"💰 Вам начислено <b>{user_bonus.credits_granted} скачиваний</b>\n\n"
-                                    f"Узнайте подробнее в разделе /referrals",
+                                    f"Узнайте подробнее в разделе /referral",
                                     parse_mode=ParseMode.HTML,
                                 )
                                 logger.info(

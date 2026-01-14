@@ -70,15 +70,22 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
             ws.append(["Нет данных"])
             continue
 
-        # Заголовки — это имена всех колонок в модели
-        columns = [col.name for col in model.__table__.columns]
-        ws.append(columns)
+        # Получаем колонки и их имена
+        column_objs = list(model.__table__.columns)
+        column_names = [col.name for col in column_objs]
+        ws.append(column_names)
 
         # Данные
         for row in rows:
             row_data = []
-            for col in columns:
-                value = getattr(row, col)
+            for col_obj in column_objs:
+                # Используем column object для безопасного получения значения
+                value = getattr(row, col_obj.name, None)
+
+                # Если getattr не сработал (например, для metadata), берем из __dict__
+                if value is None and col_obj.name in row.__dict__:
+                    value = row.__dict__[col_obj.name]
+
                 if isinstance(value, Enum):
                     value = value.value  # Конвертируем enum в его значение
                 elif value is None:
