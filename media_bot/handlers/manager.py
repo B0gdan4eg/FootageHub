@@ -131,6 +131,12 @@ async def get_stats_text():
         users_from_referral = await referral_repo.count_total_referred_users()
         users_subscribed_channel = await bonus_repo.count_users_with_bonus("CHANNEL_SUBSCRIPTION")
 
+        # Пользователи по реферальной ссылке за сегодня
+        users_from_referral_today = await referral_repo.count_referred_users_since(today_start)
+
+        # Пользователи подписавшиеся на канал за сегодня
+        users_subscribed_channel_today = await bonus_repo.count_users_with_bonus_since("CHANNEL_SUBSCRIPTION", today_start)
+
     # Форматируем суммы по валютам
     total_payments_text = (
         "\n".join(
@@ -156,8 +162,8 @@ async def get_stats_text():
         f"   • Всего: {total_users}\n"
         f"   • Новых сегодня: {new_users_today}\n"
         f"   • Активных подписок: {active_subs}\n"
-        f"   • По реферальной ссылке: {users_from_referral}\n"
-        f"   • Подписались на канал: {users_subscribed_channel}\n\n"
+        f"   • По реферальной ссылке: {users_from_referral} (+{users_from_referral_today})\n"
+        f"   • Подписались на канал: {users_subscribed_channel} (+{users_subscribed_channel_today})\n\n"
         f"📥 <b>Загрузки:</b>\n"
         f"   • Всего: {total_downloads}\n"
         f"   • Сегодня: {downloads_today}\n"

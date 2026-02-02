@@ -233,3 +233,21 @@ class BonusRepository(BaseRepository[BonusType]):
             .where(BonusType.code == bonus_code)
         )
         return result.scalar() or 0
+
+    async def count_users_with_bonus_since(self, bonus_code: str, since: datetime) -> int:
+        """
+        Count number of unique users who received a specific bonus since specified date.
+
+        Args:
+            bonus_code: Bonus type code (e.g., "CHANNEL_SUBSCRIPTION")
+            since: Start datetime
+
+        Returns:
+            Number of unique users
+        """
+        result = await self.session.execute(
+            select(func.count(func.distinct(UserBonus.user_id)))
+            .join(BonusType, UserBonus.bonus_type_id == BonusType.id)
+            .where(and_(BonusType.code == bonus_code, UserBonus.created_at >= since))
+        )
+        return result.scalar() or 0

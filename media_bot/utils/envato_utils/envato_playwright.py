@@ -159,7 +159,8 @@ class EnvatoDownloader:
 
             # Click download button - универсальный селектор для обоих форматов
             download_button_selectors = [
-                "button:has-text('Скачать')",  # Универсальный по тексту
+                "button:has-text('Скачать')",  # Универсальный по тексту (RU)
+                "button:has-text('Download')",  # Универсальный по тексту (EN)
                 "button[data-analytics-name='download']",  # Новый формат
                 "button[data-testid='button-download']",  # Старый формат
             ]

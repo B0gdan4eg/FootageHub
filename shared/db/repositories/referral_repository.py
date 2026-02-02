@@ -285,3 +285,25 @@ class ReferralRewardRepository(BaseRepository[ReferralReward]):
             )
         )
         return result.scalar() or 0
+
+    async def count_referred_users_since(self, since: datetime) -> int:
+        """
+        Count number of users who came via referral link since specified date.
+
+        Args:
+            since: Start datetime
+
+        Returns:
+            Number of unique referred users
+        """
+        from shared.db.models import ReferralTriggerType
+
+        result = await self.session.execute(
+            select(func.count(func.distinct(ReferralReward.referred_id))).where(
+                and_(
+                    ReferralReward.trigger_type == ReferralTriggerType.REGISTRATION,
+                    ReferralReward.created_at >= since
+                )
+            )
+        )
+        return result.scalar() or 0
