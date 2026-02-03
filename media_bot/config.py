@@ -39,7 +39,7 @@ BROWSER_RESTART_AFTER = int(os.getenv("BROWSER_RESTART_AFTER", "50"))
 DOWNLOAD_TIMEOUT_SECONDS = int(os.getenv("DOWNLOAD_TIMEOUT_SECONDS", "300"))
 
 # Бонусы и кредиты
-DAILY_FREE_CREDITS = int(os.getenv("DAILY_FREE_CREDITS", "5"))
+DAILY_FREE_CREDITS = int(os.getenv("DAILY_FREE_CREDITS", "2"))
 
 # Размеры браузера
 BROWSER_VIEWPORT_WIDTH = 1920
