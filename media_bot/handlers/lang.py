@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from aiogram.types import BotCommand, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup
 
 from media_bot.handlers.messages import SUPPORTED_LANGUAGES, msg
+from media_bot.keyboards import get_main_menu_kb
 from shared.db.repositories.user_repository import UserRepository
 from shared.db.session import get_session
 
@@ -69,3 +70,10 @@ async def set_lang_callback(callback: types.CallbackQuery, bot: Bot):
         parse_mode=ParseMode.HTML,
     )
     await callback.answer()
+
+    # Отправляем обновлённое главное меню
+    await callback.message.answer(
+        msg("MAIN_MENU", new_lang),
+        parse_mode=ParseMode.HTML,
+        reply_markup=get_main_menu_kb(new_lang),
+    )
