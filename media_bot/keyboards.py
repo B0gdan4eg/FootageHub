@@ -9,11 +9,11 @@ from aiogram.types import (
 main_menu_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="Скачать Envato"),
-            KeyboardButton(text="Скачать Freepik"),
+            KeyboardButton(text="Скачать Envato", style="success"),
+            KeyboardButton(text="Скачать Freepik", style="primary"),
         ],
         [
-            KeyboardButton(text="Скачать Motion Array"),
+            KeyboardButton(text="Скачать Motion Array", style="danger"),
         ],
         [
             KeyboardButton(text="Информация"),

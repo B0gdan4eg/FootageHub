@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import func, select
 
+from media_bot.handlers.messages import msg
 from shared.db.models import Download
 from shared.db.repositories import DownloadRepository, SubscriptionRepository, UserRepository
 from shared.db.session import get_session
@@ -17,7 +18,7 @@ router = Router()
 @router.message(Command("info"))
 @router.callback_query(lambda c: c.data == "user_info")
 @router.message(lambda message: message.text == "Информация")
-async def info(message: types.Message, state: FSMContext):
+async def info(message: types.Message, state: FSMContext, lang: str = "ru"):
     await state.clear()
     telegram_id = message.from_user.id
 
@@ -25,7 +26,7 @@ async def info(message: types.Message, state: FSMContext):
         user_repo = UserRepository(session)
         user = await user_repo.get_by_telegram_id(telegram_id)
         if not user:
-            await message.answer("Пользователь не найден.")
+            await message.answer(msg("USER_NOT_FOUND_SHORT", lang))
             return
 
         download_repo = DownloadRepository(session)
@@ -67,16 +68,14 @@ async def info(message: types.Message, state: FSMContext):
             sub_until = "—"
             sub_limits = "—"
 
-        INFO_MASSEGE = (
-            f"👤 <b>Ваш профиль</b>\n\n"
-            f"🎁 Бесплатно: <b>{user.credits if user.credits > 0 else '0 ❗️'}</b>\n"
-            f"💼 Статус: {sub_status}\n"
-            f"⏰ До: {sub_until}\n"
-            f"📊 Доступно: {sub_limits}\n"
-            f"✅ Скачано: <b>{downloads_count}</b>\n\n"
-            f"{'─' * 30}\n\n"
-            f"📊 <b>Сегодня в FootageHub</b>\n"
-            f"⚡️ Загрузок за 24ч: <b>{downloads_24h}</b>\n"
+        credits_display = str(user.credits) if user.credits > 0 else "0 ❗️"
+        info_text = msg("INFO_MESSAGE", lang).format(
+            credits=credits_display,
+            sub_status=sub_status,
+            sub_until=sub_until,
+            sub_limits=sub_limits,
+            downloads_count=downloads_count,
+            downloads_24h=downloads_24h,
         )
 
         # Создаём кнопку увеличения лимитов
@@ -87,7 +86,7 @@ async def info(message: types.Message, state: FSMContext):
         )
 
         await message.answer(
-            INFO_MASSEGE.format(name=message.from_user.first_name),
+            info_text,
             parse_mode=ParseMode.HTML,
             reply_markup=keyboard,
         )

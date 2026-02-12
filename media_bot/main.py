@@ -13,6 +13,7 @@ from media_bot.handlers import (
     channel_check,
     download,
     info,
+    lang,
     manager,
     menu,
     payment,
@@ -20,6 +21,7 @@ from media_bot.handlers import (
     referral,
     start,
 )
+from media_bot.middlewares import I18nMiddleware
 from media_bot.schedule_tasks import (
     check_expired_subscriptions,
     cleanup_playwright_cache,
@@ -55,6 +57,7 @@ async def set_bot_commands(bot: Bot):
         BotCommand(command="info", description="Информация"),
         BotCommand(command="pay", description="Оформить подписку"),
         BotCommand(command="referral", description="Реферальная программа"),
+        BotCommand(command="lang", description="Язык / Language"),
     ]
     await bot.set_my_commands(commands)
 
@@ -70,8 +73,13 @@ BotServices.link_processor = LinkProcessor(max_workers=5)
 # Initialize universal logger for error reporting
 error_logger.set_bot(bot)
 
+# i18n middleware — определяет язык и инжектит data["lang"]
+dp.message.middleware(I18nMiddleware())
+dp.callback_query.middleware(I18nMiddleware())
+
 # Роутеры бота
 # Порядок важен! Сначала роутеры с FSM состояниями, потом общие команды
+dp.include_router(lang.router)  # Выбор языка (до остальных команд)
 dp.include_router(admin.router)  # Админ-панель с FSM состояниями
 dp.include_router(manager.router)  # Менеджер-панель с FSM состояниями
 dp.include_router(download.router)  # Скачивание с FSM состояниями (waiting_for_link)

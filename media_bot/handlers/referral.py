@@ -13,6 +13,7 @@ from aiogram.enums.parse_mode import ParseMode
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
+from media_bot.handlers.messages import msg
 from shared.core.logger import get_logger
 from shared.db.repositories import BonusRepository, UserRepository
 from shared.db.session import get_session
@@ -24,7 +25,7 @@ router = Router()
 
 
 @router.message(Command("referral", "ref"))
-async def cmd_referral(message: types.Message, bot: Bot):
+async def cmd_referral(message: types.Message, bot: Bot, lang: str = "ru"):
     """
     Команда /referral - показывает реферальную ссылку и статистику
 
@@ -42,7 +43,7 @@ async def cmd_referral(message: types.Message, bot: Bot):
 
         if not user:
             await message.answer(
-                "❌ Пользователь не найден. Используйте /start для регистрации.",
+                msg("REFERRAL_USER_NOT_FOUND", lang),
                 parse_mode=ParseMode.HTML,
             )
             return
@@ -74,35 +75,19 @@ async def cmd_referral(message: types.Message, bot: Bot):
             rewards = await referral_service.get_user_referral_rewards(user_id=user.id, limit=5)
 
             # Формируем сообщение
-            message_text = (
-                "🎁 <b>Реферальная программа</b>\n\n"
-                f"👥 Приглашено рефералов: <b>{stats['total_referrals']}</b>\n"
-                f"💰 Заработано бонусов: <b>{stats['total_credits_earned']} скачиваний</b>\n"
-                f"✅ Активных рефералов: <b>{stats['active_referrals']}</b>\n\n"
-                "📋 <b>Ваша реферальная ссылка:</b>\n"
-                f"<code>{referral_link}</code>\n\n"
-                "🎯 <b>Как это работает:</b>\n"
-                "1️⃣ Поделитесь ссылкой с друзьями\n"
-                "2️⃣ Когда друг регистрируется — вы получаете <b>3 скачивания</b>\n"
-                "3️⃣ Когда друг совершает первую покупку — вы получаете <b>5 скачиваний</b>\n\n"
-                "🏆 <b>Milestone награды:</b>\n"
-                "• 5 рефералов → +5 скачиваний\n"
-                "• 10 рефералов → +10 скачиваний\n"
-                "• 25 рефералов → +25 скачиваний\n"
-                "• 50 рефералов → +50 скачиваний\n"
-                "• 100 рефералов → +100 скачиваний\n"
-            )
+            message_text = msg("REFERRAL_MAIN", lang).format(
+                total_referrals=stats['total_referrals'],
+                total_credits_earned=stats['total_credits_earned'],
+                active_referrals=stats['active_referrals'],
+                referral_link=referral_link,
+            ) + msg("REFERRAL_MILESTONES", lang)
 
             # Добавляем последние награды, если есть
             if rewards:
+                trigger_names = msg("REFERRAL_TRIGGER_NAMES", lang)
                 message_text += "\n💎 <b>Последние награды:</b>\n"
                 for reward in rewards:
-                    trigger_text = {
-                        "REGISTRATION": "Регистрация реферала",
-                        "FIRST_PAYMENT": "Первая покупка реферала",
-                        "SUBSCRIPTION": "Подписка реферала",
-                        "MILESTONE": "Milestone награда",
-                    }.get(reward.trigger_type, "Другое")
+                    trigger_text = trigger_names.get(reward.trigger_type, "Другое")
 
                     status_emoji = "✅" if reward.status == "COMPLETED" else "⏳"
                     message_text += (
@@ -127,12 +112,12 @@ async def cmd_referral(message: types.Message, bot: Bot):
         except Exception as e:
             logger.error(f"Failed to get referral stats for user {telegram_id}: {e}", exc_info=True)
             await message.answer(
-                "❌ Ошибка при получении статистики рефералов.", parse_mode=ParseMode.HTML
+                msg("REFERRAL_ERROR_STATS", lang), parse_mode=ParseMode.HTML
             )
 
 
 @router.callback_query(lambda c: c.data == "ref_my_referrals")
-async def callback_my_referrals(callback: CallbackQuery):
+async def callback_my_referrals(callback: CallbackQuery, lang: str = "ru"):
     """
     Callback - показывает список рефералов пользователя
 
@@ -149,7 +134,7 @@ async def callback_my_referrals(callback: CallbackQuery):
 
         if not user:
             await callback.answer(
-                "❌ Пользователь не найден. Используйте /start для регистрации.",
+                msg("REFERRAL_USER_NOT_FOUND", lang),
                 show_alert=True,
             )
             return
@@ -164,10 +149,7 @@ async def callback_my_referrals(callback: CallbackQuery):
             stats = await referral_service.get_referral_stats(user_id=user.id)
 
             if stats["total_referrals"] == 0:
-                message_text = (
-                    "📭 <b>У вас пока нет рефералов</b>\n\n"
-                    "Используйте команду /referral чтобы получить вашу реферальную ссылку!"
-                )
+                message_text = msg("REFERRAL_NO_REFERRALS", lang)
             else:
                 # Получаем детальную информацию о рефералах
                 referrals_detailed = await referral_service.get_user_referrals_detailed(
@@ -175,10 +157,10 @@ async def callback_my_referrals(callback: CallbackQuery):
                 )
 
                 # Формируем сообщение
-                message_text = (
-                    f"👥 <b>Ваши рефералы ({stats['total_referrals']})</b>\n\n"
-                    f"✅ Активных: {stats['active_referrals']}\n"
-                    f"💰 Заработано: {stats['total_credits_earned']} скачиваний\n\n"
+                message_text = msg("REFERRAL_LIST_HEADER", lang).format(
+                    count=stats['total_referrals'],
+                    active_referrals=stats['active_referrals'],
+                    total_credits_earned=stats['total_credits_earned'],
                 )
 
                 if referrals_detailed:
@@ -211,13 +193,13 @@ async def callback_my_referrals(callback: CallbackQuery):
 
         except Exception as e:
             logger.error(f"Failed to get referrals list for user {telegram_id}: {e}", exc_info=True)
-            await callback.answer("❌ Ошибка при получении списка рефералов.", show_alert=True)
+            await callback.answer(msg("REFERRAL_ERROR_LIST", lang), show_alert=True)
 
     await callback.answer()
 
 
 @router.callback_query(lambda c: c.data == "ref_rewards_history")
-async def callback_referral_rewards(callback: CallbackQuery):
+async def callback_referral_rewards(callback: CallbackQuery, lang: str = "ru"):
     """
     Callback - показывает историю реферальных наград
 
@@ -234,7 +216,7 @@ async def callback_referral_rewards(callback: CallbackQuery):
 
         if not user:
             await callback.answer(
-                "❌ Пользователь не найден. Используйте /start для регистрации.",
+                msg("REFERRAL_USER_NOT_FOUND", lang),
                 show_alert=True,
             )
             return
@@ -251,11 +233,7 @@ async def callback_referral_rewards(callback: CallbackQuery):
             )
 
             if not rewards:
-                message_text = (
-                    "📭 <b>История наград пуста</b>\n\n"
-                    "Приглашайте друзей, чтобы получать бонусы!\n"
-                    "Используйте команду /referral для получения реферальной ссылки."
-                )
+                message_text = msg("REFERRAL_NO_REWARDS", lang)
             else:
                 # Группируем по типам триггеров
                 rewards_by_type = {}
@@ -269,10 +247,9 @@ async def callback_referral_rewards(callback: CallbackQuery):
                     total_earned += reward.reward_value
 
                 # Формируем сообщение
-                message_text = (
-                    f"💎 <b>История реферальных наград</b>\n\n"
-                    f"Всего заработано: <b>{total_earned} скачиваний</b>\n"
-                    f"Всего наград: <b>{len(rewards)}</b>\n\n"
+                message_text = msg("REFERRAL_REWARDS_HEADER", lang).format(
+                    total_earned=total_earned,
+                    total_rewards=len(rewards),
                 )
 
                 # Отображаем по типам
@@ -293,10 +270,7 @@ async def callback_referral_rewards(callback: CallbackQuery):
                         f"Сумма: {trigger_sum} скачиваний\n"
                     )
 
-                message_text += (
-                    "\n\nℹ️ Используйте /referral для просмотра текущей статистики "
-                    "и реферальной ссылки."
-                )
+                message_text += msg("REFERRAL_REWARDS_FOOTER", lang)
 
             # Кнопка "Назад"
             keyboard = InlineKeyboardMarkup(
@@ -310,13 +284,13 @@ async def callback_referral_rewards(callback: CallbackQuery):
 
         except Exception as e:
             logger.error(f"Failed to get referral rewards for user {telegram_id}: {e}")
-            await callback.answer("❌ Ошибка при получении истории наград.", show_alert=True)
+            await callback.answer(msg("REFERRAL_ERROR_REWARDS", lang), show_alert=True)
 
     await callback.answer()
 
 
 @router.callback_query(lambda c: c.data == "ref_back")
-async def callback_ref_back(callback: CallbackQuery, bot: Bot):
+async def callback_ref_back(callback: CallbackQuery, bot: Bot, lang: str = "ru"):
     """
     Callback - возвращает к главному меню реферальной программы
     """
@@ -328,7 +302,7 @@ async def callback_ref_back(callback: CallbackQuery, bot: Bot):
 
         if not user:
             await callback.answer(
-                "❌ Пользователь не найден. Используйте /start для регистрации.",
+                msg("REFERRAL_USER_NOT_FOUND", lang),
                 show_alert=True,
             )
             return
@@ -360,35 +334,19 @@ async def callback_ref_back(callback: CallbackQuery, bot: Bot):
             rewards = await referral_service.get_user_referral_rewards(user_id=user.id, limit=5)
 
             # Формируем сообщение
-            message_text = (
-                "🎁 <b>Реферальная программа</b>\n\n"
-                f"👥 Приглашено рефералов: <b>{stats['total_referrals']}</b>\n"
-                f"💰 Заработано бонусов: <b>{stats['total_credits_earned']} скачиваний</b>\n"
-                f"✅ Активных рефералов: <b>{stats['active_referrals']}</b>\n\n"
-                "📋 <b>Ваша реферальная ссылка:</b>\n"
-                f"<code>{referral_link}</code>\n\n"
-                "🎯 <b>Как это работает:</b>\n"
-                "1️⃣ Поделитесь ссылкой с друзьями\n"
-                "2️⃣ Когда друг регистрируется — вы получаете <b>3 скачивания</b>\n"
-                "3️⃣ Когда друг совершает первую покупку — вы получаете <b>5 скачиваний</b>\n\n"
-                "🏆 <b>Milestone награды:</b>\n"
-                "• 5 рефералов → +5 скачиваний\n"
-                "• 10 рефералов → +10 скачиваний\n"
-                "• 25 рефералов → +25 скачиваний\n"
-                "• 50 рефералов → +50 скачиваний\n"
-                "• 100 рефералов → +100 скачиваний\n"
-            )
+            message_text = msg("REFERRAL_MAIN", lang).format(
+                total_referrals=stats['total_referrals'],
+                total_credits_earned=stats['total_credits_earned'],
+                active_referrals=stats['active_referrals'],
+                referral_link=referral_link,
+            ) + msg("REFERRAL_MILESTONES", lang)
 
             # Добавляем последние награды, если есть
             if rewards:
+                trigger_names = msg("REFERRAL_TRIGGER_NAMES", lang)
                 message_text += "\n💎 <b>Последние награды:</b>\n"
                 for reward in rewards:
-                    trigger_text = {
-                        "REGISTRATION": "Регистрация реферала",
-                        "FIRST_PAYMENT": "Первая покупка реферала",
-                        "SUBSCRIPTION": "Подписка реферала",
-                        "MILESTONE": "Milestone награда",
-                    }.get(reward.trigger_type, "Другое")
+                    trigger_text = trigger_names.get(reward.trigger_type, "Другое")
 
                     status_emoji = "✅" if reward.status == "COMPLETED" else "⏳"
                     message_text += (
@@ -414,6 +372,6 @@ async def callback_ref_back(callback: CallbackQuery, bot: Bot):
 
         except Exception as e:
             logger.error(f"Failed to return to referral menu for user {telegram_id}: {e}")
-            await callback.answer("❌ Ошибка при возврате в меню.", show_alert=True)
+            await callback.answer(msg("REFERRAL_ERROR_MENU", lang), show_alert=True)
 
     await callback.answer()

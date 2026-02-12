@@ -80,12 +80,13 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
             row_data = []
             for col_obj in column_objs:
                 try:
-                    # Безопасное получение значения: сначала пробуем __dict__, потом getattr
+                    # Используем col_obj.key (Python-атрибут) вместо col_obj.name (имя в БД)
                     # Это нужно чтобы избежать конфликтов с зарезервированными именами SQLAlchemy (metadata)
-                    if col_obj.name in row.__dict__:
-                        value = row.__dict__[col_obj.name]
+                    attr_name = col_obj.key
+                    if attr_name in row.__dict__:
+                        value = row.__dict__[attr_name]
                     else:
-                        value = getattr(row, col_obj.name, None)
+                        value = getattr(row, attr_name, None)
 
                     if isinstance(value, Enum):
                         value = value.value  # Конвертируем enum в его значение

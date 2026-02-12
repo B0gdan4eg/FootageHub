@@ -2,7 +2,7 @@
 MediaBot handlers
 """
 
-from . import admin, channel_check, download, info, manager, menu, payment, referral, start
+from . import admin, channel_check, download, info, lang, manager, menu, payment, referral, start
 
 __all__ = [
     "start",
@@ -14,4 +14,5 @@ __all__ = [
     "download",
     "admin",
     "referral",
+    "lang",
 ]

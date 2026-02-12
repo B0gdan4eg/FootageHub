@@ -11,7 +11,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from sqlalchemy import select
 
 from media_bot.config import CHANNEL_BONUS_CREDITS, CHANNEL_ID
-from media_bot.handlers.messages import CHANEL_APPLY, CHANEL_CANCLE
+from media_bot.handlers.messages import msg
 from shared.core.logger import get_logger
 from shared.db.models import User
 from shared.db.repositories import BonusRepository, UserRepository
@@ -49,7 +49,7 @@ async def is_subscribed(bot: Bot, tg_user_id: int) -> bool:
 # Роутер по коллбэку на проверку подписки
 # ------------------------------------------------------------
 @router.callback_query(lambda c: c.data == "check_subscription")
-async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
+async def check_subscription_callback(callback: CallbackQuery, bot: Bot, lang: str = "ru"):
     user_id = callback.from_user.id
     logger.debug(f"check_subscription callback triggered for user {user_id}")
     subscribed = await is_subscribed(bot, user_id)
@@ -69,7 +69,7 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
         )
         try:
             await callback.message.edit_text(
-                CHANEL_CANCLE,
+                msg("CHANEL_CANCLE", lang),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 reply_markup=keyboard,
@@ -112,11 +112,11 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                                 metadata={"channel_id": CHANNEL_ID},
                             )
                             bonuses_text.append(
-                                f"💰 Вам начислено {bonus.credits_granted} скачивания за подписку!"
+                                msg("CHANNEL_BONUS_GIVEN", lang).format(credits=bonus.credits_granted)
                             )
                             logger.info(f"CHANNEL_SUBSCRIPTION bonus claimed by user {user_id}")
                         else:
-                            bonuses_text.append("✅ Бонус за подписку вы уже получали ранее.")
+                            bonuses_text.append(msg("CHANNEL_BONUS_ALREADY", lang))
 
                         # Проверяем майлстоуны для реферера (бонус за регистрацию уже начислен)
                         try:
@@ -126,7 +126,7 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                         except Exception as e:
                             logger.error(f"Failed to check referral milestones: {e}")
 
-                        text = f"{CHANEL_APPLY}\n" + "\n".join(bonuses_text)
+                        text = f"{msg('CHANEL_APPLY', lang)}\n" + "\n".join(bonuses_text)
                     except Exception as e:
                         logger.error(f"Failed to claim CHANNEL_SUBSCRIPTION bonus: {e}")
                         # Fallback на старую систему
@@ -139,9 +139,9 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot):
                             if user_obj:
                                 user_obj.credits += CHANNEL_BONUS_CREDITS
                                 await session.commit()
-                                text = f"{CHANEL_APPLY}\n💰 Вам начислено {CHANNEL_BONUS_CREDITS} скачивания за подписку!"
+                                text = f"{msg('CHANEL_APPLY', lang)}\n{msg('CHANNEL_BONUS_GIVEN', lang).format(credits=CHANNEL_BONUS_CREDITS)}"
                         else:
-                            text = f"{CHANEL_APPLY}\n❌ Бонус за подписку вы уже получали ранее."
+                            text = f"{msg('CHANEL_APPLY', lang)}\n{msg('CHANNEL_BONUS_ALREADY_ALT', lang)}"
 
                     try:
                         await callback.message.edit_text(

@@ -6,7 +6,7 @@ from aiogram.filters import CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 
 from media_bot.config import ADMIN
-from media_bot.handlers.messages import MAINTENANCE_MESSAGE, WELCOME
+from media_bot.handlers.messages import msg
 from media_bot.keyboards import main_menu_kb
 from shared.core.logger import get_logger
 from shared.db.models import UserRole
@@ -25,14 +25,14 @@ BLOCKED_USERS = {472785197, 289997391, 6269570979}
 
 
 @router.message(CommandStart())
-async def cmd_start(message: types.Message, state: FSMContext, command: CommandObject):
+async def cmd_start(message: types.Message, state: FSMContext, command: CommandObject, lang: str = "ru"):
     await state.clear()
     telegram_id = message.from_user.id
 
     # Проверка на заблокированных пользователей
     if telegram_id in BLOCKED_USERS:
         await message.answer(
-            MAINTENANCE_MESSAGE, parse_mode=ParseMode.HTML, disable_web_page_preview=True
+            msg("MAINTENANCE_MESSAGE", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
         )
         return
 
@@ -52,7 +52,7 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                 logger.info(f"Creating user {telegram_id} with ADMIN role")
 
             # Создаем пользователя с 0 кредитов (бонусная система добавит)
-            user = await user_repo.create(tg_id=telegram_id, role=user_role, credits=0)
+            user = await user_repo.create(tg_id=telegram_id, role=user_role, credits=0, username=lang)
             await session.flush()
             await session.refresh(user)
 
@@ -101,12 +101,13 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                         # Отправляем уведомление рефереру о новом реферале
                         if user_bonus:
                             try:
+                                # Язык реферера берём из его username
+                                ref_lang = referrer.username if referrer.username in {"ru", "en"} else "ru"
                                 await message.bot.send_message(
                                     chat_id=referrer.tg_id,
-                                    text=f"🎉 <b>У вас новый реферал!</b>\n\n"
-                                    f"По вашей реферальной ссылке зарегистрировался новый пользователь.\n\n"
-                                    f"💰 Вам начислено <b>{user_bonus.credits_granted} скачиваний</b>\n\n"
-                                    f"Узнайте подробнее в разделе /referral",
+                                    text=msg("REFERRAL_NEW_NOTIFICATION", ref_lang).format(
+                                        credits_granted=user_bonus.credits_granted
+                                    ),
                                     parse_mode=ParseMode.HTML,
                                 )
                                 logger.info(
@@ -128,7 +129,7 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                 logger.info(f"Updated user {telegram_id} to ADMIN role")
 
     await message.answer(
-        WELCOME.format(name=message.from_user.first_name),
+        msg("WELCOME", lang),
         parse_mode=ParseMode.HTML,
         reply_markup=main_menu_kb,
         disable_web_page_preview=True,

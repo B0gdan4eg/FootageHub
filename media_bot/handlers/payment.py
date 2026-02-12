@@ -6,12 +6,7 @@ from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from media_bot.handlers.messages import (
-    SUB_PAYMENT_DAILY,
-    SUB_PAYMENT_MONTHLY_50,
-    SUB_PAYMENT_MONTHLY_150,
-    SUB_PAYMENT_MONTHLY_400,
-)
+from media_bot.handlers.messages import msg
 from media_bot.utils.price_loader import load_subscription_plans
 from media_bot.webpay_utils import get_webpay_api
 from shared.db.repositories import PaymentRepository, SubscriptionRepository, UserRepository
@@ -22,7 +17,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-async def send_price_menu(message_or_callback):
+async def send_price_menu(message_or_callback, lang: str = "ru"):
     """Отправляет меню с подписками и несгораемыми кредитами."""
 
     # Получить user_id
@@ -38,10 +33,10 @@ async def send_price_menu(message_or_callback):
 
         if not user:
             if isinstance(message_or_callback, types.CallbackQuery):
-                await message_or_callback.message.answer("❌ Пользователь не найден")
+                await message_or_callback.message.answer(msg("PAYMENT_USER_NOT_FOUND", lang))
                 await message_or_callback.answer()
             else:
-                await message_or_callback.answer("❌ Пользователь не найден")
+                await message_or_callback.answer(msg("PAYMENT_USER_NOT_FOUND", lang))
             return
 
         subscription_repo = SubscriptionRepository(session)
@@ -61,19 +56,11 @@ async def send_price_menu(message_or_callback):
             subscription_type_name = active_subscription.subscription_type.value
             end_date = active_subscription.end_date.strftime("%d.%m.%Y %H:%M")
 
-            message_text = f"""✅ <b>У вас активная подписка!</b>
-
-📋 <b>Ваша подписка:</b>
-- Тариф: {subscription_type_name}
-- Действует до: {end_date}
-- Доступно: {user.credits} загрузок
-
-⚠️ <b>Новую подписку нельзя купить, пока действует текущая.</b>
-
-💎 Но вы можете докупить загрузки поштучно — они не сгорают и всегда доступны!
-
-❓ Есть вопросы? Напишите в <a href="https://t.me/FootageHub_support">поддержку</a>
-"""
+            message_text = msg("PAYMENT_HAS_SUBSCRIPTION", lang).format(
+                subscription_type=subscription_type_name,
+                end_date=end_date,
+                credits=user.credits,
+            )
 
             if isinstance(message_or_callback, types.CallbackQuery):
                 await message_or_callback.message.edit_text(
@@ -98,10 +85,10 @@ async def send_price_menu(message_or_callback):
     except (FileNotFoundError, json.JSONDecodeError) as e:
         logger.error(f"Failed to load subscription plans: {e}")
         if isinstance(message_or_callback, types.CallbackQuery):
-            await message_or_callback.message.answer("❌ Ошибка загрузки списка подписок.")
+            await message_or_callback.message.answer(msg("PAYMENT_PLANS_LOAD_ERROR", lang))
             await message_or_callback.answer()
         else:
-            await message_or_callback.answer("❌ Ошибка загрузки списка подписок.")
+            await message_or_callback.answer(msg("PAYMENT_PLANS_LOAD_ERROR", lang))
         return
 
     data = dict_to_namespace({"subscription_plans": plans})
@@ -151,46 +138,32 @@ async def send_price_menu(message_or_callback):
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
-    # Новое сообщение с описанием планов
-    menu_message = """💎 <b>Выберите тарифный план</b>
-
-<b>Lite</b> · 50 шт. · ~8₽/файл
-Базовый
-
-<b>Standard</b> · 150 шт. · ~6₽/файл ⭐️
-Популярный
-
-<b>Pro</b> · 400 шт. · ~4.5₽/файл
-Для активной работы
-
-<i>Чем больше план — тем выгоднее!</i>"""
-
     # Для CallbackQuery редактируем сообщение, для Message создаем новое
     if isinstance(message_or_callback, types.CallbackQuery):
         await message_or_callback.message.edit_text(
-            menu_message, reply_markup=keyboard, parse_mode="HTML"
+            msg("PAYMENT_PLANS_MENU", lang), reply_markup=keyboard, parse_mode="HTML"
         )
         await message_or_callback.answer()
     else:
-        await message_or_callback.answer(menu_message, reply_markup=keyboard, parse_mode="HTML")
+        await message_or_callback.answer(msg("PAYMENT_PLANS_MENU", lang), reply_markup=keyboard, parse_mode="HTML")
 
 
 # Хендлер для callback "buy_subscription"
 @router.message(Command("pay"))
 @router.message(F.text == "Оформить подписку 💳")
-async def choose_plan_message(message: types.Message, state):
+async def choose_plan_message(message: types.Message, state, lang: str = "ru"):
     await state.clear()
-    await send_price_menu(message)
+    await send_price_menu(message, lang)
 
 
 @router.callback_query(F.data == "buy_subscription")
-async def choose_plan_callback(callback_query: types.CallbackQuery, state):
+async def choose_plan_callback(callback_query: types.CallbackQuery, state, lang: str = "ru"):
     await state.clear()
-    await send_price_menu(callback_query)
+    await send_price_menu(callback_query, lang)
 
 
 @router.callback_query(F.data.startswith("select_plan_"))
-async def show_plan_details(callback_query: types.CallbackQuery):
+async def show_plan_details(callback_query: types.CallbackQuery, lang: str = "ru"):
     """Показывает детали выбранной подписки с описанием всех тарифов."""
     plan_key = callback_query.data.replace("select_plan_", "")
 
@@ -199,7 +172,7 @@ async def show_plan_details(callback_query: types.CallbackQuery):
         plans = load_subscription_plans()
     except (FileNotFoundError, json.JSONDecodeError) as e:
         logger.error(f"Failed to load subscription plans: {e}")
-        await callback_query.message.answer("❌ Ошибка конфигурации. Обратитесь к администратору.")
+        await callback_query.message.answer(msg("PAYMENT_CONFIG_ERROR", lang))
         await callback_query.answer()
         return
 
@@ -208,21 +181,18 @@ async def show_plan_details(callback_query: types.CallbackQuery):
 
     if not plan:
         logger.error(f"Plan not found for key: {plan_key}")
-        await callback_query.message.answer("❌ Неверный тариф подписки. Попробуйте снова.")
+        await callback_query.message.answer(msg("PAYMENT_INVALID_PLAN", lang))
         await callback_query.answer()
         return
 
     # Выбираем правильное сообщение в зависимости от плана
-    if plan_key == "monthly_50":
-        message_template = SUB_PAYMENT_MONTHLY_50
-    elif plan_key == "monthly_150":
-        message_template = SUB_PAYMENT_MONTHLY_150
-    elif plan_key == "monthly_400":
-        message_template = SUB_PAYMENT_MONTHLY_400
-    elif plan_key == "daily_30":
-        message_template = SUB_PAYMENT_DAILY
-    else:
-        message_template = SUB_PAYMENT_MONTHLY_150  # По умолчанию
+    plan_msg_keys = {
+        "monthly_50": "SUB_PAYMENT_MONTHLY_50",
+        "monthly_150": "SUB_PAYMENT_MONTHLY_150",
+        "monthly_400": "SUB_PAYMENT_MONTHLY_400",
+        "daily_30": "SUB_PAYMENT_DAILY",
+    }
+    message_template = msg(plan_msg_keys.get(plan_key, "SUB_PAYMENT_MONTHLY_150"), lang)
 
     # Показываем детали подписки
     user_id = callback_query.from_user.id
@@ -257,13 +227,13 @@ async def show_plan_details(callback_query: types.CallbackQuery):
         pay_url = result.get("invoiceUrl")
     except Exception as e:
         logger.error(f"Error creating invoice: {e}")
-        await callback_query.message.answer("❌ Ошибка при создании инвойса. Попробуйте позже.")
+        await callback_query.message.answer(msg("PAYMENT_INVOICE_ERROR", lang))
         await callback_query.answer()
         return
 
     if not pay_url or not order_id:
         logger.error("Invoice creation returned empty values")
-        await callback_query.message.answer("❌ Ошибка при создании инвойса. Попробуйте позже.")
+        await callback_query.message.answer(msg("PAYMENT_INVOICE_ERROR", lang))
         await callback_query.answer()
         return
 
@@ -275,7 +245,7 @@ async def show_plan_details(callback_query: types.CallbackQuery):
         user = await user_repo.get_by_telegram_id(user_id)
         if not user:
             logger.error(f"User not found in DB: {user_id}")
-            await callback_query.message.answer("❌ Пользователь не найден. Начните с /start")
+            await callback_query.message.answer(msg("PAYMENT_USER_START", lang))
             await callback_query.answer()
             return
 
@@ -295,9 +265,7 @@ async def show_plan_details(callback_query: types.CallbackQuery):
             import traceback
 
             traceback.print_exc()
-            await callback_query.message.answer(
-                "❌ Ошибка при сохранении платежа. Попробуйте позже."
-            )
+            await callback_query.message.answer(msg("PAYMENT_SAVE_ERROR", lang))
             await callback_query.answer()
             return
 

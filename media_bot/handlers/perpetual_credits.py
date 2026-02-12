@@ -10,10 +10,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from media_bot.handlers.messages import (
-    PERPETUAL_CREDITS_CONFIRMATION,
     PERPETUAL_CREDITS_INVALID_INPUT,
     PERPETUAL_CREDITS_INVALID_QUANTITY,
-    PERPETUAL_CREDITS_PROMPT,
+    PERPETUAL_MAX_EXCEEDED,
+    msg,
 )
 from media_bot.state import PerpetualCreditsFlow
 from media_bot.webpay_utils import get_webpay_api
@@ -78,14 +78,14 @@ def validate_quantity_input(text: str) -> Tuple[bool, int, str]:
         return (
             False,
             quantity,
-            f"❌ <b>Превышен максимум</b>\n\nМаксимальное количество: <b>{config['maximum_quantity']} загрузок</b> за один раз.\n\nПожалуйста, введите число не больше {config['maximum_quantity']}.",
+            PERPETUAL_MAX_EXCEEDED.format(max_quantity=config["maximum_quantity"]),
         )
 
     return True, quantity, ""
 
 
 @router.callback_query(F.data == "buy_perpetual_credits")
-async def show_perpetual_credits_menu(callback_query: types.CallbackQuery, state: FSMContext):
+async def show_perpetual_credits_menu(callback_query: types.CallbackQuery, state: FSMContext, lang: str = "ru"):
     """Показывает меню покупки несгораемых кредитов"""
     await state.clear()
 
@@ -95,7 +95,7 @@ async def show_perpetual_credits_menu(callback_query: types.CallbackQuery, state
     )
 
     await callback_query.message.edit_text(
-        PERPETUAL_CREDITS_PROMPT, reply_markup=keyboard, parse_mode="HTML"
+        msg("PERPETUAL_CREDITS_PROMPT", lang), reply_markup=keyboard, parse_mode="HTML"
     )
 
     # Устанавливаем состояние ожидания количества
@@ -104,7 +104,7 @@ async def show_perpetual_credits_menu(callback_query: types.CallbackQuery, state
 
 
 @router.message(PerpetualCreditsFlow.waiting_for_quantity)
-async def process_quantity_input(message: types.Message, state: FSMContext):
+async def process_quantity_input(message: types.Message, state: FSMContext, lang: str = "ru"):
     """Обрабатывает ввод количества кредитов от пользователя"""
 
     # Валидация ввода
@@ -158,13 +158,13 @@ async def process_quantity_input(message: types.Message, state: FSMContext):
         pay_url = result.get("invoiceUrl")
     except Exception as e:
         logger.error(f"Error creating perpetual credits invoice: {e}")
-        await message.answer("❌ Ошибка при создании инвойса. Попробуйте позже.", parse_mode="HTML")
+        await message.answer(msg("PAYMENT_INVOICE_ERROR", lang), parse_mode="HTML")
         await state.clear()
         return
 
     if not pay_url or not order_id:
         logger.error("Perpetual credits invoice creation returned empty values")
-        await message.answer("❌ Ошибка при создании инвойса. Попробуйте позже.", parse_mode="HTML")
+        await message.answer(msg("PAYMENT_INVOICE_ERROR", lang), parse_mode="HTML")
         await state.clear()
         return
 
@@ -175,7 +175,7 @@ async def process_quantity_input(message: types.Message, state: FSMContext):
 
         if not user:
             logger.error(f"User not found in DB: {user_id}")
-            await message.answer("❌ Пользователь не найден. Начните с /start", parse_mode="HTML")
+            await message.answer(msg("PAYMENT_USER_START", lang), parse_mode="HTML")
             await state.clear()
             return
 
@@ -197,14 +197,12 @@ async def process_quantity_input(message: types.Message, state: FSMContext):
             )
         except Exception as e:
             logger.error(f"Error creating payment in DB: {e}", exc_info=True)
-            await message.answer(
-                "❌ Ошибка при сохранении платежа. Попробуйте позже.", parse_mode="HTML"
-            )
+            await message.answer(msg("PAYMENT_SAVE_ERROR", lang), parse_mode="HTML")
             await state.clear()
             return
 
     # Показываем подтверждение с кнопкой оплаты
-    confirmation_message = PERPETUAL_CREDITS_CONFIRMATION.format(
+    confirmation_message = msg("PERPETUAL_CREDITS_CONFIRMATION", lang).format(
         quantity=quantity, price=total_price
     )
 

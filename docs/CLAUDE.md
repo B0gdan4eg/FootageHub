@@ -203,6 +203,21 @@ python freepik_utils/check_cookies.py
 - Users with active subscriptions can still purchase perpetual credits
 - Implementation in `media_bot/handlers/perpetual_credits.py`
 
+**i18n (Internationalization):**
+- Supported languages: `ru` (default), `en`
+- Language stored in `User.username` field (DB). Not a real username — repurposed for lang code
+- Priority: `User.username` (DB) → Telegram `language_code[:2]` → `"ru"` (fallback)
+- All user-facing strings in `media_bot/handlers/messages.py`
+- Russian texts — module-level constants (e.g., `MAIN_MENU = "..."`), English — `_TRANSLATIONS["en"]` dict
+- `msg(key, lang)` function returns text: if `lang == "ru"` → `globals()[key]`, else → `_TRANSLATIONS[lang][key]` with ru fallback
+- `I18nMiddleware` (`media_bot/middlewares/i18n.py`) reads `user.username`, injects `data["lang"]`
+- All handlers accept `lang: str = "ru"` parameter (injected by middleware)
+- `/lang` command (`media_bot/handlers/lang.py`) — inline buttons to switch language, saves to `user.username`
+- Adding new language: add code to `SUPPORTED_LANGUAGES`, add `_TRANSLATIONS["xx"]` dict, add button in `lang.py`
+- When creating new user in `/start`: `username=lang` is set from middleware-detected language
+- **Usage in handlers**: `msg("CONSTANT_NAME", lang)` instead of bare `CONSTANT_NAME`; for `.format()`: `msg("KEY", lang).format(...)`
+- `REFERRAL_TRIGGER_NAMES` is a dict, not a string — `msg()` returns the dict for the right language
+
 **Referral Program:**
 - Each user has unique `referral_code` (generated on first user creation)
 - ReferralReward table tracks referrer → referred relationships
@@ -280,7 +295,7 @@ The `send_price_menu()` function has **two distinct branches** based on subscrip
 
 **Implementation pattern:**
 ```python
-async def send_price_menu(message_or_callback):
+async def send_price_menu(message_or_callback, lang: str = "ru"):
     user_id = message_or_callback.from_user.id
 
     # Check active subscription
@@ -290,6 +305,7 @@ async def send_price_menu(message_or_callback):
 
         if active_subscription:
             # Branch 1: Show only perpetual credits option
+            # All messages via msg("KEY", lang)
             return
 
     # Branch 2: Show all subscription tiers + perpetual credits
@@ -542,13 +558,13 @@ def load_perpetual_credits_config():
 2. Add subscription type to `SubscriptionType` enum in `shared/db/models.py`
 3. Create Alembic migration if enum changed
 4. Update handlers in `media_bot/handlers/payment.py` to offer new plan
-5. Update message templates in `media_bot/handlers/messages.py`
+5. Update message templates in `media_bot/handlers/messages.py` (Russian constant + `_TRANSLATIONS["en"]`)
 6. Update webhook parsing in `media_bot/webhook/webpay.py` if plan_key format changes
 
 **For Perpetual Credits:**
 1. Update `media_bot/handlers/prices_list.json` → `perpetual_credits` section
 2. Change `price_per_credit`, `minimum_quantity`, or `maximum_quantity`
-3. Update message templates in `media_bot/handlers/messages.py` if pricing changes
+3. Update message templates in `media_bot/handlers/messages.py` (Russian constant + `_TRANSLATIONS["en"]`)
 4. No database migration needed - uses existing `User.credits` field
 
 ### Debugging Download Issues
@@ -631,6 +647,7 @@ async def handle_perpetual_credits_purchase(session, user_id, order_id, plan_key
 - Order IDs for payments always follow format: `USER_{user_id}_{plan_key}_{uuid}`
 - Currency displayed to users: RUB; currency sent to WebPay: BYN (conversion factor in code)
 - **Configuration centralization**: Always import constants from `media_bot/config.py` (PRICE_LIST_PATH, CHANNEL_ID, etc.), never hardcode paths or values in handlers
+- **i18n**: Never use bare message constants in handlers. Always use `msg("KEY", lang)`. All handler functions must accept `lang: str = "ru"` parameter. New user-facing strings must be added both as Russian constant and in `_TRANSLATIONS["en"]`. `User.username` field stores language code (`"ru"` / `"en"`), not the actual Telegram username
 - **Perpetual Credits System**:
   - plan_key format: `perpetual_credits_{quantity}` (e.g., `perpetual_credits_10`)
   - No separate database table - uses `User.credits` field

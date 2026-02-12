@@ -1,9 +1,7 @@
 """
 Middlewares for MediaBot
-
-Future middlewares:
-- auth.py - Authentication middleware
-- subscription_check.py - Subscription validation middleware
 """
 
-__all__ = []
+from .i18n import I18nMiddleware
+
+__all__ = ["I18nMiddleware"]
