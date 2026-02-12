@@ -21,7 +21,7 @@ def msg(key: str, lang: str = "ru"):
 WELCOME = """
 👋 <b>Скачивай премиум с Envato, Freepik и Motion Array — бесплатно!</b>
 
-🎁 У тебя <b>3 бесплатных скачивания</b> в неделю.
+🎁 У тебя <b>2 бесплатных скачивания</b> в неделю.
 
 Нажми команду → кидай ссылку → готово!
 /envato · /freepik · /motion
@@ -620,7 +620,7 @@ _TRANSLATIONS = {
         "WELCOME": """
 👋 <b>Download premium from Envato, Freepik & Motion Array — for free!</b>
 
-🎁 You have <b>3 free downloads</b> per week.
+🎁 You have <b>2 free downloads</b> per week.
 
 Tap a command → send a link → done!
 /envato · /freepik · /motion
