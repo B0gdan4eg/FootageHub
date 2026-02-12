@@ -48,18 +48,36 @@ if sys.platform == "win32":
 
 
 async def set_bot_commands(bot: Bot):
-    """Устанавливает список команд бота, чтобы меню отображалось на всех устройствах."""
-    commands = [
-        BotCommand(command="menu", description="Меню"),
-        BotCommand(command="envato", description="Скачать Envato"),
-        BotCommand(command="freepik", description="Скачать Freepik"),
-        BotCommand(command="motion", description="Скачать Motion Array"),
-        BotCommand(command="info", description="Информация"),
-        BotCommand(command="pay", description="Оформить подписку"),
-        BotCommand(command="referral", description="Реферальная программа"),
-        BotCommand(command="lang", description="Язык / Language"),
+    """Устанавливает список команд бота на двух языках."""
+    from media_bot.handlers.messages import msg
+
+    ru_commands = [
+        BotCommand(command="menu", description=msg("CMD_MENU", "ru")),
+        BotCommand(command="envato", description=msg("CMD_ENVATO", "ru")),
+        BotCommand(command="freepik", description=msg("CMD_FREEPIK", "ru")),
+        BotCommand(command="motion", description=msg("CMD_MOTION", "ru")),
+        BotCommand(command="info", description=msg("CMD_INFO", "ru")),
+        BotCommand(command="pay", description=msg("CMD_PAY", "ru")),
+        BotCommand(command="referral", description=msg("CMD_REFERRAL", "ru")),
+        BotCommand(command="lang", description=msg("CMD_LANG", "ru")),
     ]
-    await bot.set_my_commands(commands)
+
+    en_commands = [
+        BotCommand(command="menu", description=msg("CMD_MENU", "en")),
+        BotCommand(command="envato", description=msg("CMD_ENVATO", "en")),
+        BotCommand(command="freepik", description=msg("CMD_FREEPIK", "en")),
+        BotCommand(command="motion", description=msg("CMD_MOTION", "en")),
+        BotCommand(command="info", description=msg("CMD_INFO", "en")),
+        BotCommand(command="pay", description=msg("CMD_PAY", "en")),
+        BotCommand(command="referral", description=msg("CMD_REFERRAL", "en")),
+        BotCommand(command="lang", description=msg("CMD_LANG", "en")),
+    ]
+
+    # Дефолтные команды (русские)
+    await bot.set_my_commands(ru_commands)
+    # Per-language команды
+    await bot.set_my_commands(ru_commands, language_code="ru")
+    await bot.set_my_commands(en_commands, language_code="en")
 
 
 # Telegram bot

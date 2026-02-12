@@ -17,7 +17,7 @@ router = Router()
 
 @router.message(Command("info"))
 @router.callback_query(lambda c: c.data == "user_info")
-@router.message(lambda message: message.text == "Информация")
+@router.message(lambda message: message.text in {"Информация", "Information"})
 async def info(message: types.Message, state: FSMContext, lang: str = "ru"):
     await state.clear()
     telegram_id = message.from_user.id
@@ -50,7 +50,7 @@ async def info(message: types.Message, state: FSMContext, lang: str = "ru"):
 
         # Формируем информацию о подписке
         if subscription:
-            sub_status = "✅ Активна"
+            sub_status = msg("SUB_STATUS_ACTIVE", lang)
             sub_until = subscription.end_date.strftime("%d.%m.%Y")
 
             # Определяем тип отображения лимитов
@@ -59,12 +59,14 @@ async def info(message: types.Message, state: FSMContext, lang: str = "ru"):
                 sub_limits = f"{subscription.used_total}/{subscription.total_limit}"
             elif subscription.daily_limit:
                 # DAILY_30: показываем только дневной лимит
-                sub_limits = f"{subscription.used_today}/{subscription.daily_limit} (сегодня)"
+                sub_limits = msg("SUB_LIMITS_DAILY", lang).format(
+                    used=subscription.used_today, limit=subscription.daily_limit
+                )
             else:
                 # UNLIMITED: безлимит
-                sub_limits = "♾️ Безлимит"
+                sub_limits = msg("SUB_LIMITS_UNLIMITED", lang)
         else:
-            sub_status = "❌ Неактивна"
+            sub_status = msg("SUB_STATUS_INACTIVE", lang)
             sub_until = "—"
             sub_limits = "—"
 
@@ -81,7 +83,7 @@ async def info(message: types.Message, state: FSMContext, lang: str = "ru"):
         # Создаём кнопку увеличения лимитов
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="buy_subscription")]
+                [InlineKeyboardButton(text=msg("BTN_BUY_SUBSCRIPTION", lang), callback_data="buy_subscription")]
             ]
         )
 

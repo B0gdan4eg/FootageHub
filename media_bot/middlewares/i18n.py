@@ -19,6 +19,8 @@ class I18nMiddleware(BaseMiddleware):
                         lang = user.username
                     elif from_user.language_code and from_user.language_code[:2] in SUPPORTED_LANGUAGES:
                         lang = from_user.language_code[:2]
+                    else:
+                        lang = "en"
             except Exception:
                 pass
         data["lang"] = lang

@@ -59,10 +59,10 @@ async def check_subscription_callback(callback: CallbackQuery, bot: Bot, lang: s
         # Пользователь не подписан — клавиатура для подписки
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}")],
+                [InlineKeyboardButton(text=msg("BTN_SUBSCRIBE_CHANNEL", lang), url=f"https://t.me/{CHANNEL_ID[1:]}")],
                 [
                     InlineKeyboardButton(
-                        text="Проверить подписку 🔍", callback_data="check_subscription"
+                        text=msg("BTN_CHECK_SUBSCRIPTION", lang), callback_data="check_subscription"
                     )
                 ],
             ]

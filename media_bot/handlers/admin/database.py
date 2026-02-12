@@ -10,7 +10,7 @@ import openpyxl
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
-from sqlalchemy import select
+from sqlalchemy import inspect as sa_inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from media_bot.state import AdminStates
@@ -70,23 +70,19 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
             ws.append(["Нет данных"])
             continue
 
-        # Получаем колонки и их имена
-        column_objs = list(model.__table__.columns)
-        column_names = [col.name for col in column_objs]
+        # Получаем маппинг Python-атрибут -> имя столбца в БД через inspect
+        # Это избегает конфликтов с зарезервированными именами SQLAlchemy (metadata)
+        mapper = sa_inspect(model)
+        attrs = [(prop.key, prop.columns[0].name) for prop in mapper.column_attrs]
+        column_names = [db_name for _, db_name in attrs]
         ws.append(column_names)
 
         # Данные
         for row in rows:
             row_data = []
-            for col_obj in column_objs:
+            for attr_name, db_name in attrs:
                 try:
-                    # Используем col_obj.key (Python-атрибут) вместо col_obj.name (имя в БД)
-                    # Это нужно чтобы избежать конфликтов с зарезервированными именами SQLAlchemy (metadata)
-                    attr_name = col_obj.key
-                    if attr_name in row.__dict__:
-                        value = row.__dict__[attr_name]
-                    else:
-                        value = getattr(row, attr_name, None)
+                    value = getattr(row, attr_name, None)
 
                     if isinstance(value, Enum):
                         value = value.value  # Конвертируем enum в его значение
@@ -102,7 +98,7 @@ async def export_full_db_and_send(session: AsyncSession, bot: Bot, chat_id: int)
                     row_data.append(value)
                 except Exception as e:
                     # Если не получается конвертировать значение, пропускаем и ставим пустую строку
-                    logger.warning(f"Failed to convert column {col_obj.name}: {e}")
+                    logger.warning(f"Failed to convert column {db_name} (attr={attr_name}): {e}")
                     row_data.append("")
             ws.append(row_data)
 

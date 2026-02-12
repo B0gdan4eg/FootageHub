@@ -14,6 +14,7 @@ from media_bot.downloaders.base import AbstractDownloader
 from media_bot.downloaders.envato import EnvatoDownloader
 from media_bot.downloaders.freepik import FreepikDownloader
 from media_bot.downloaders.motion import MotionDownloader
+from media_bot.handlers.messages import msg
 from shared.core.exceptions import (
     DownloadException,
     InsufficientCreditsError,
@@ -91,10 +92,10 @@ class DownloadService:
             subscription = await self._subscription_repo.get_active_by_user_id(user.id)
             if subscription:
                 raise InsufficientCreditsError(
-                    f"Недостаточно кредитов. Осталось: {subscription.downloads_left}"
+                    msg("ERR_INSUFFICIENT_CREDITS", "ru").format(remaining=subscription.downloads_left)
                 )
             else:
-                raise SubscriptionRequiredError("Для загрузки требуется активная подписка")
+                raise SubscriptionRequiredError(msg("ERR_SUBSCRIPTION_REQUIRED", "ru"))
 
         # 3. Получение загрузчика
         downloader = self._downloaders.get(provider)
@@ -104,14 +105,14 @@ class DownloadService:
         # 4. Проверка авторизации загрузчика
         if not await downloader.check_auth():
             logger.error(f"{provider} downloader is not authenticated")
-            raise DownloadException(f"Ошибка авторизации {provider}. Обратитесь к администратору.")
+            raise DownloadException(msg("ERR_AUTH_FAILED", "ru").format(provider=provider))
 
         # 5. Загрузка файла
         try:
             download_url = await downloader.download(url)
 
             if not download_url:
-                raise DownloadException("Не удалось загрузить файл")
+                raise DownloadException(msg("ERR_DOWNLOAD_FAILED", "ru"))
 
             # 6. Списание кредита
             subscription = await self._subscription_repo.get_active_by_user_id(user.id)
@@ -135,7 +136,7 @@ class DownloadService:
             raise
         except Exception as e:
             logger.error(f"Download failed for user {user_id}: {e}")
-            raise DownloadException(f"Ошибка загрузки: {str(e)}")
+            raise DownloadException(msg("ERR_DOWNLOAD_GENERIC", "ru").format(error=str(e)))
 
     async def check_download_availability(self, user_id: int, provider: str) -> Dict[str, Any]:
         """

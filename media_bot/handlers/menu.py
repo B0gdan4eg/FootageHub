@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
 from media_bot.handlers.messages import msg
-from media_bot.keyboards import main_menu_kb
+from media_bot.keyboards import get_main_menu_kb
 
 router = Router()
 
@@ -19,7 +19,7 @@ async def main_menu(message: types.Message, state: FSMContext, lang: str = "ru")
     await message.answer(
         msg("MAIN_MENU", lang),
         parse_mode=ParseMode.HTML,
-        reply_markup=main_menu_kb,
+        reply_markup=get_main_menu_kb(lang),
     )
 
 
@@ -31,7 +31,7 @@ async def main_menu_callback(callback: types.CallbackQuery, state: FSMContext, l
     await callback.message.answer(
         msg("MAIN_MENU", lang),
         parse_mode=ParseMode.HTML,
-        reply_markup=main_menu_kb,
+        reply_markup=get_main_menu_kb(lang),
     )
     await callback.answer()
     await state.clear()

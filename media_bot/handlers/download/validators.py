@@ -9,11 +9,7 @@ from aiogram.enums.parse_mode import ParseMode
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from media_bot.handlers.channel_check import CHANNEL_ID, is_subscribed
-from media_bot.handlers.messages import (
-    CANCLE_DOWNLOAD_PAYMENT_OFF,
-    CHANEL_CHECK,
-    USER_NOT_REGISTERED,
-)
+from media_bot.handlers.messages import msg
 from shared.db.repositories import UserRepository
 
 
@@ -47,7 +43,7 @@ async def auto_delete_download_link(
         pass
 
 
-async def check_user_eligibility(message: types.Message, bot: Bot, session) -> tuple[bool, any]:
+async def check_user_eligibility(message: types.Message, bot: Bot, session, lang: str = "ru") -> tuple[bool, any]:
     """
     Проверяет, может ли пользователь скачивать файлы.
 
@@ -60,7 +56,7 @@ async def check_user_eligibility(message: types.Message, bot: Bot, session) -> t
 
     if not user:
         await message.answer(
-            USER_NOT_REGISTERED, parse_mode=ParseMode.HTML, disable_web_page_preview=True
+            msg("USER_NOT_REGISTERED", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
         )
         return False, None
 
@@ -70,18 +66,18 @@ async def check_user_eligibility(message: types.Message, bot: Bot, session) -> t
                 inline_keyboard=[
                     [
                         InlineKeyboardButton(
-                            text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}"
+                            text=msg("BTN_SUBSCRIBE_CHANNEL", lang), url=f"https://t.me/{CHANNEL_ID[1:]}"
                         )
                     ],
                     [
                         InlineKeyboardButton(
-                            text="Проверить подписку 🔍", callback_data="check_subscription"
+                            text=msg("BTN_CHECK_SUBSCRIPTION", lang), callback_data="check_subscription"
                         )
                     ],
                 ]
             )
             await message.answer(
-                CHANEL_CHECK,
+                msg("CHANEL_CHECK", lang),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 reply_markup=keyboard,
@@ -90,11 +86,11 @@ async def check_user_eligibility(message: types.Message, bot: Bot, session) -> t
 
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="buy_subscription")]
+                [InlineKeyboardButton(text=msg("BTN_BUY_SUBSCRIPTION", lang), callback_data="buy_subscription")]
             ]
         )
         await message.answer(
-            CANCLE_DOWNLOAD_PAYMENT_OFF,
+            msg("CANCLE_DOWNLOAD_PAYMENT_OFF", lang),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             reply_markup=keyboard,

@@ -85,22 +85,22 @@ async def cmd_referral(message: types.Message, bot: Bot, lang: str = "ru"):
             # Добавляем последние награды, если есть
             if rewards:
                 trigger_names = msg("REFERRAL_TRIGGER_NAMES", lang)
-                message_text += "\n💎 <b>Последние награды:</b>\n"
+                message_text += msg("REFERRAL_RECENT_HEADER", lang)
                 for reward in rewards:
-                    trigger_text = trigger_names.get(reward.trigger_type, "Другое")
+                    trigger_text = trigger_names.get(reward.trigger_type, msg("REFERRAL_OTHER", lang))
 
                     status_emoji = "✅" if reward.status == "COMPLETED" else "⏳"
-                    message_text += (
-                        f"{status_emoji} {trigger_text}: " f"+{reward.reward_value} скачиваний\n"
+                    message_text += msg("REFERRAL_REWARD_LINE", lang).format(
+                        emoji=status_emoji, trigger=trigger_text, value=reward.reward_value
                     )
 
             # Создаем инлайн-клавиатуру
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="👥 Мои рефералы", callback_data="ref_my_referrals")],
+                    [InlineKeyboardButton(text=msg("BTN_MY_REFERRALS", lang), callback_data="ref_my_referrals")],
                     [
                         InlineKeyboardButton(
-                            text="💎 История наград", callback_data="ref_rewards_history"
+                            text=msg("BTN_REFERRAL_HISTORY", lang), callback_data="ref_rewards_history"
                         )
                     ],
                 ]
@@ -164,7 +164,7 @@ async def callback_my_referrals(callback: CallbackQuery, lang: str = "ru"):
                 )
 
                 if referrals_detailed:
-                    message_text += "<b>Список рефералов:</b>\n"
+                    message_text += msg("REFERRAL_LIST_TITLE", lang)
                     for idx, ref in enumerate(referrals_detailed[:10], 1):
                         # Эмодзи для статусов
                         channel_emoji = "✅" if ref["has_channel_subscription"] else "❌"
@@ -173,17 +173,19 @@ async def callback_my_referrals(callback: CallbackQuery, lang: str = "ru"):
                         # Формат даты
                         reg_date = ref["registered_at"].strftime("%d.%m.%Y")
 
-                        message_text += (
-                            f"{idx}. ID: <b>{ref['telegram_id']}</b>\n"
-                            f"   Канал: {channel_emoji} | Покупка: {payment_emoji} | {reg_date}\n"
+                        message_text += msg("REFERRAL_ITEM", lang).format(
+                            idx=idx, tid=ref['telegram_id'],
+                            ch=channel_emoji, pay=payment_emoji, date=reg_date
                         )
 
                     if len(referrals_detailed) > 10:
-                        message_text += f"\n<i>... и еще {len(referrals_detailed) - 10}</i>\n"
+                        message_text += msg("REFERRAL_AND_MORE", lang).format(
+                            count=len(referrals_detailed) - 10
+                        )
 
             # Кнопка "Назад"
             keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text="« Назад", callback_data="ref_back")]]
+                inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="ref_back")]]
             )
 
             await callback.message.edit_text(
@@ -253,28 +255,21 @@ async def callback_referral_rewards(callback: CallbackQuery, lang: str = "ru"):
                 )
 
                 # Отображаем по типам
-                trigger_names = {
-                    "REGISTRATION": "📝 Регистрации рефералов",
-                    "FIRST_PAYMENT": "💳 Первые покупки",
-                    "SUBSCRIPTION": "🔔 Подписки",
-                    "MILESTONE": "🏆 Milestone награды",
-                }
+                trigger_names = msg("REFERRAL_TRIGGER_NAMES_EXT", lang)
 
                 for trigger, trigger_rewards in rewards_by_type.items():
-                    trigger_name = trigger_names.get(trigger, "❓ Другое")
+                    trigger_name = trigger_names.get(trigger, "❓ " + msg("REFERRAL_OTHER", lang))
                     trigger_sum = sum(r.reward_value for r in trigger_rewards)
 
-                    message_text += (
-                        f"\n{trigger_name}\n"
-                        f"Количество: {len(trigger_rewards)} | "
-                        f"Сумма: {trigger_sum} скачиваний\n"
+                    message_text += "\n" + msg("REFERRAL_TRIGGER_STATS", lang).format(
+                        name=trigger_name, count=len(trigger_rewards), sum=trigger_sum
                     )
 
                 message_text += msg("REFERRAL_REWARDS_FOOTER", lang)
 
             # Кнопка "Назад"
             keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text="« Назад", callback_data="ref_back")]]
+                inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="ref_back")]]
             )
 
             await callback.message.edit_text(
@@ -344,22 +339,22 @@ async def callback_ref_back(callback: CallbackQuery, bot: Bot, lang: str = "ru")
             # Добавляем последние награды, если есть
             if rewards:
                 trigger_names = msg("REFERRAL_TRIGGER_NAMES", lang)
-                message_text += "\n💎 <b>Последние награды:</b>\n"
+                message_text += msg("REFERRAL_RECENT_HEADER", lang)
                 for reward in rewards:
-                    trigger_text = trigger_names.get(reward.trigger_type, "Другое")
+                    trigger_text = trigger_names.get(reward.trigger_type, msg("REFERRAL_OTHER", lang))
 
                     status_emoji = "✅" if reward.status == "COMPLETED" else "⏳"
-                    message_text += (
-                        f"{status_emoji} {trigger_text}: " f"+{reward.reward_value} скачиваний\n"
+                    message_text += msg("REFERRAL_REWARD_LINE", lang).format(
+                        emoji=status_emoji, trigger=trigger_text, value=reward.reward_value
                     )
 
             # Создаем инлайн-клавиатуру
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="👥 Мои рефералы", callback_data="ref_my_referrals")],
+                    [InlineKeyboardButton(text=msg("BTN_MY_REFERRALS", lang), callback_data="ref_my_referrals")],
                     [
                         InlineKeyboardButton(
-                            text="💎 История наград", callback_data="ref_rewards_history"
+                            text=msg("BTN_REFERRAL_HISTORY", lang), callback_data="ref_rewards_history"
                         )
                     ],
                 ]

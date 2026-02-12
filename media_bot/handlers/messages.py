@@ -532,6 +532,84 @@ PERPETUAL_MAX_EXCEEDED = (
     "Пожалуйста, введите число не больше {max_quantity}."
 )
 
+# Кнопки
+BTN_DOWNLOAD_ENVATO = "Скачать Envato"
+BTN_DOWNLOAD_FREEPIK = "Скачать Freepik"
+BTN_DOWNLOAD_MOTION = "Скачать Motion Array"
+BTN_INFO = "Информация"
+BTN_SUBSCRIBE = "Оформить подписку 💳"
+BTN_CANCEL = "❌ Отменить"
+BTN_SUBSCRIBE_CHANNEL = "Подписаться ✅"
+BTN_CHECK_SUBSCRIPTION = "Проверить подписку 🔍"
+BTN_BUY_SUBSCRIPTION = "💳 Оформить подписку"
+BTN_DOWNLOAD_FILE = "Cкачать файл 📁"
+BTN_DOWNLOAD_MORE = "Cкачать ещё"
+BTN_BACK_TO_PLANS = "⬅️ Назад к выбору"
+
+# Кнопки навигации
+BTN_BACK = "« Назад"
+BTN_DOWNLOAD = "⬇️ Скачать"
+BTN_PAY = "💳 Оплатить"
+BTN_BUY_PERPETUAL = "💎 Купить поштучно"
+BTN_MY_REFERRALS = "👥 Мои рефералы"
+BTN_REFERRAL_HISTORY = "💎 История наград"
+BTN_SEPARATOR_OR = "─────────── или ───────────"
+BTN_LANG_RU = "🇷🇺 Русский"
+BTN_LANG_EN = "🇬🇧 English"
+
+# Кнопки тарифов
+BTN_PLAN_LITE = "Lite · 50 шт · {price} ₽/мес"
+BTN_PLAN_STANDARD = "Standard · 150 шт · {price} ₽/мес ⭐️"
+BTN_PLAN_PRO = "Pro · 400 шт · {price} ₽/мес"
+BTN_PLAN_OTHER = "{name} · {limit} шт · {price} ₽/мес"
+
+# Статусы подписки (info.py)
+SUB_STATUS_ACTIVE = "✅ Активна"
+SUB_STATUS_INACTIVE = "❌ Неактивна"
+SUB_LIMITS_UNLIMITED = "♾️ Безлимит"
+SUB_LIMITS_DAILY = "{used}/{limit} (сегодня)"
+
+# Реферальная система — дополнительные строки
+REFERRAL_RECENT_HEADER = "\n💎 <b>Последние награды:</b>\n"
+REFERRAL_REWARD_LINE = "{emoji} {trigger}: +{value} скачиваний\n"
+REFERRAL_OTHER = "Другое"
+REFERRAL_LIST_TITLE = "<b>Список рефералов:</b>\n"
+REFERRAL_ITEM = "{idx}. ID: <b>{tid}</b>\n   Канал: {ch} | Покупка: {pay} | {date}\n"
+REFERRAL_AND_MORE = "\n<i>... и еще {count}</i>\n"
+REFERRAL_TRIGGER_NAMES_EXT = {
+    "REGISTRATION": "📝 Регистрации рефералов",
+    "FIRST_PAYMENT": "💳 Первые покупки",
+    "SUBSCRIPTION": "🔔 Подписки",
+    "MILESTONE": "🏆 Milestone награды",
+}
+REFERRAL_TRIGGER_STATS = "{name}\nКоличество: {count} | Сумма: {sum} скачиваний\n"
+
+# Описания инвойсов
+INVOICE_SUBSCRIPTION = "Покупка подписки {name}"
+INVOICE_PERPETUAL = "Покупка {quantity} несгораемых загрузок"
+
+# Ошибки download_service
+ERR_INSUFFICIENT_CREDITS = "Недостаточно кредитов. Осталось: {remaining}"
+ERR_SUBSCRIPTION_REQUIRED = "Для загрузки требуется активная подписка"
+ERR_AUTH_FAILED = "Ошибка авторизации {provider}. Обратитесь к администратору."
+ERR_DOWNLOAD_FAILED = "Не удалось загрузить файл"
+ERR_DOWNLOAD_GENERIC = "Ошибка загрузки: {error}"
+
+# Ошибки subscription_repository
+ERR_SUB_EXPIRED = "Подписка истекла"
+ERR_TOTAL_LIMIT = "Достигнут общий лимит скачиваний"
+ERR_DAILY_LIMIT = "Достигнут дневной лимит скачиваний"
+
+# Команды бота
+CMD_MENU = "Меню"
+CMD_ENVATO = "Скачать Envato"
+CMD_FREEPIK = "Скачать Freepik"
+CMD_MOTION = "Скачать Motion Array"
+CMD_INFO = "Информация"
+CMD_PAY = "Оформить подписку"
+CMD_REFERRAL = "Реферальная программа"
+CMD_LANG = "Язык / Language"
+
 # Выбор языка
 LANG_CHOOSE = "🌐 <b>Выберите язык / Choose language:</b>"
 LANG_SET = "✅ Язык установлен: <b>Русский</b> 🇷🇺"
@@ -991,5 +1069,73 @@ For heavy use
         ),
         "LANG_CHOOSE": "🌐 <b>Выберите язык / Choose language:</b>",
         "LANG_SET": "✅ Language set: <b>English</b> 🇬🇧",
+        "BTN_DOWNLOAD_ENVATO": "Download Envato",
+        "BTN_DOWNLOAD_FREEPIK": "Download Freepik",
+        "BTN_DOWNLOAD_MOTION": "Download Motion Array",
+        "BTN_INFO": "Information",
+        "BTN_SUBSCRIBE": "Subscribe 💳",
+        "BTN_CANCEL": "❌ Cancel",
+        "BTN_SUBSCRIBE_CHANNEL": "Subscribe ✅",
+        "BTN_CHECK_SUBSCRIPTION": "Check subscription 🔍",
+        "BTN_BUY_SUBSCRIPTION": "💳 Subscribe",
+        "BTN_DOWNLOAD_FILE": "Download file 📁",
+        "BTN_DOWNLOAD_MORE": "Download more",
+        "BTN_BACK_TO_PLANS": "⬅️ Back to plans",
+        # Кнопки навигации
+        "BTN_BACK": "« Back",
+        "BTN_DOWNLOAD": "⬇️ Download",
+        "BTN_PAY": "💳 Pay",
+        "BTN_BUY_PERPETUAL": "💎 Buy per download",
+        "BTN_MY_REFERRALS": "👥 My referrals",
+        "BTN_REFERRAL_HISTORY": "💎 Rewards history",
+        "BTN_SEPARATOR_OR": "─────────── or ───────────",
+        "BTN_LANG_RU": "🇷🇺 Русский",
+        "BTN_LANG_EN": "🇬🇧 English",
+        # Кнопки тарифов
+        "BTN_PLAN_LITE": "Lite · 50 pcs · {price} ₽/mo",
+        "BTN_PLAN_STANDARD": "Standard · 150 pcs · {price} ₽/mo ⭐️",
+        "BTN_PLAN_PRO": "Pro · 400 pcs · {price} ₽/mo",
+        "BTN_PLAN_OTHER": "{name} · {limit} pcs · {price} ₽/mo",
+        # Статусы подписки
+        "SUB_STATUS_ACTIVE": "✅ Active",
+        "SUB_STATUS_INACTIVE": "❌ Inactive",
+        "SUB_LIMITS_UNLIMITED": "♾️ Unlimited",
+        "SUB_LIMITS_DAILY": "{used}/{limit} (today)",
+        # Реферальная система
+        "REFERRAL_RECENT_HEADER": "\n💎 <b>Recent rewards:</b>\n",
+        "REFERRAL_REWARD_LINE": "{emoji} {trigger}: +{value} downloads\n",
+        "REFERRAL_OTHER": "Other",
+        "REFERRAL_LIST_TITLE": "<b>Referrals list:</b>\n",
+        "REFERRAL_ITEM": "{idx}. ID: <b>{tid}</b>\n   Channel: {ch} | Purchase: {pay} | {date}\n",
+        "REFERRAL_AND_MORE": "\n<i>... and {count} more</i>\n",
+        "REFERRAL_TRIGGER_NAMES_EXT": {
+            "REGISTRATION": "📝 Referral registrations",
+            "FIRST_PAYMENT": "💳 First purchases",
+            "SUBSCRIPTION": "🔔 Subscriptions",
+            "MILESTONE": "🏆 Milestone rewards",
+        },
+        "REFERRAL_TRIGGER_STATS": "{name}\nCount: {count} | Total: {sum} downloads\n",
+        # Описания инвойсов
+        "INVOICE_SUBSCRIPTION": "Subscription purchase {name}",
+        "INVOICE_PERPETUAL": "Purchase of {quantity} permanent downloads",
+        # Ошибки download_service
+        "ERR_INSUFFICIENT_CREDITS": "Insufficient credits. Remaining: {remaining}",
+        "ERR_SUBSCRIPTION_REQUIRED": "An active subscription is required to download",
+        "ERR_AUTH_FAILED": "{provider} authentication error. Contact administrator.",
+        "ERR_DOWNLOAD_FAILED": "Failed to download the file",
+        "ERR_DOWNLOAD_GENERIC": "Download error: {error}",
+        # Ошибки subscription_repository
+        "ERR_SUB_EXPIRED": "Subscription expired",
+        "ERR_TOTAL_LIMIT": "Total download limit reached",
+        "ERR_DAILY_LIMIT": "Daily download limit reached",
+        # Команды бота
+        "CMD_MENU": "Menu",
+        "CMD_ENVATO": "Download Envato",
+        "CMD_FREEPIK": "Download Freepik",
+        "CMD_MOTION": "Download Motion Array",
+        "CMD_INFO": "Information",
+        "CMD_PAY": "Subscribe",
+        "CMD_REFERRAL": "Referral program",
+        "CMD_LANG": "Language",
     }
 }

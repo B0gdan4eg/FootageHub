@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 
 from media_bot.config import ADMIN
 from media_bot.handlers.messages import msg
-from media_bot.keyboards import main_menu_kb
+from media_bot.keyboards import get_main_menu_kb
 from shared.core.logger import get_logger
 from shared.db.models import UserRole
 from shared.db.repositories.bonus_repository import BonusRepository
@@ -131,6 +131,6 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
     await message.answer(
         msg("WELCOME", lang),
         parse_mode=ParseMode.HTML,
-        reply_markup=main_menu_kb,
+        reply_markup=get_main_menu_kb(lang),
         disable_web_page_preview=True,
     )

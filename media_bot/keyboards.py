@@ -5,24 +5,28 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 
-# Main menu keyboard
-main_menu_kb = ReplyKeyboardMarkup(
-    keyboard=[
-        [
-            KeyboardButton(text="Скачать Envato", style="success"),
-            KeyboardButton(text="Скачать Freepik", style="primary"),
+from media_bot.handlers.messages import msg
+
+
+def get_main_menu_kb(lang: str = "ru") -> ReplyKeyboardMarkup:
+    """Get main menu keyboard localized by language."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text=msg("BTN_DOWNLOAD_ENVATO", lang)),
+                KeyboardButton(text=msg("BTN_DOWNLOAD_FREEPIK", lang)),
+            ],
+            [
+                KeyboardButton(text=msg("BTN_DOWNLOAD_MOTION", lang)),
+            ],
+            [
+                KeyboardButton(text=msg("BTN_INFO", lang)),
+                KeyboardButton(text=msg("BTN_SUBSCRIBE", lang)),
+            ],
         ],
-        [
-            KeyboardButton(text="Скачать Motion Array", style="danger"),
-        ],
-        [
-            KeyboardButton(text="Информация"),
-            KeyboardButton(text="Оформить подписку 💳"),
-        ],
-    ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
-)
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
 
 
 # Admin menu inline keyboard with obfuscated callbacks
@@ -70,10 +74,10 @@ def get_user_edit_menu_kb() -> InlineKeyboardMarkup:
 
 
 # Cancel keyboard
-def get_cancel_kb() -> ReplyKeyboardMarkup:
-    """Get cancel keyboard"""
+def get_cancel_kb(lang: str = "ru") -> ReplyKeyboardMarkup:
+    """Get cancel keyboard localized by language."""
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="❌ Отменить")]],
+        keyboard=[[KeyboardButton(text=msg("BTN_CANCEL", lang))]],
         resize_keyboard=True,
         one_time_keyboard=False,
     )

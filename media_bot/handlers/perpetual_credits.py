@@ -9,12 +9,7 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from media_bot.handlers.messages import (
-    PERPETUAL_CREDITS_INVALID_INPUT,
-    PERPETUAL_CREDITS_INVALID_QUANTITY,
-    PERPETUAL_MAX_EXCEEDED,
-    msg,
-)
+from media_bot.handlers.messages import msg
 from media_bot.state import PerpetualCreditsFlow
 from media_bot.webpay_utils import get_webpay_api
 from shared.db.repositories import PaymentRepository, UserRepository
@@ -51,12 +46,13 @@ def load_perpetual_credits_config():
         }
 
 
-def validate_quantity_input(text: str) -> Tuple[bool, int, str]:
+def validate_quantity_input(text: str, lang: str = "ru") -> Tuple[bool, int, str]:
     """
     Валидация пользовательского ввода количества кредитов.
 
     Args:
         text: Текст от пользователя
+        lang: Язык пользователя
 
     Returns:
         (is_valid, quantity, error_message)
@@ -67,18 +63,18 @@ def validate_quantity_input(text: str) -> Tuple[bool, int, str]:
     try:
         quantity = int(text.strip())
     except ValueError:
-        return False, 0, PERPETUAL_CREDITS_INVALID_INPUT
+        return False, 0, msg("PERPETUAL_CREDITS_INVALID_INPUT", lang)
 
     # Минимум
     if quantity < config["minimum_quantity"]:
-        return False, quantity, PERPETUAL_CREDITS_INVALID_QUANTITY
+        return False, quantity, msg("PERPETUAL_CREDITS_INVALID_QUANTITY", lang)
 
     # Максимум
     if quantity > config["maximum_quantity"]:
         return (
             False,
             quantity,
-            PERPETUAL_MAX_EXCEEDED.format(max_quantity=config["maximum_quantity"]),
+            msg("PERPETUAL_MAX_EXCEEDED", lang).format(max_quantity=config["maximum_quantity"]),
         )
 
     return True, quantity, ""
@@ -91,7 +87,7 @@ async def show_perpetual_credits_menu(callback_query: types.CallbackQuery, state
 
     # Обновляем сообщение с промптом
     keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="❌ Отмена", callback_data="buy_subscription")]]
+        inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_CANCEL", lang), callback_data="buy_subscription")]]
     )
 
     await callback_query.message.edit_text(
@@ -108,13 +104,13 @@ async def process_quantity_input(message: types.Message, state: FSMContext, lang
     """Обрабатывает ввод количества кредитов от пользователя"""
 
     # Валидация ввода
-    is_valid, quantity, error_message = validate_quantity_input(message.text)
+    is_valid, quantity, error_message = validate_quantity_input(message.text, lang)
 
     if not is_valid:
         # Отправляем сообщение об ошибке
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="❌ Отмена", callback_data="buy_subscription")]
+                [InlineKeyboardButton(text=msg("BTN_CANCEL", lang), callback_data="buy_subscription")]
             ]
         )
         await message.answer(error_message, reply_markup=keyboard, parse_mode="HTML")
@@ -148,7 +144,7 @@ async def process_quantity_input(message: types.Message, state: FSMContext, lang
         result = await webpay_api.create_invoice(
             order_id=order_id,
             amount=total_price,
-            description=f"Покупка {quantity} несгораемых загрузок",
+            description=msg("INVOICE_PERPETUAL", lang).format(quantity=quantity),
             return_url=return_url,
             cancel_url=cancel_url,
             notify_url=notify_url,
@@ -208,8 +204,8 @@ async def process_quantity_input(message: types.Message, state: FSMContext, lang
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="💳 Оплатить", url=pay_url)],
-            [InlineKeyboardButton(text="⬅️ Назад к выбору", callback_data="buy_subscription")],
+            [InlineKeyboardButton(text=msg("BTN_PAY", lang), url=pay_url)],
+            [InlineKeyboardButton(text=msg("BTN_BACK_TO_PLANS", lang), callback_data="buy_subscription")],
         ]
     )
 

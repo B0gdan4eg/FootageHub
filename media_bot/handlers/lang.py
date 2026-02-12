@@ -11,12 +11,14 @@ from shared.db.session import get_session
 
 router = Router()
 
-_LANG_KB = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="set_lang_ru")],
-        [InlineKeyboardButton(text="🇬🇧 English", callback_data="set_lang_en")],
-    ]
-)
+
+def _lang_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=msg("BTN_LANG_RU", "ru"), callback_data="set_lang_ru")],
+            [InlineKeyboardButton(text=msg("BTN_LANG_EN", "en"), callback_data="set_lang_en")],
+        ]
+    )
 
 
 @router.message(Command("lang"))
@@ -24,7 +26,7 @@ async def cmd_lang(message: types.Message, lang: str = "ru"):
     await message.answer(
         msg("LANG_CHOOSE", lang),
         parse_mode=ParseMode.HTML,
-        reply_markup=_LANG_KB,
+        reply_markup=_lang_keyboard(),
     )
 
 

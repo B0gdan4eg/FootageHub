@@ -12,22 +12,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from media_bot.handlers.channel_check import CHANNEL_ID, is_subscribed
 from media_bot.handlers.download.validators import auto_delete_download_link, check_user_eligibility
-from media_bot.handlers.messages import (
-    ALREADY_DOWNLOADED,
-    APPLY_DOWNLOAD,
-    BAD_URL,
-    CANCLE_DOWNLOAD_PAYMENT_OFF,
-    CHANEL_CHECK,
-    DOWNLOAD_FAILED,
-    DOWNLOAD_FILE,
-    DOWNLOAD_RETRY,
-    LINK_NOT_FOUND,
-    LINK_READY,
-    PROCESSING_COMPLETE,
-    PROCESSING_LINK,
-    USER_NOT_FOUND,
-    USER_NOT_REGISTERED,
-)
+from media_bot.handlers.messages import msg
 from media_bot.services import BotServices
 from media_bot.state import DownloadFlow
 from shared.db.models import ServiceType
@@ -45,19 +30,19 @@ router = Router()
 
 @router.message(Command("envato"))
 @router.callback_query(F.data == "envato_start")
-@router.message(F.text == "Скачать Envato")
-async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
+@router.message(F.text.in_({"Скачать Envato", "Download Envato"}))
+async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot, lang: str = "ru"):
     """Запрос ссылки на Envato файл"""
     async for session in get_session():
-        is_eligible, user = await check_user_eligibility(message, bot, session)
+        is_eligible, user = await check_user_eligibility(message, bot, session, lang)
         if not is_eligible:
             return
 
         keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]]
+            inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="go_back_menu")]]
         )
         await message.answer(
-            APPLY_DOWNLOAD.format(credit=user.credits),
+            msg("APPLY_DOWNLOAD", lang).format(credit=user.credits),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             reply_markup=keyboard,
@@ -66,7 +51,7 @@ async def ask_for_link(message: types.Message, state: FSMContext, bot: Bot):
 
 
 @router.message(DownloadFlow.waiting_for_link)
-async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
+async def handle_link(message: types.Message, state: FSMContext, bot: Bot, lang: str = "ru"):
     """Обработка ссылки на Envato файл"""
     url = message.text.strip()
 
@@ -84,10 +69,10 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         url.startswith("https://elements.envato.com/") or url.startswith("https://app.envato.com/")
     ):
         keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]]
+            inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="go_back_menu")]]
         )
         await message.answer(
-            BAD_URL, parse_mode=ParseMode.HTML, disable_web_page_preview=True, reply_markup=keyboard
+            msg("BAD_URL", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True, reply_markup=keyboard
         )
         return
 
@@ -99,7 +84,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         user = await user_repo.get_by_telegram_id(telegram_id)
         if not user:
             await message.answer(
-                USER_NOT_FOUND, parse_mode=ParseMode.HTML, disable_web_page_preview=True
+                msg("USER_NOT_FOUND", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
             )
             await state.clear()
             return
@@ -108,18 +93,18 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         downloaded = await download_repo.has_user_downloaded(user_id=user.id, url=url)
         print(downloaded)
         if downloaded:
-            await message.answer(ALREADY_DOWNLOADED)
+            await message.answer(msg("ALREADY_DOWNLOADED", lang))
 
             link_processor = BotServices.link_processor
             file_path = await link_processor.submit(url, with_license=with_license)
 
             if file_path:
                 keyboard = InlineKeyboardMarkup(
-                    inline_keyboard=[[InlineKeyboardButton(text="⬇️ Скачать", url=file_path)]]
+                    inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_DOWNLOAD", lang), url=file_path)]]
                 )
 
                 sent_message = await message.answer(
-                    LINK_READY,
+                    msg("LINK_READY", lang),
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
                     reply_markup=keyboard,
@@ -131,7 +116,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
                 )
             else:
                 await message.answer(
-                    LINK_NOT_FOUND, parse_mode=ParseMode.HTML, disable_web_page_preview=True
+                    msg("LINK_NOT_FOUND", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
                 )
 
             await state.clear()
@@ -143,13 +128,13 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
                 inline_keyboard=[
                     [
                         InlineKeyboardButton(
-                            text="💳 Оформить подписку", callback_data="buy_subscription"
+                            text=msg("BTN_BUY_SUBSCRIPTION", lang), callback_data="buy_subscription"
                         )
                     ]
                 ]
             )
             await message.answer(
-                CANCLE_DOWNLOAD_PAYMENT_OFF,
+                msg("CANCLE_DOWNLOAD_PAYMENT_OFF", lang),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 reply_markup=keyboard,
@@ -160,7 +145,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
         await bot.send_chat_action(chat_id=message.chat.id, action="typing")
 
         # Отправляем сообщение о загрузке
-        thinking_msg = await message.answer(PROCESSING_LINK)
+        thinking_msg = await message.answer(msg("PROCESSING_LINK", lang))
 
         link_processor = BotServices.link_processor
         file_path = await link_processor.submit(url, with_license=with_license)
@@ -172,12 +157,12 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
                 user_id=user.id, media_id=media.id, service_type=ServiceType.ENVATO
             )
 
-            await thinking_msg.edit_text(PROCESSING_COMPLETE)
+            await thinking_msg.edit_text(msg("PROCESSING_COMPLETE", lang))
 
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="Cкачать файл 📁", url=file_path)],
-                    [InlineKeyboardButton(text="Cкачать ещё", callback_data="download_more")],
+                    [InlineKeyboardButton(text=msg("BTN_DOWNLOAD_FILE", lang), url=file_path)],
+                    [InlineKeyboardButton(text=msg("BTN_DOWNLOAD_MORE", lang), callback_data="download_more")],
                 ]
             )
 
@@ -192,7 +177,7 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
                 print(f"[DOWNLOAD] ✅ Увеличен счетчик подписки #{subscription.id}")
 
             sent_message = await message.answer(
-                DOWNLOAD_FILE.format(credit=user.credits),
+                msg("DOWNLOAD_FILE", lang).format(credit=user.credits),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 reply_markup=keyboard,
@@ -206,14 +191,14 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot):
             await session.commit()
         else:
             await thinking_msg.edit_text(
-                DOWNLOAD_FAILED, parse_mode=ParseMode.HTML, disable_web_page_preview=True
+                msg("DOWNLOAD_FAILED", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
             )
-            await message.answer(DOWNLOAD_RETRY, parse_mode=ParseMode.HTML)
+            await message.answer(msg("DOWNLOAD_RETRY", lang), parse_mode=ParseMode.HTML)
         await state.clear()
 
 
 @router.callback_query(F.data == "download_more")
-async def download_more(callback: CallbackQuery, state: FSMContext, bot: Bot):
+async def download_more(callback: CallbackQuery, state: FSMContext, bot: Bot, lang: str = "ru"):
     """Обработка кнопки 'Скачать ещё' для Envato"""
     telegram_id = callback.from_user.id
 
@@ -224,7 +209,7 @@ async def download_more(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
         if not user:
             await callback.message.answer(
-                USER_NOT_REGISTERED, parse_mode=ParseMode.HTML, disable_web_page_preview=True
+                msg("USER_NOT_REGISTERED", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
             )
             await callback.answer()
             return
@@ -235,18 +220,18 @@ async def download_more(callback: CallbackQuery, state: FSMContext, bot: Bot):
                     inline_keyboard=[
                         [
                             InlineKeyboardButton(
-                                text="Подписаться ✅", url=f"https://t.me/{CHANNEL_ID[1:]}"
+                                text=msg("BTN_SUBSCRIBE_CHANNEL", lang), url=f"https://t.me/{CHANNEL_ID[1:]}"
                             )
                         ],
                         [
                             InlineKeyboardButton(
-                                text="Проверить подписку 🔍", callback_data="check_subscription"
+                                text=msg("BTN_CHECK_SUBSCRIPTION", lang), callback_data="check_subscription"
                             )
                         ],
                     ]
                 )
                 await callback.message.answer(
-                    CHANEL_CHECK,
+                    msg("CHANEL_CHECK", lang),
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
                     reply_markup=keyboard,
@@ -255,10 +240,10 @@ async def download_more(callback: CallbackQuery, state: FSMContext, bot: Bot):
                 return
 
         keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text="« Назад", callback_data="go_back_menu")]]
+            inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="go_back_menu")]]
         )
         await callback.message.answer(
-            APPLY_DOWNLOAD.format(credit=user.credits),
+            msg("APPLY_DOWNLOAD", lang).format(credit=user.credits),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             reply_markup=keyboard,

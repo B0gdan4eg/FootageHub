@@ -47,7 +47,7 @@ async def send_price_menu(message_or_callback, lang: str = "ru"):
             keyboard_buttons = [
                 [
                     InlineKeyboardButton(
-                        text="💎 Купить поштучно", callback_data="buy_perpetual_credits"
+                        text=msg("BTN_BUY_PERPETUAL", lang), callback_data="buy_perpetual_credits"
                     )
                 ]
             ]
@@ -107,14 +107,16 @@ async def send_price_menu(message_or_callback, lang: str = "ru"):
 
             # Формируем текст кнопки
             if key == "monthly_50":
-                button_text = f"Lite · 50 шт · {item.price} ₽/мес"
+                button_text = msg("BTN_PLAN_LITE", lang).format(price=item.price)
             elif key == "monthly_150":
-                button_text = f"Standard · 150 шт · {item.price} ₽/мес ⭐️"
+                button_text = msg("BTN_PLAN_STANDARD", lang).format(price=item.price)
             elif key == "monthly_400":
-                button_text = f"Pro · 400 шт · {item.price} ₽/мес"
+                button_text = msg("BTN_PLAN_PRO", lang).format(price=item.price)
             else:
                 # Для других планов (если будут)
-                button_text = f"{item.name} · {item.total_limit} шт · {item.price} ₽/мес"
+                button_text = msg("BTN_PLAN_OTHER", lang).format(
+                    name=item.name, limit=item.total_limit, price=item.price
+                )
 
             callback_data = f"select_plan_{key}"
             keyboard_buttons.append(
@@ -128,12 +130,12 @@ async def send_price_menu(message_or_callback, lang: str = "ru"):
 
     # Добавить разделитель
     keyboard_buttons.append(
-        [InlineKeyboardButton(text="─────────── или ───────────", callback_data="separator_ignore")]
+        [InlineKeyboardButton(text=msg("BTN_SEPARATOR_OR", lang), callback_data="separator_ignore")]
     )
 
     # Добавить кнопку несгораемых кредитов
     keyboard_buttons.append(
-        [InlineKeyboardButton(text="💎 Купить поштучно", callback_data="buy_perpetual_credits")]
+        [InlineKeyboardButton(text=msg("BTN_BUY_PERPETUAL", lang), callback_data="buy_perpetual_credits")]
     )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
@@ -150,7 +152,7 @@ async def send_price_menu(message_or_callback, lang: str = "ru"):
 
 # Хендлер для callback "buy_subscription"
 @router.message(Command("pay"))
-@router.message(F.text == "Оформить подписку 💳")
+@router.message(F.text.in_({"Оформить подписку 💳", "Subscribe 💳"}))
 async def choose_plan_message(message: types.Message, state, lang: str = "ru"):
     await state.clear()
     await send_price_menu(message, lang)
@@ -218,7 +220,7 @@ async def show_plan_details(callback_query: types.CallbackQuery, lang: str = "ru
         result = await webpay_api.create_invoice(
             order_id=order_id,
             amount=plan.price,
-            description=f"Покупка подписки {plan.name}",
+            description=msg("INVOICE_SUBSCRIPTION", lang).format(name=plan.name),
             return_url=return_url,
             cancel_url=cancel_url,
             notify_url=notify_url,
@@ -272,8 +274,8 @@ async def show_plan_details(callback_query: types.CallbackQuery, lang: str = "ru
     # Кнопка для оплаты
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="💳 Оплатить", url=pay_url)],
-            [InlineKeyboardButton(text="⬅️ Назад к выбору", callback_data="buy_subscription")],
+            [InlineKeyboardButton(text=msg("BTN_PAY", lang), url=pay_url)],
+            [InlineKeyboardButton(text=msg("BTN_BACK_TO_PLANS", lang), callback_data="buy_subscription")],
         ]
     )
 
