@@ -31,8 +31,8 @@ SERVICES = {
     },
     "freepik": {
         "login_url": "https://www.freepik.com/log-in?client_id=freepik&lang=en",
-        "success_url": "https://www.freepik.com",
-        "alt_success_url": None,
+        "success_url": "https://www.freepik.com/",
+        "alt_success_url": "https://www.freepik.com/home",
         "output_dir": "freepik_utils",
         "cookie_prefix": "freepik_cookies",
     },
@@ -86,33 +86,21 @@ async def save_cookies_after_login(service: str, number: int = None):
         print(f"\n1. Откроется браузер со страницей: {config['login_url']}")
         print(f"2. Войдите в аккаунт вручную")
         print(f"3. Дождитесь полной загрузки главной страницы")
-        print(f"4. Cookies будут автоматически сохранены в:")
+        print(f"4. Вернитесь в консоль и нажмите ENTER")
+        print(f"5. Cookies сохранятся в:")
         print(f"   - {service_output_path}")
         print(f"   - {test_output_path}")
-        print(f"\n[*] Ожидание входа (макс. 5 минут)...\n")
 
         await page.goto(config["login_url"])
 
-        # Wait for successful login (check main page URL)
-        success_urls = [config["success_url"]]
-        if config["alt_success_url"]:
-            success_urls.append(config["alt_success_url"])
-
-        try:
-            # Wait for any of the success URLs
-            await page.wait_for_url(f"**{config['success_url']}**", timeout=300000)
-        except Exception:
-            # Try alternative success URL if available
-            if config["alt_success_url"]:
-                try:
-                    await page.wait_for_url(f"**{config['alt_success_url']}**", timeout=5000)
-                except Exception:
-                    pass
-
-        # Give time for all cookies to be set
-        print("[+] Вход выполнен! Ожидание загрузки cookies...")
         import asyncio
 
+        # Wait for user to confirm login
+        await asyncio.get_event_loop().run_in_executor(
+            None, input, "\n>>> Нажмите ENTER после входа в аккаунт... "
+        )
+
+        print("[+] Сохраняю cookies...")
         await asyncio.sleep(3)
 
         # Get all cookies from current context
