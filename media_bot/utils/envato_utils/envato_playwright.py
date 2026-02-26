@@ -158,6 +158,7 @@ class EnvatoDownloader:
                     pass
 
             # Click download button - универсальный селектор для обоих форматов
+            # Используем JS-клик чтобы обойти overlay-попапы (New plans, Easier way to find licenses)
             download_button_selectors = [
                 "button:has-text('Скачать')",  # Универсальный по тексту (RU)
                 "button:has-text('Download')",  # Универсальный по тексту (EN)
@@ -168,10 +169,15 @@ class EnvatoDownloader:
             button_clicked = False
             for selector in download_button_selectors:
                 try:
-                    await page.wait_for_selector(selector, state="visible", timeout=2000)
-                    await page.click(selector, delay=0)
-                    button_clicked = True
-                    break
+                    btn = await page.wait_for_selector(selector, state="visible", timeout=2000)
+                    if btn:
+                        try:
+                            await page.click(selector, delay=0, timeout=3000)
+                        except Exception:
+                            # Если overlay блокирует клик — кликаем через JS
+                            await btn.evaluate("el => el.click()")
+                        button_clicked = True
+                        break
                 except Exception:
                     continue
 
@@ -309,7 +315,13 @@ class EnvatoDownloader:
                 pass  # Cookie banner not found, continue
 
             # Step 1: Click download button to open modal
-            await page.click("button[data-testid='button-download']", timeout=10000)
+            # JS-клик чтобы обойти overlay-попапы (New plans, Easier way to find licenses)
+            try:
+                await page.click("button[data-testid='button-download']", timeout=3000)
+            except Exception:
+                btn = await page.wait_for_selector("button[data-testid='button-download']", state="visible", timeout=5000)
+                if btn:
+                    await btn.evaluate("el => el.click()")
             await asyncio.sleep(1)  # Wait for modal to appear
 
             # Step 2: Click radio button to select project (from recorded_actions.json)
