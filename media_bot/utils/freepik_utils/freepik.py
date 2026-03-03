@@ -69,7 +69,8 @@ class FreepikDownloader:
         self.fail_count = 0
 
     async def __aenter__(self):
-        self.browser = await uc.start(headless=False)
+        # sandbox=False нужен для запуска в Docker (root без песочницы)
+        self.browser = await uc.start(headless=False, sandbox=False)
         return self
 
     async def __aexit__(self, *args):
