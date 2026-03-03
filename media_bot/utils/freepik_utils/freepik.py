@@ -1,4 +1,5 @@
 import asyncio
+import glob
 import json
 import os
 import time
@@ -10,6 +11,20 @@ from .logger import logger
 
 COOKIE_DIR = os.path.dirname(__file__)
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "freepik_cookie_index.txt")
+
+
+def find_chromium_executable() -> str | None:
+    """Ищет Chromium от Playwright если системный Chrome не найден."""
+    patterns = [
+        "/root/.cache/ms-playwright/chromium-*/chrome-linux/chrome",
+        "/home/*/.cache/ms-playwright/chromium-*/chrome-linux/chrome",
+        "/ms-playwright/chromium-*/chrome-linux/chrome",
+    ]
+    for pattern in patterns:
+        matches = glob.glob(pattern)
+        if matches:
+            return matches[0]
+    return None
 
 
 def get_next_cookie_file():
@@ -70,7 +85,13 @@ class FreepikDownloader:
 
     async def __aenter__(self):
         # sandbox=False нужен для запуска в Docker (root без песочницы)
-        self.browser = await uc.start(headless=False, sandbox=False)
+        # Если системный Chrome не найден — используем Chromium от Playwright
+        chromium_path = find_chromium_executable()
+        self.browser = await uc.start(
+            headless=False,
+            sandbox=False,
+            browser_executable_path=chromium_path,  # None = автопоиск системного Chrome
+        )
         return self
 
     async def __aexit__(self, *args):
