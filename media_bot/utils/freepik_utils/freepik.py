@@ -148,18 +148,40 @@ class FreepikDownloader:
             tab.add_handler(cdp.page.DownloadWillBegin, on_download)
 
             # Запрещаем реальное скачивание файла — нам нужна только ссылка
-            await tab.send(cdp.browser.set_download_behavior(
-                behavior="deny",
-                browser_context_id=None,
-            ))
+            await tab.send(
+                cdp.browser.set_download_behavior(
+                    behavior="deny",
+                    browser_context_id=None,
+                )
+            )
 
             # Переходим на страницу ресурса
             await tab.get(asset_url)
 
-            # Ищем кнопку скачивания (nodriver ждёт появления элемента)
-            btn = await tab.select('button[data-cy="download-button"]', timeout=30)
+            # Ищем кнопку скачивания
+            # nodriver бросает StopIteration (-> RuntimeError в async) если элемент не найден
+            try:
+                btn = await tab.select('button[data-cy="download-button"]', timeout=30)
+            except (StopIteration, RuntimeError):
+                btn = None
             if not btn:
-                print(f"❌ [FREEPIK] Кнопка скачивания не найдена")
+                self.fail_count += 1
+                elapsed = time.time() - start_time
+                self.total_time += elapsed
+                print(f"❌ [FREEPIK] Кнопка скачивания не найдена ({elapsed:.2f} сек)")
+
+                screenshot_dir = os.path.join(COOKIE_DIR, "debug_screenshots")
+                os.makedirs(screenshot_dir, exist_ok=True)
+                screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
+                try:
+                    await tab.save_screenshot(screenshot_path)
+                except Exception:
+                    screenshot_path = None
+
+                await logger.error(
+                    f"❌ [FREEPIK] Кнопка скачивания не найдена\nURL: {asset_url}",
+                    screenshot_path=screenshot_path,
+                )
                 return None
 
             await btn.click()
@@ -213,9 +235,7 @@ class FreepikDownloader:
                 try:
                     screenshot_dir = os.path.join(COOKIE_DIR, "debug_screenshots")
                     os.makedirs(screenshot_dir, exist_ok=True)
-                    screenshot_path = os.path.join(
-                        screenshot_dir, f"error_{int(time.time())}.png"
-                    )
+                    screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
                     await tab.save_screenshot(screenshot_path)
                 except Exception:
                     screenshot_path = None
