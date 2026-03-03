@@ -20,6 +20,7 @@ idna==3.10
 magic-filter==1.0.12
 multidict==6.6.3
 playwright==1.53.0
+nodriver==0.48.1
 propcache==0.3.2
 pydantic==2.11.7
 pydantic_core==2.33.2

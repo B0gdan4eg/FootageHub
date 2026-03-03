@@ -3,7 +3,8 @@ import json
 import os
 import time
 
-from playwright.async_api import async_playwright
+import nodriver as uc
+from nodriver import cdp
 
 from .logger import logger
 
@@ -58,55 +59,29 @@ def get_next_cookie_file():
 
 class FreepikDownloader:
     """
-    Advanced Freepik downloader using CDP (Chrome DevTools Protocol).
-    Supports both single and batch processing with URL interception.
+    Freepik downloader using nodriver (undetected Chrome, bypasses Cloudflare).
     """
 
     def __init__(self):
-        self.playwright = None
         self.browser = None
-        self.context = None
         self.total_time = 0
         self.success_count = 0
         self.fail_count = 0
 
     async def __aenter__(self):
-        self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=False)
-        self.context = await self.browser.new_context()
-
-        # Получаем следующий файл с куками (ротация)
-        cookie_file = get_next_cookie_file()
-
-        with open(cookie_file, "r") as f:
-            await self.context.add_cookies(json.load(f))
-
+        self.browser = await uc.start(headless=False)
         return self
 
     async def __aexit__(self, *args):
-        # Закрываем контекст перед браузером для корректной очистки
-        if self.context:
-            try:
-                await self.context.close()
-            except Exception as e:
-                print(f"⚠️ [FREEPIK] Ошибка при закрытии контекста: {e}")
-
         if self.browser:
             try:
-                await self.browser.close()
+                self.browser.stop()
             except Exception as e:
                 print(f"⚠️ [FREEPIK] Ошибка при закрытии браузера: {e}")
 
-        if self.playwright:
-            try:
-                await self.playwright.stop()
-            except Exception as e:
-                print(f"⚠️ [FREEPIK] Ошибка при остановке playwright: {e}")
-
     async def get_download_url(self, asset_url: str) -> str | None:
         """
-        Get direct download URL using download event interception.
-        Fastest and most reliable method.
+        Get direct download URL using network request interception.
 
         Args:
             asset_url: URL of the Freepik asset page
@@ -114,53 +89,75 @@ class FreepikDownloader:
         Returns:
             Direct download URL or None if failed
         """
-        page = None
+        tab = None
         start_time = time.time()
         download_url = None
 
         try:
-            page = await self.context.new_page()
+            tab = await self.browser.get("about:blank")
 
-            # Перехватываем только download event - самый быстрый и надежный способ
+            # Загружаем куки через CDP
+            cookie_file = get_next_cookie_file()
+            with open(cookie_file, "r") as f:
+                raw_cookies = json.load(f)
+
+            for c in raw_cookies:
+                try:
+                    await tab.send(
+                        cdp.network.set_cookie(
+                            name=c["name"],
+                            value=c["value"],
+                            domain=c.get("domain", ".freepik.com"),
+                            path=c.get("path", "/"),
+                            secure=c.get("secure", False),
+                            http_only=c.get("httpOnly", False),
+                        )
+                    )
+                except Exception:
+                    pass
+
+            # Перехватываем событие начала скачивания — содержит прямой URL
             download_info = {}
 
-            async def handle_download(download):
-                try:
-                    download_info["url"] = download.url
-                    # Отменяем скачивание, нам нужна только ссылка
-                    await download.cancel()
-                except Exception as e:
-                    print(f"⚠️ [FREEPIK] Ошибка: {e}")
+            def on_download(evt: cdp.page.DownloadWillBegin):
+                if not download_info.get("url"):
+                    download_info["url"] = evt.url
 
-            page.on("download", handle_download)
+            tab.add_handler(cdp.page.DownloadWillBegin, on_download)
 
-            # Navigate to asset page
-            await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
+            # Запрещаем реальное скачивание файла — нам нужна только ссылка
+            await tab.send(cdp.browser.set_download_behavior(
+                behavior="deny",
+                browser_context_id=None,
+            ))
 
-            # Click download button
-            await page.click("button[data-cy='download-button']", timeout=5000)
+            # Переходим на страницу ресурса
+            await tab.get(asset_url)
 
-            # Ждём download event (увеличено до 5 секунд для надежности)
-            max_wait = 5
-            for i in range(max_wait * 10):
+            # Ищем кнопку скачивания (nodriver ждёт появления элемента)
+            btn = await tab.select('button[data-cy="download-button"]', timeout=30)
+            if not btn:
+                print(f"❌ [FREEPIK] Кнопка скачивания не найдена")
+                return None
+
+            await btn.click()
+
+            # Ждём URL скачивания (до 10 секунд)
+            for _ in range(100):
                 if download_info.get("url"):
                     break
                 await asyncio.sleep(0.1)
 
-            # Если download event не сработал, пробуем кликнуть ещё раз
+            # Если не нашли — повторный клик
             if not download_info.get("url"):
-                print(f"[FREEPIK] Download event не сработал, повторный клик...")
-                await page.click("button[data-cy='download-button']", timeout=5000)
-
-                # Ждём ещё 5 секунд
-                for i in range(max_wait * 10):
+                print(f"[FREEPIK] Download URL не найден, повторный клик...")
+                await btn.click()
+                for _ in range(100):
                     if download_info.get("url"):
                         break
                     await asyncio.sleep(0.1)
 
-            # Получаем ссылку
             download_url = download_info.get("url")
-
             elapsed = time.time() - start_time
             self.total_time += elapsed
 
@@ -169,18 +166,15 @@ class FreepikDownloader:
                 print(f"✅ [FREEPIK] Ссылка получена за {elapsed:.2f} сек")
             else:
                 self.fail_count += 1
-                print(f"❌ [FREEPIK] Download event не сработал")
+                print(f"❌ [FREEPIK] Download URL не найден")
 
-                # Делаем скриншот для отладки
-                import os
-
-                screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
+                screenshot_dir = os.path.join(COOKIE_DIR, "debug_screenshots")
                 os.makedirs(screenshot_dir, exist_ok=True)
                 screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
-                await page.screenshot(path=screenshot_path, full_page=False)
+                await tab.save_screenshot(screenshot_path)
 
                 await logger.error(
-                    f"❌ [FREEPIK] Download event не сработал\n" f"URL: {asset_url}",
+                    f"❌ [FREEPIK] Download URL не найден\nURL: {asset_url}",
                     screenshot_path=screenshot_path,
                 )
 
@@ -192,30 +186,28 @@ class FreepikDownloader:
             self.fail_count += 1
             print(f"❌ [FREEPIK] Ошибка: {e}")
 
-            # Делаем скриншот при ошибке, если страница доступна
             screenshot_path = None
-            if page:
+            if tab:
                 try:
-                    import os
-
-                    screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
+                    screenshot_dir = os.path.join(COOKIE_DIR, "debug_screenshots")
                     os.makedirs(screenshot_dir, exist_ok=True)
-                    screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
-                    await page.screenshot(path=screenshot_path, full_page=False)
-                except Exception as e:
-                    print(f"[FREEPIK] Failed to save screenshot: {e}")
+                    screenshot_path = os.path.join(
+                        screenshot_dir, f"error_{int(time.time())}.png"
+                    )
+                    await tab.save_screenshot(screenshot_path)
+                except Exception:
                     screenshot_path = None
 
             await logger.error(
-                f"❌ [FREEPIK] Ошибка: {e}\n" f"URL: {asset_url}", screenshot_path=screenshot_path
+                f"❌ [FREEPIK] Ошибка: {e}\nURL: {asset_url}",
+                screenshot_path=screenshot_path,
             )
             return None
 
         finally:
-            # Close the page
-            if page:
+            if tab:
                 try:
-                    await page.close()
+                    await tab.close()
                 except Exception:
                     pass
 
