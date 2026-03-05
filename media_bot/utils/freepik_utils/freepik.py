@@ -156,7 +156,16 @@ class FreepikDownloader:
             )
 
             # Переходим на страницу ресурса
-            await tab.get(asset_url)
+            # nodriver бросает StopIteration (-> RuntimeError в async) при проблемах навигации
+            try:
+                await tab.get(asset_url)
+            except (StopIteration, RuntimeError) as e:
+                if "StopIteration" in str(type(e).__name__) or "StopIteration" in str(e):
+                    print(f"⚠️ [FREEPIK] Retry navigation after StopIteration...")
+                    await asyncio.sleep(1)
+                    await tab.get(asset_url)
+                else:
+                    raise
 
             # Ищем кнопку скачивания
             # nodriver бросает StopIteration (-> RuntimeError в async) если элемент не найден
@@ -184,7 +193,15 @@ class FreepikDownloader:
                 )
                 return None
 
-            await btn.click()
+            try:
+                await btn.click()
+            except (StopIteration, RuntimeError):
+                # nodriver иногда бросает StopIteration при клике
+                await asyncio.sleep(0.5)
+                try:
+                    await btn.click()
+                except (StopIteration, RuntimeError):
+                    pass
 
             # Ждём URL скачивания (до 10 секунд)
             for _ in range(100):
@@ -195,7 +212,10 @@ class FreepikDownloader:
             # Если не нашли — повторный клик
             if not download_info.get("url"):
                 print(f"[FREEPIK] Download URL не найден, повторный клик...")
-                await btn.click()
+                try:
+                    await btn.click()
+                except (StopIteration, RuntimeError):
+                    pass
                 for _ in range(100):
                     if download_info.get("url"):
                         break
