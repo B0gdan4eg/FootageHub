@@ -169,10 +169,22 @@ class FreepikDownloader:
 
             # Ищем кнопку скачивания
             # nodriver бросает StopIteration (-> RuntimeError в async) если элемент не найден
+            btn = None
+            # 1) По data-cy атрибуту
             try:
-                btn = await tab.select('button[data-cy="download-button"]', timeout=30)
+                btn = await tab.select('button[data-cy="download-button"]', timeout=15)
             except (StopIteration, RuntimeError):
-                btn = None
+                pass
+            # 2) Фоллбэк: ищем по тексту "Download" / "Скачать"
+            if not btn:
+                for text in ("Download", "Скачать"):
+                    try:
+                        btn = await tab.find(text, best_match=True, timeout=5)
+                        if btn and btn.tag_name in ("button", "a"):
+                            break
+                        btn = None
+                    except (StopIteration, RuntimeError):
+                        btn = None
             if not btn:
                 self.fail_count += 1
                 elapsed = time.time() - start_time
