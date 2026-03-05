@@ -289,6 +289,23 @@ class FreepikDownloader:
                     pass
 
 
+# Синглтон — один браузер на весь процесс.
+# nodriver не переживает повторные uc.start()/browser.stop() циклы.
+_shared_downloader: FreepikDownloader | None = None
+_downloader_lock = asyncio.Lock()
+
+
+async def _get_shared_downloader() -> FreepikDownloader:
+    """Возвращает (или создаёт) общий FreepikDownloader."""
+    global _shared_downloader
+    async with _downloader_lock:
+        if _shared_downloader is None or _shared_downloader.browser is None:
+            _shared_downloader = FreepikDownloader()
+            await _shared_downloader.__aenter__()
+            print("[FREEPIK] 🚀 Браузер запущен (singleton)")
+        return _shared_downloader
+
+
 # Main API function for bot integration
 async def get_freepik_direct_download_url(asset_url: str) -> str | None:
     """
@@ -317,27 +334,32 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
 
         semaphore = BotServices.download_semaphore
     except (ImportError, AttributeError):
-        # Если запускается не из бота (тесты), семафор не нужен
         semaphore = None
+
+    async def _do_download() -> str | None:
+        try:
+            downloader = await _get_shared_downloader()
+            return await downloader.get_download_url(asset_url)
+        except Exception as e:
+            # Если браузер умер — сбрасываем синглтон, следующий вызов пересоздаст
+            global _shared_downloader
+            if _shared_downloader is not None:
+                try:
+                    await _shared_downloader.__aexit__(None, None, None)
+                except Exception:
+                    pass
+                _shared_downloader = None
+            print(f"❌ [FREEPIK] Браузер упал, сброс: {e}")
+            return None
 
     if semaphore:
         async with semaphore:
-            async with FreepikDownloader() as downloader:
-                link = await downloader.get_download_url(asset_url)
-
-                if link:
-                    print(f"✅ [FREEPIK] Прямая ссылка получена")
-                    return link
-                else:
-                    print("❌ [FREEPIK] Не удалось получить ссылку")
-                    return None
+            link = await _do_download()
     else:
-        async with FreepikDownloader() as downloader:
-            link = await downloader.get_download_url(asset_url)
+        link = await _do_download()
 
-            if link:
-                print(f"✅ [FREEPIK] Прямая ссылка получена")
-                return link
-            else:
-                print("❌ [FREEPIK] Не удалось получить ссылку")
-                return None
+    if link:
+        print(f"✅ [FREEPIK] Прямая ссылка получена")
+    else:
+        print("❌ [FREEPIK] Не удалось получить ссылку")
+    return link
