@@ -281,7 +281,10 @@ class FreepikDownloader:
         finally:
             if tab:
                 try:
-                    await tab.close()
+                    # Не закрываем таб — закрытие последнего таба убивает браузер,
+                    # и следующий вызов get_download_url падает с StopIteration.
+                    # Вместо этого просто навигируем на пустую страницу.
+                    await tab.get("about:blank")
                 except Exception:
                     pass
 
