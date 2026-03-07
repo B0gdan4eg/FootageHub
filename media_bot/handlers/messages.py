@@ -476,8 +476,7 @@ REFERRAL_REWARDS_HEADER = (
 )
 
 REFERRAL_REWARDS_FOOTER = (
-    "\n\nℹ️ Используйте /referral для просмотра текущей статистики "
-    "и реферальной ссылки."
+    "\n\nℹ️ Используйте /referral для просмотра текущей статистики " "и реферальной ссылки."
 )
 
 REFERRAL_ERROR_STATS = "❌ Ошибка при получении статистики рефералов."
@@ -511,7 +510,9 @@ PAYMENT_PLANS_MENU = """💎 <b>Выберите тарифный план</b>
 <b>Pro</b> · 400 шт. · ~4.5₽/файл
 Для активной работы
 
-<i>Чем больше план — тем выгоднее!</i>"""
+<i>Чем больше план — тем выгоднее!</i>
+
+💳 Оплата из РФ проходит через платёжную систему МИР"""
 
 PAYMENT_PLANS_LOAD_ERROR = "❌ Ошибка загрузки списка подписок."
 PAYMENT_CONFIG_ERROR = "❌ Ошибка конфигурации. Обратитесь к администратору."
@@ -1022,8 +1023,7 @@ Example: <code>10</code>
             "Total rewards: <b>{total_rewards}</b>\n\n"
         ),
         "REFERRAL_REWARDS_FOOTER": (
-            "\n\nℹ️ Use /referral to view current stats "
-            "and your referral link."
+            "\n\nℹ️ Use /referral to view current stats " "and your referral link."
         ),
         "REFERRAL_ERROR_STATS": "❌ Error getting referral stats.",
         "REFERRAL_ERROR_LIST": "❌ Error getting referrals list.",
@@ -1052,7 +1052,9 @@ Popular
 <b>Pro</b> · 400 pcs. · ~4.5₽/file
 For heavy use
 
-<i>The bigger the plan — the better the deal!</i>""",
+<i>The bigger the plan — the better the deal!</i>
+
+💳 Payments from Russia are processed via the MIR payment system""",
         "PAYMENT_PLANS_LOAD_ERROR": "❌ Error loading subscription plans.",
         "PAYMENT_CONFIG_ERROR": "❌ Configuration error. Contact the administrator.",
         "PAYMENT_INVALID_PLAN": "❌ Invalid subscription plan. Try again.",
