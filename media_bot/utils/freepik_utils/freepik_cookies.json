@@ -1,0 +1,192 @@
+[
+  {
+    "name": "_GRECAPTCHA",
+    "value": "09AKhCRwhUw1tXg2dPR7XI90upY3FZ-LoNLzr-AnZfFvJVEzVKK8GR3_1PSigVYzWGgpS84NhquK6tLd0Jj4-Ryck",
+    "domain": "www.google.com",
+    "path": "/recaptcha",
+    "expires": 1790184419.5098,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "pikaso_session",
+    "value": "eyJpdiI6IlNtSXhkQnRMd0V3WklHbVFBYk1hTFE9PSIsInZhbHVlIjoiMldBWGoyd0VBaVNjS1NQLzFQSHp4VlU1ZGtGME8yQXcyWHBPTGRYYkt1a2NMbngvdWY2dzNDTWRZaE02RlBadGdRYlZZVDVscGxuV21ESU9VNVNRS3AvaTdZWGUvOGEzNUFrSFZhZ2xCMlRjd1ZzNitVMUhNNDY5QlZwVW9VMW8iLCJtYWMiOiIwYjBmN2UwODY5ODMxYThlMjA2NzBkNjBiODVhOGJjNWI5ZmUzYjc2N2E1YmMzMzE0MjJjYTk2ZDNhMjBjMGMxIiwidGFnIjoiIn0%3D",
+    "domain": "www.freepik.com",
+    "path": "/pikaso",
+    "expires": 1774634297.834224,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ak_bmsc",
+    "value": "41FB6CB2D9F3C2E6CBD81C93EE2B2D88~000000000000000000000000000000~YAAQ5/xzPjzBGh2dAQAAJ6FVMB9h1k36zc2Aa9WKEitgLVaxHzNxYiPAl+2vVBdmk9uC/VB3lEBxaKpGKx/bSr777EkVokPZIDyVzMRJjbWNoQ8qs9aoJOQQvqpi+2g6GGwMscX0YSCilTP6t5PbnHlDcB1ckKCMGcGPOCmv7iRS0V75/KP6lQTRT4EYKlC03GHCc3fU5692ChOjl5OFnXJ0tN5FFK7//YEtimiXUuXusMlYbKJbcR/np0WiKgEVvHHfxGRCPWRUP49ehCzvKmF9F0b7QauYC360oNfFlRl1hi+djHhyUhPhlwfeuN0Z/BxFgOuKb87f4kBJuxgwmFNadZyNhGpRp5zCbLzH3XOPc4eacJFE8owfe/NY+jsO7lO6vtxwTt5wVeo=",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1774639611.525673,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_gcl_au",
+    "value": "1.1.2146732878.1774632413",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1782408413,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_ga",
+    "value": "GA1.1.1937848607.1774632413",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1809192496.717665,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "g_state",
+    "value": "{\"i_l\":0,\"i_ll\":1774632438722,\"i_b\":\"p92yTSFvxWeKxLg+dl8YufVcSJphDSNYyoCvMtu3T1M\",\"i_e\":{\"enable_itp_optimization\":0}}",
+    "domain": "www.freepik.com",
+    "path": "/",
+    "expires": 1790184438,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "GR_TOKEN",
+    "value": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjM3MzAwNzY5YTA3ZTA1MTE2ZjdlNTEzOGZhOTA5MzY4NWVlYmMyNDAiLCJ0eXAiOiJKV1QifQ.eyJwaWN0dXJlIjoiaHR0cHM6Ly9hdmF0YXIuY2RucGsubmV0L2RlZmF1bHRfMDgucG5nIiwiYWNjb3VudHNfdXNlcl9pZCI6MjI1NTg2NzUwLCJzY29wZXMiOiJmcmVlcGlrL2ltYWdlcyBmcmVlcGlrL3ZpZGVvcyBmbGF0aWNvbi9wbmcgZnJlZXBpay9pbWFnZXMvcHJlbWl1bSBmcmVlcGlrL3ZpZGVvcy9wcmVtaXVtIGZsYXRpY29uL3N2ZyIsImltcGVyc29uYXRlZF9zZXNzaW9uIjpmYWxzZSwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL2ZjLXByb2ZpbGUtcHJvLXJldjEiLCJhdWQiOiJmYy1wcm9maWxlLXByby1yZXYxIiwiYXV0aF90aW1lIjoxNzc0NjMyNDk0LCJ1c2VyX2lkIjoiU2R0bjVWTmVxMk1DWGFHQkFFQnh1am9wdnhXMiIsInN1YiI6IlNkdG41Vk5lcTJNQ1hhR0JBRUJ4dWpvcHZ4VzIiLCJpYXQiOjE3NzQ2MzI0OTQsImV4cCI6MTc3NDYzNjA5NCwiZW1haWwiOiJzaGNoZXJiYWtvdi5iQG1haWwucnUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsic2hjaGVyYmFrb3YuYkBtYWlsLnJ1Il19LCJzaWduX2luX3Byb3ZpZGVyIjoiY3VzdG9tIn19.i-HYUEDwcRacM9UoApxH4AXYYi4rkeIRXJbUdtIXGXdysCmcug5zlDOZdIRxO0T59uv1FQ7l5bCryuj3JxWfpVhEQcfmxBeSLrbc0zezBkfbUMUfEd9cOYcHgDkA9ZUGvwfUwt2Bzq03aXHK-ukaq74bDCWlsyfUJrT010W1l20Bhr4vxcXbbJnUa1PO0kX-T4c3LgEMYEMWnrQaxPWtPWsGyyqDsRLcMmuZYpAfrxUbDrT1-GVIvOxxSLEKVgCzMN4sWPENOQN2QN9Xr2vGMBAns4I1kjEms0SIJCM4TvhfcjU7b0I0XKpjS4kmoFGX8eVh6ATLJaRO_hAmnxhdHg",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1774636094.205223,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "GR_REFRESH",
+    "value": "AMf-vBxHC2P5CwPE6HaqhP4rUjYcFQ7m0HNNeL5an5s-XQAck74C8itW_K9GxcrUkpFOKvC_kmMVTYqXe0hfpJ3khYqlxl8OG4CnFQl8Z5KOJhKwoEHbfDhHIToVYtEbaxE2PRAIvNkM1sK3KpTrZcH6HL8gH-RbZDOn56iUodWtRi2GOFOLAP2fKNNV4XCULQxFkDC5Juic",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1777224494.205491,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_fc",
+    "value": "FC.d1d21de6-78b3-ac80-0b13-58be00ca3db0",
+    "domain": "www.freepik.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_fcid",
+    "value": "FC.d1d21de6-78b3-ac80-0b13-58be00ca3db0",
+    "domain": "www.freepik.com",
+    "path": "/",
+    "expires": 1806168494.205631,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "AI_MBL",
+    "value": "1",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1775237294.600195,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Strict"
+  },
+  {
+    "name": "OptanonConsent",
+    "value": "isGpcEnabled=0&datestamp=Fri+Mar+27+2026+20%3A28%3A15+GMT%2B0300+(%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0%2C+%D1%81%D1%82%D0%B0%D0%BD%D0%B4%D0%B0%D1%80%D1%82%D0%BD%D0%BE%D0%B5+%D0%B2%D1%80%D0%B5%D0%BC%D1%8F)&version=202407.2.0&browserGpcFlag=0&isIABGlobal=false&hosts=&consentId=e4d103d1-98a9-47ef-bf7e-fa063114d079&interactionCount=1&isAnonUser=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A0%2CC0003%3A0%2CC0004%3A0%2CC0005%3A0&AwaitingReconsent=false",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1806168495,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "sb-prefs",
+    "value": "%7B%22mode%22%3A%22anchored%22%7D",
+    "domain": "www.freepik.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ab.storage.deviceId.35bcbbc0-d0b5-4e6c-9926-dfe1d0cd06ab",
+    "value": "g%3A272f8709-be66-ee14-1df8-950959408bf5%7Ce%3Aundefined%7Cc%3A1774632495860%7Cl%3A1774632496612",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1809192496,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ab.storage.userId.35bcbbc0-d0b5-4e6c-9926-dfe1d0cd06ab",
+    "value": "g%3A225586750%7Ce%3Aundefined%7Cc%3A1774632496608%7Cl%3A1774632496612",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1809192496,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ab.storage.sessionId.35bcbbc0-d0b5-4e6c-9926-dfe1d0cd06ab",
+    "value": "g%3A195d675d-e703-8596-7daf-67075d3dbf8f%7Ce%3A1774668496625%7Cc%3A1774632496610%7Cl%3A1774632496625",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1809192496,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_ga_QWX66025LC",
+    "value": "GS2.1.s1774632412$o1$g1$t1774632496$j57$l0$h0",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1809192496.717034,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ph_phc_Rc6y1yvZwwwR09Pl9NtKBo5gzpxr1Ei4Bdbg3kC1Ihz_posthog",
+    "value": "%7B%22%24device_id%22%3A%22019d3056-e862-7834-a58a-ebba2e2ddcd1%22%2C%22distinct_id%22%3A%22225586750%22%2C%22%24epp%22%3Atrue%2C%22%24user_state%22%3A%22identified%22%7D",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1806168497,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "XSRF-TOKEN",
+    "value": "eyJpdiI6Ilg1akZIYnZ4dFFWOW1wMjQxaFFrc1E9PSIsInZhbHVlIjoieHZoS1F0UUN2WklWM1YvZmYyanZtQ2VhdzN3MlRRYUk0Z3dUaU5vZkE1Njh6L0hLWUpBWk5tZWdYcDFHNzRmaHJYakdPdCttQ0ZkeS8vZVRGeW1ybkVZc1ZtanU1MmRzaVZ0OFRrTnNhQldjbFh3WHlTMllKNWlGeUUwYWJxUzciLCJtYWMiOiI2MzRhZjQ3ODI1MzhkYTc4N2YxOTAyNjA0MDU1ZjAyNWJiY2UyYzQ1NDM5ODZmM2EyYTdkOTU1YmNjNjk4MGU0IiwidGFnIjoiIn0%3D",
+    "domain": "www.freepik.com",
+    "path": "/",
+    "expires": 1774634297.834103,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Lax"
+  }
+]
