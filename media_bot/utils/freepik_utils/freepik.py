@@ -148,21 +148,72 @@ class FreepikDownloader:
             tab.add_handler(cdp.page.DownloadWillBegin, on_download)
 
             # Запрещаем реальное скачивание файла — нам нужна только ссылка
-            await tab.send(cdp.browser.set_download_behavior(
-                behavior="deny",
-                browser_context_id=None,
-            ))
+            await tab.send(
+                cdp.browser.set_download_behavior(
+                    behavior="deny",
+                    browser_context_id=None,
+                )
+            )
 
             # Переходим на страницу ресурса
-            await tab.get(asset_url)
+            # nodriver бросает StopIteration (-> RuntimeError в async) при проблемах навигации
+            try:
+                await tab.get(asset_url)
+            except (StopIteration, RuntimeError) as e:
+                if "StopIteration" in str(type(e).__name__) or "StopIteration" in str(e):
+                    print(f"⚠️ [FREEPIK] Retry navigation after StopIteration...")
+                    await asyncio.sleep(1)
+                    await tab.get(asset_url)
+                else:
+                    raise
 
-            # Ищем кнопку скачивания (nodriver ждёт появления элемента)
-            btn = await tab.select('button[data-cy="download-button"]', timeout=30)
+            # Ищем кнопку скачивания
+            # nodriver бросает StopIteration (-> RuntimeError в async) если элемент не найден
+            btn = None
+            # 1) По data-cy атрибуту
+            try:
+                btn = await tab.select('button[data-cy="download-button"]', timeout=15)
+            except (StopIteration, RuntimeError):
+                pass
+            # 2) Фоллбэк: ищем по тексту "Download" / "Скачать"
             if not btn:
-                print(f"❌ [FREEPIK] Кнопка скачивания не найдена")
+                for text in ("Download", "Скачать"):
+                    try:
+                        btn = await tab.find(text, best_match=True, timeout=5)
+                        if btn and btn.tag_name in ("button", "a"):
+                            break
+                        btn = None
+                    except (StopIteration, RuntimeError):
+                        btn = None
+            if not btn:
+                self.fail_count += 1
+                elapsed = time.time() - start_time
+                self.total_time += elapsed
+                print(f"❌ [FREEPIK] Кнопка скачивания не найдена ({elapsed:.2f} сек)")
+
+                screenshot_dir = os.path.join(COOKIE_DIR, "debug_screenshots")
+                os.makedirs(screenshot_dir, exist_ok=True)
+                screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
+                try:
+                    await tab.save_screenshot(screenshot_path)
+                except Exception:
+                    screenshot_path = None
+
+                await logger.error(
+                    f"❌ [FREEPIK] Кнопка скачивания не найдена\nURL: {asset_url}",
+                    screenshot_path=screenshot_path,
+                )
                 return None
 
-            await btn.click()
+            try:
+                await btn.click()
+            except (StopIteration, RuntimeError):
+                # nodriver иногда бросает StopIteration при клике
+                await asyncio.sleep(0.5)
+                try:
+                    await btn.click()
+                except (StopIteration, RuntimeError):
+                    pass
 
             # Ждём URL скачивания (до 10 секунд)
             for _ in range(100):
@@ -173,7 +224,10 @@ class FreepikDownloader:
             # Если не нашли — повторный клик
             if not download_info.get("url"):
                 print(f"[FREEPIK] Download URL не найден, повторный клик...")
-                await btn.click()
+                try:
+                    await btn.click()
+                except (StopIteration, RuntimeError):
+                    pass
                 for _ in range(100):
                     if download_info.get("url"):
                         break
@@ -213,9 +267,7 @@ class FreepikDownloader:
                 try:
                     screenshot_dir = os.path.join(COOKIE_DIR, "debug_screenshots")
                     os.makedirs(screenshot_dir, exist_ok=True)
-                    screenshot_path = os.path.join(
-                        screenshot_dir, f"error_{int(time.time())}.png"
-                    )
+                    screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
                     await tab.save_screenshot(screenshot_path)
                 except Exception:
                     screenshot_path = None
@@ -229,9 +281,29 @@ class FreepikDownloader:
         finally:
             if tab:
                 try:
-                    await tab.close()
+                    # Не закрываем таб — закрытие последнего таба убивает браузер,
+                    # и следующий вызов get_download_url падает с StopIteration.
+                    # Вместо этого просто навигируем на пустую страницу.
+                    await tab.get("about:blank")
                 except Exception:
                     pass
+
+
+# Синглтон — один браузер на весь процесс.
+# nodriver не переживает повторные uc.start()/browser.stop() циклы.
+_shared_downloader: FreepikDownloader | None = None
+_downloader_lock = asyncio.Lock()
+
+
+async def _get_shared_downloader() -> FreepikDownloader:
+    """Возвращает (или создаёт) общий FreepikDownloader."""
+    global _shared_downloader
+    async with _downloader_lock:
+        if _shared_downloader is None or _shared_downloader.browser is None:
+            _shared_downloader = FreepikDownloader()
+            await _shared_downloader.__aenter__()
+            print("[FREEPIK] 🚀 Браузер запущен (singleton)")
+        return _shared_downloader
 
 
 # Main API function for bot integration
@@ -262,27 +334,32 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
 
         semaphore = BotServices.download_semaphore
     except (ImportError, AttributeError):
-        # Если запускается не из бота (тесты), семафор не нужен
         semaphore = None
+
+    async def _do_download() -> str | None:
+        try:
+            downloader = await _get_shared_downloader()
+            return await downloader.get_download_url(asset_url)
+        except Exception as e:
+            # Если браузер умер — сбрасываем синглтон, следующий вызов пересоздаст
+            global _shared_downloader
+            if _shared_downloader is not None:
+                try:
+                    await _shared_downloader.__aexit__(None, None, None)
+                except Exception:
+                    pass
+                _shared_downloader = None
+            print(f"❌ [FREEPIK] Браузер упал, сброс: {e}")
+            return None
 
     if semaphore:
         async with semaphore:
-            async with FreepikDownloader() as downloader:
-                link = await downloader.get_download_url(asset_url)
-
-                if link:
-                    print(f"✅ [FREEPIK] Прямая ссылка получена")
-                    return link
-                else:
-                    print("❌ [FREEPIK] Не удалось получить ссылку")
-                    return None
+            link = await _do_download()
     else:
-        async with FreepikDownloader() as downloader:
-            link = await downloader.get_download_url(asset_url)
+        link = await _do_download()
 
-            if link:
-                print(f"✅ [FREEPIK] Прямая ссылка получена")
-                return link
-            else:
-                print("❌ [FREEPIK] Не удалось получить ссылку")
-                return None
+    if link:
+        print(f"✅ [FREEPIK] Прямая ссылка получена")
+    else:
+        print("❌ [FREEPIK] Не удалось получить ссылку")
+    return link

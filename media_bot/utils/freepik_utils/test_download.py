@@ -12,6 +12,8 @@ import sys
 import time
 import warnings
 
+from media_bot.utils.freepik_utils.freepik import FreepikDownloader, get_next_cookie_file
+
 # Подавляем мусорные предупреждения от nodriver при закрытии браузера на Windows
 warnings.filterwarnings("ignore", category=ResourceWarning)
 
@@ -20,7 +22,6 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     sys.path.insert(0, project_root)
 
-from media_bot.utils.freepik_utils.freepik import FreepikDownloader, get_next_cookie_file
 
 # URL для теста по умолчанию (бесплатный ресурс)в
 DEFAULT_TEST_URLS = [
@@ -141,7 +142,9 @@ def main():
     urls = sys.argv[1:] if len(sys.argv) > 1 else DEFAULT_TEST_URLS
 
     if not urls:
-        print("Использование: python -m media_bot.utils.freepik_utils.test_download [url1] [url2] ...")
+        print(
+            "Использвание: python -m media_bot.utils.freepik_utils.test_download [url1] [url2] ..."
+        )
         print(f"По умолчанию используется: {DEFAULT_TEST_URLS[0]}")
         urls = DEFAULT_TEST_URLS
 
