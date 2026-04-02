@@ -12,6 +12,11 @@ from .logger import logger
 COOKIE_DIR = os.path.dirname(__file__)
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "freepik_cookie_index.txt")
 
+# Импортируем лениво чтобы избежать циклических импортов
+def _get_token_refresher():
+    from .token_refresh import ensure_token_valid
+    return ensure_token_valid
+
 
 def find_chromium_executable() -> str | None:
     """Ищет Chromium от Playwright если системный Chrome не найден."""
@@ -120,6 +125,14 @@ class FreepikDownloader:
 
             # Загружаем куки через CDP
             cookie_file = get_next_cookie_file()
+
+            # Обновляем GR_TOKEN если истёк (без запуска нового браузера — прямой REST)
+            try:
+                ensure_token_valid = _get_token_refresher()
+                await ensure_token_valid(cookie_file)
+            except Exception as _e:
+                print(f"⚠️ [FREEPIK] Не удалось проверить токен: {_e}")
+
             with open(cookie_file, "r") as f:
                 raw_cookies = json.load(f)
 
