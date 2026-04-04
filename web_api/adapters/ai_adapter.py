@@ -11,7 +11,6 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai_bot.services.ai_service import AIService
 from shared.db.models import AIGenerationLog, AIGenerationStatus, AIGenerationType
 from shared.db.repositories.user_repository import UserRepository
 from web_api.config import config
@@ -37,6 +36,8 @@ class WebAIAdapter:
     def __init__(self, db_user_id: int, db: AsyncSession):
         self._user_id = db_user_id
         self._db = db
+        from ai_bot.services.ai_service import AIService  # noqa: PLC0415
+
         self._ai_service = AIService(api_key=config.KIE_AI_API_KEY)
 
     def _get_cost(self, gen_type: str, provider: str) -> int:
