@@ -85,7 +85,7 @@ export const usersApi = {
 export const downloadsApi = {
   download: (url: string, provider?: string) =>
     api.post<{ download_url: string; remaining_credits: number; is_file_token: boolean }>(
-      "/downloads",
+      "/downloads/",
       { url, provider }
     ),
 };
