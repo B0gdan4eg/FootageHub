@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements/web-api.txt
 COPY shared/ /app/shared/
 COPY web_api/ /app/web_api/
 COPY ai_bot/ /app/ai_bot/
+COPY media_bot/ /app/media_bot/
 COPY migrations/ /app/migrations/
 COPY alembic.ini /app/alembic.ini
 

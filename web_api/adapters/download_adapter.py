@@ -10,9 +10,6 @@ import os
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from media_bot.downloaders.envato import EnvatoDownloader
-from media_bot.downloaders.freepik import FreepikDownloader
-from media_bot.downloaders.motion import MotionDownloader
 from shared.db.models import Download, Media, ServiceType
 from shared.db.repositories.subscription_repository import SubscriptionRepository
 from shared.db.repositories.user_repository import UserRepository
@@ -26,11 +23,17 @@ class WebDownloadAdapter:
     а не по tg_id — что необходимо для web-пользователей без Telegram.
     """
 
-    _downloaders = {
-        "ENVATO": EnvatoDownloader,
-        "FREEPIK": FreepikDownloader,
-        "MOTION_ARRAY": MotionDownloader,
-    }
+    @property
+    def _downloaders(self):
+        from media_bot.downloaders.envato import EnvatoDownloader
+        from media_bot.downloaders.freepik import FreepikDownloader
+        from media_bot.downloaders.motion import MotionDownloader
+
+        return {
+            "ENVATO": EnvatoDownloader,
+            "FREEPIK": FreepikDownloader,
+            "MOTION_ARRAY": MotionDownloader,
+        }
 
     _service_types = {
         "ENVATO": ServiceType.ENVATO,
