@@ -352,7 +352,13 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
         browser_cookie_map: dict = {}
         try:
             all_browser_cookies = await tab.send(cdp.network.get_all_cookies())
-            browser_cookie_map = {bc.name: bc for bc in all_browser_cookies.cookies}
+            # nodriver возвращает список напрямую, без обёртки .cookies
+            cookie_list = (
+                all_browser_cookies
+                if isinstance(all_browser_cookies, list)
+                else all_browser_cookies.cookies
+            )
+            browser_cookie_map = {bc.name: bc for bc in cookie_list}
         except Exception as e:
             print(f"[TOKEN REFRESH] Не удалось прочитать куки браузера: {e}")
 
