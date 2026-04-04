@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authApi, TelegramAuthResult } from "@/lib/api";
 import { setToken } from "@/lib/auth";
@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-export default function AuthPage() {
+function AuthPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/dashboard";
@@ -423,5 +423,13 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+      <AuthPageInner />
+    </Suspense>
   );
 }
