@@ -61,7 +61,7 @@ export default function AIPage() {
       try {
         const res = await aiApi.status(taskId);
         const data = res.data;
-        setTask(data);
+        setTask(data as Task);
         if (data.status === "COMPLETED" || data.status === "FAILED") {
           clearInterval(interval);
           setLoading(false);
