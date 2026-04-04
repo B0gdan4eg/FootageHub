@@ -1,5 +1,6 @@
 """Downloads router: media download from Envato/Freepik/Motion Array."""
 
+import logging
 import secrets
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from shared.db.models import User
 from web_api.adapters.download_adapter import WebDownloadAdapter
 from web_api.dependencies import get_current_user, get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -56,10 +59,22 @@ async def download_media(
     adapter = WebDownloadAdapter(current_user.id, db)
     try:
         result = await adapter.process_download(body.url, provider)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(e))
+    except ValueError as e:
+        logger.error("Download error for user=%s url=%s: %s", current_user.id, body.url, e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ошибка скачивания. Проверьте ссылку и попробуйте снова.",
+        )
+    except Exception as e:
+        logger.error(
+            "Unexpected download error for user=%s url=%s: %s", current_user.id, body.url, e
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка скачивания. Попробуйте позже.",
+        )
 
     return result
 
