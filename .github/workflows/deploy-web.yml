@@ -62,5 +62,6 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "cd /opt/my_bot && \
              docker compose pull web-api frontend && \
+             docker compose run --rm web-api alembic upgrade head && \
              docker compose up -d web-api frontend && \
              docker image prune -af"
