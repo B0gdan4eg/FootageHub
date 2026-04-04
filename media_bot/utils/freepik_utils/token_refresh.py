@@ -354,23 +354,46 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
             # достаём Firebase API key прямо из JS-контекста.
             # Firebase SDK в свежем профиле не знает о сессии (нет IndexedDB),
             # поэтому сам не рефрешит, но ключ в бандле всё равно есть.
+            # Ждём ещё 3 сек чтобы страница точно загрузилась
+            await asyncio.sleep(3)
+
             extracted_key = None
             try:
-                pass
-
                 extracted_key = await tab.evaluate(
                     """
                     (() => {
+                        const RE = /"apiKey"\\s*:\\s*"(AIza[A-Za-z0-9_\\-]{35,})"/;
+
+                        // 1. Firebase Apps object (если SDK инициализирован)
                         try {
                             if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-                                return firebase.apps[0].options.apiKey || null;
+                                const k = firebase.apps[0].options.apiKey;
+                                if (k && k.startsWith('AIza')) return k;
                             }
                         } catch(e) {}
-                        // Fallback: ищем в тексте всех script-тегов
+
+                        // 2. Next.js __NEXT_DATA__ (inline JSON на всех Next.js страницах)
+                        try {
+                            const el = document.getElementById('__NEXT_DATA__');
+                            if (el) {
+                                const m = el.textContent.match(RE);
+                                if (m) return m[1];
+                            }
+                        } catch(e) {}
+
+                        // 3. Полный innerHTML — ловит и inline-скрипты и вшитые конфиги
+                        try {
+                            const m = document.documentElement.innerHTML.match(RE);
+                            if (m) return m[1];
+                        } catch(e) {}
+
+                        // 4. Инлайн script-теги (text непустой только для inline)
                         for (const s of document.scripts) {
-                            const m = s.text.match(/"apiKey"\\s*:\\s*"(AIza[A-Za-z0-9_\\-]{35,})"/);
+                            if (!s.text) continue;
+                            const m = s.text.match(RE);
                             if (m) return m[1];
                         }
+
                         return null;
                     })()
                     """
