@@ -336,7 +336,7 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
         except Exception:
             pass
 
-        # Ждём до 20 секунд
+        # Ждём до 20 секунд пока Firebase сам не обновит токен
         for _ in range(200):
             if token_data.get("id_token"):
                 break
@@ -347,12 +347,47 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
             _save_api_key(api_key_found[0])
 
         if not token_data.get("id_token"):
-            print("[TOKEN REFRESH] ❌ Токен не получен за 20с")
-            # Если API ключ перехватили, попробуем прямой рефреш
-            if api_key_found:
-                print("[TOKEN REFRESH] Пробуем прямой рефреш с перехваченным ключом...")
-                ok = await _refresh_direct(cookie_file, api_key_found[0])
-                return ok
+            print("[TOKEN REFRESH] ❌ Firebase не обновил токен за 20с")
+            print("[TOKEN REFRESH] Извлекаем API key из загруженной страницы...")
+
+            # Страница уже загружена через браузер (прошла Cloudflare) —
+            # достаём Firebase API key прямо из JS-контекста.
+            # Firebase SDK в свежем профиле не знает о сессии (нет IndexedDB),
+            # поэтому сам не рефрешит, но ключ в бандле всё равно есть.
+            extracted_key = None
+            try:
+                pass
+
+                extracted_key = await tab.evaluate(
+                    """
+                    (() => {
+                        try {
+                            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+                                return firebase.apps[0].options.apiKey || null;
+                            }
+                        } catch(e) {}
+                        // Fallback: ищем в тексте всех script-тегов
+                        for (const s of document.scripts) {
+                            const m = s.text.match(/"apiKey"\\s*:\\s*"(AIza[A-Za-z0-9_\\-]{35,})"/);
+                            if (m) return m[1];
+                        }
+                        return null;
+                    })()
+                    """
+                )
+            except Exception as _e:
+                print(f"[TOKEN REFRESH] JS evaluate ошибка: {_e}")
+
+            if not extracted_key and api_key_found:
+                extracted_key = api_key_found[0]
+
+            if extracted_key and str(extracted_key).startswith("AIza"):
+                print(f"[TOKEN REFRESH] API key из JS: {str(extracted_key)[:20]}...")
+                _save_api_key(extracted_key)
+                ok = await _refresh_direct(cookie_file, extracted_key)
+                if ok:
+                    return True
+
             return False
 
         # Обновляем cookie-файл
