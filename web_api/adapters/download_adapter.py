@@ -65,16 +65,21 @@ class WebDownloadAdapter:
         if not user:
             raise ValueError("Пользователь не найден")
 
-        # Проверяем подписку/кредиты
+        # Ищем активную подписку на нужный сервис
         sub_repo = SubscriptionRepository(self._db)
         service_type = _SERVICE_TYPES[provider]
 
-        has_sub = await sub_repo.has_active_subscription(user.id, service_type)
-        if not has_sub:
-            if user.credits <= 0:
-                raise PermissionError(
-                    "Недостаточно кредитов. Купите подписку или пополните баланс."
-                )
+        active_sub = None
+        all_subs = await sub_repo.get_all_active_by_user_id(user.id)
+        for sub in all_subs:
+            if sub.service_type == service_type or sub.service_type == ServiceType.ALL:
+                can_dl = await sub_repo.can_download(sub.id, service_type)
+                if can_dl:
+                    active_sub = sub
+                    break
+
+        if active_sub is None and user.credits <= 0:
+            raise PermissionError("Недостаточно кредитов. Купите подписку или пополните баланс.")
 
         # Делегируем скачивание в media-bot через внутреннюю сеть Docker
         try:
@@ -94,8 +99,8 @@ class WebDownloadAdapter:
         download_url = data["download_url"]
 
         # Списываем кредиты / обновляем счётчик подписки
-        if has_sub:
-            await sub_repo.increment_usage(user.id, service_type)
+        if active_sub is not None:
+            await sub_repo.increment_usage(active_sub.id)
         else:
             user.credits -= 1
 
@@ -111,7 +116,7 @@ class WebDownloadAdapter:
             user_id=user.id,
             media_id=media.id,
             service_type=service_type,
-            paid=not has_sub,
+            paid=active_sub is None,
         )
         self._db.add(download)
         await self._db.commit()
