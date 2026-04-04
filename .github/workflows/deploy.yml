@@ -38,12 +38,20 @@ jobs:
     needs: build
 
     steps:
+    - uses: actions/checkout@v3
+
     - name: Set up SSH
       run: |
         mkdir -p ~/.ssh
         printf "%s\n" "${{ secrets.VPS_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Copy docker-compose.yml to VPS
+      run: |
+        scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+          docker-compose.yml \
+          ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/my_bot/docker-compose.yml
 
     - name: Deploy Media Bot on VPS
       run: |
