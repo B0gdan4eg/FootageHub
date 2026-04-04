@@ -100,6 +100,7 @@ services:
       - WEBPAY_RESOURCE_ID=${WEBPAY_RESOURCE_ID}
       - WEBPAY_SIGNING_KEY=${WEBPAY_SIGNING_KEY}
       - CRYPTO_BOT_API_KEY=${CRYPTO_BOT_API_KEY}
+      - MEDIA_BOT_INTERNAL_URL=http://media-bot:8443
     networks:
       - footagehub-network
     ports:

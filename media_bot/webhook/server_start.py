@@ -1,12 +1,13 @@
 import uvicorn
 from fastapi import FastAPI
 
-from media_bot.webhook import cryptobot, webpay
+from media_bot.webhook import cryptobot, internal, webpay
 
 # Создаём FastAPI приложение
 app = FastAPI()
 app.include_router(webpay.router)
 app.include_router(cryptobot.router)
+app.include_router(internal.router)
 
 
 async def start_server():

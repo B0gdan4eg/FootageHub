@@ -1,12 +1,14 @@
 """
 Download adapter for web API.
 
-Wraps media_bot downloaders to work with web users identified by DB primary key
-instead of tg_id.
+Delegates actual downloading to media-bot via internal HTTP API,
+since browser automation (nodriver, playwright) runs only in media-bot container.
+Both containers share the same Docker network (footagehub-network).
 """
 
 import os
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,32 +16,23 @@ from shared.db.models import Download, Media, ServiceType
 from shared.db.repositories.subscription_repository import SubscriptionRepository
 from shared.db.repositories.user_repository import UserRepository
 
+# media-bot internal API URL — доступен через Docker-сеть footagehub-network
+MEDIA_BOT_URL = os.getenv("MEDIA_BOT_INTERNAL_URL", "http://media-bot:8443")
+
+_SERVICE_TYPES = {
+    "ENVATO": ServiceType.ENVATO,
+    "FREEPIK": ServiceType.FREEPIK,
+    "MOTION_ARRAY": ServiceType.MOTION_ARRAY,
+}
+
 
 class WebDownloadAdapter:
     """
     Адаптер для скачивания медиа через web API.
 
-    Отличие от DownloadService: идентифицирует пользователя по DB user.id,
-    а не по tg_id — что необходимо для web-пользователей без Telegram.
+    Идентифицирует пользователя по DB user.id (не по tg_id).
+    Делегирует скачивание в media-bot через внутренний HTTP-эндпоинт.
     """
-
-    @property
-    def _downloaders(self):
-        from media_bot.downloaders.envato import EnvatoDownloader
-        from media_bot.downloaders.freepik import FreepikDownloader
-        from media_bot.downloaders.motion import MotionDownloader
-
-        return {
-            "ENVATO": EnvatoDownloader,
-            "FREEPIK": FreepikDownloader,
-            "MOTION_ARRAY": MotionDownloader,
-        }
-
-    _service_types = {
-        "ENVATO": ServiceType.ENVATO,
-        "FREEPIK": ServiceType.FREEPIK,
-        "MOTION_ARRAY": ServiceType.MOTION_ARRAY,
-    }
 
     def __init__(self, db_user_id: int, db: AsyncSession):
         self._user_id = db_user_id
@@ -49,15 +42,11 @@ class WebDownloadAdapter:
         """
         Скачать медиафайл для web-пользователя.
 
-        Args:
-            url: URL медиафайла
-            provider: ENVATO | FREEPIK | MOTION_ARRAY
-
         Returns:
             {
-                "download_url": str,  # прямая ссылка или токен
+                "download_url": str,
                 "remaining_credits": int,
-                "is_file_token": bool  # True если это токен для /file/{token}
+                "is_file_token": bool
             }
 
         Raises:
@@ -65,9 +54,9 @@ class WebDownloadAdapter:
             PermissionError: Если недостаточно кредитов или нет подписки
         """
         provider = provider.upper()
-        if provider not in self._downloaders:
+        if provider not in _SERVICE_TYPES:
             raise ValueError(
-                f"Неизвестный провайдер: {provider}. Используйте: {list(self._downloaders.keys())}"
+                f"Неизвестный провайдер: {provider}. Используйте: {list(_SERVICE_TYPES.keys())}"
             )
 
         # Проверяем пользователя
@@ -78,38 +67,31 @@ class WebDownloadAdapter:
 
         # Проверяем подписку/кредиты
         sub_repo = SubscriptionRepository(self._db)
-        service_type = self._service_types[provider]
+        service_type = _SERVICE_TYPES[provider]
 
-        # Проверяем активную подписку для данного сервиса
         has_sub = await sub_repo.has_active_subscription(user.id, service_type)
         if not has_sub:
-            # Проверяем бесплатные кредиты
             if user.credits <= 0:
                 raise PermissionError(
                     "Недостаточно кредитов. Купите подписку или пополните баланс."
                 )
 
-        # Скачиваем файл
-        downloader = self._downloaders[provider]()
-        result_url = await downloader.download(url)
+        # Делегируем скачивание в media-bot через внутреннюю сеть Docker
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(
+                    f"{MEDIA_BOT_URL}/internal/download",
+                    json={"url": url, "provider": provider},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+        except httpx.HTTPStatusError as e:
+            detail = e.response.json().get("detail", str(e)) if e.response.content else str(e)
+            raise ValueError(f"Ошибка скачивания: {detail}")
+        except httpx.RequestError as e:
+            raise ValueError(f"Не удалось связаться с сервисом скачивания: {e}")
 
-        if not result_url:
-            raise ValueError("Не удалось скачать файл. Проверьте URL и попробуйте снова.")
-
-        # Определяем — это прямая ссылка или путь к файлу
-        is_file_token = False
-        download_url = result_url
-
-        if not result_url.startswith("http"):
-            # Это локальный путь к файлу — создаём временный токен
-            if os.path.exists(result_url):
-                from web_api.routers.downloads import create_file_token
-
-                token = create_file_token(result_url)
-                download_url = f"/api/downloads/file/{token}"
-                is_file_token = True
-            else:
-                raise ValueError("Файл не найден после скачивания")
+        download_url = data["download_url"]
 
         # Списываем кредиты / обновляем счётчик подписки
         if has_sub:
@@ -137,5 +119,5 @@ class WebDownloadAdapter:
         return {
             "download_url": download_url,
             "remaining_credits": user.credits,
-            "is_file_token": is_file_token,
+            "is_file_token": False,
         }
