@@ -1,14 +1,11 @@
 """Database session management for shared models."""
 
+import os
+
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from media_bot.config import DATABASE_URL
-
-# Get DATABASE_URL from environment
-# DATABASE_URL = os.getenv("DATABASE_URL")
-# if not DATABASE_URL:
-#     raise ValueError("DATABASE_URL environment variable is not set")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Create async engine
 async_engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)

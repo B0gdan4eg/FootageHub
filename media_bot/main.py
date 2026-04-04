@@ -14,6 +14,7 @@ from media_bot.handlers import (
     download,
     info,
     lang,
+    link_account,
     manager,
     menu,
     payment,
@@ -97,6 +98,7 @@ dp.callback_query.middleware(I18nMiddleware())
 
 # Роутеры бота
 # Порядок важен! Сначала роутеры с FSM состояниями, потом общие команды
+dp.include_router(link_account.router)  # Привязка web-аккаунта (callback без состояний)
 dp.include_router(lang.router)  # Выбор языка (до остальных команд)
 dp.include_router(admin.router)  # Админ-панель с FSM состояниями
 dp.include_router(manager.router)  # Менеджер-панель с FSM состояниями

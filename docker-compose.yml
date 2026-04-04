@@ -78,6 +78,46 @@ services:
     networks:
       - footagehub-network
 
+  # Web API — FastAPI backend for web interface
+  web-api:
+    image: ghcr.io/b0gdan4eg/footagehub-web-api:latest
+    container_name: footagehub-web-api
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - BOT_USERNAME=${BOT_USERNAME}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - SMSC_LOGIN=${SMSC_LOGIN}
+      - SMSC_PASSWORD=${SMSC_PASSWORD}
+      - SMSC_SENDER=${SMSC_SENDER:-FOOTAGE}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://envato-freepik-download.store}
+      - KIE_AI_API_KEY=${KIE_AI_API_KEY}
+      - WEBPAY_RESOURCE_ID=${WEBPAY_RESOURCE_ID}
+      - WEBPAY_SIGNING_KEY=${WEBPAY_SIGNING_KEY}
+      - CRYPTO_BOT_API_KEY=${CRYPTO_BOT_API_KEY}
+    networks:
+      - footagehub-network
+    ports:
+      - "8080:8080"
+
+  # Frontend — Next.js
+  frontend:
+    image: ghcr.io/b0gdan4eg/footagehub-frontend:latest
+    container_name: footagehub-frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://envato-freepik-download.store/api
+    networks:
+      - footagehub-network
+    ports:
+      - "3000:3000"
+
 volumes:
   postgres_data:
 

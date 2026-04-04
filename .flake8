@@ -15,6 +15,8 @@ extend-ignore =
     B036,
     # B014: redundant exception types (minor issue)
     B014,
+    # B008: Depends() calls in FastAPI function signatures (intended pattern)
+    B008,
 exclude =
     .git,
     __pycache__,

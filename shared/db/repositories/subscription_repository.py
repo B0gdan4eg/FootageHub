@@ -10,7 +10,6 @@ from typing import List, Optional
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from media_bot.handlers.messages import msg
 from shared.db.models import ServiceType, Subscription, SubscriptionType
 from shared.db.repositories.base import BaseRepository
 
@@ -378,11 +377,11 @@ class SubscriptionRepository(BaseRepository[Subscription]):
         """
         # Проверка срока действия
         if subscription.end_date < datetime.utcnow():
-            return False, msg("ERR_SUB_EXPIRED", "ru")
+            return False, "Подписка истекла"
 
         # Проверка общего лимита
         if subscription.total_limit and subscription.used_total >= subscription.total_limit:
-            return False, msg("ERR_TOTAL_LIMIT", "ru")
+            return False, "Достигнут общий лимит подписки"
 
         # Сброс дневного счётчика если новый день
         today = datetime.utcnow().date()
@@ -393,7 +392,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
 
         # Проверка дневного лимита
         if subscription.daily_limit and subscription.used_today >= subscription.daily_limit:
-            return False, msg("ERR_DAILY_LIMIT", "ru")
+            return False, "Достигнут дневной лимит подписки"
 
         return True, ""
 

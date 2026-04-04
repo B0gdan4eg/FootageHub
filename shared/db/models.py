@@ -110,7 +110,8 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    tg_id = Column(BigInteger, unique=True, index=True, nullable=False)
+    tg_id = Column(BigInteger, unique=True, index=True, nullable=True)
+    phone_number = Column(String(20), unique=True, index=True, nullable=True)
     username = Column(String)
     role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
 
@@ -401,3 +402,39 @@ class AIGenerationLog(Base):
 
     # Отношения
     user = relationship("User", back_populates="ai_generations")
+
+
+# ==================== WEB AUTH MODELS ====================
+
+
+class SmsVerification(Base):
+    """Коды SMS-верификации для входа на сайт"""
+
+    __tablename__ = "sms_verifications"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    phone = Column(String(20), nullable=False, index=True)
+    code = Column(String(6), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+
+class BotLinkRequest(Base):
+    """Запросы на привязку бот-аккаунта к веб-аккаунту"""
+
+    __tablename__ = "bot_link_requests"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    web_user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    bot_user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    status = Column(
+        Enum("PENDING", "CONFIRMED", "REJECTED", "EXPIRED", name="link_request_status"),
+        default="PENDING",
+        nullable=False,
+    )
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+    web_user = relationship("User", foreign_keys=[web_user_id])
+    bot_user = relationship("User", foreign_keys=[bot_user_id])

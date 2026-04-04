@@ -48,6 +48,34 @@ class UserRepository(BaseRepository[User]):
         result = await self.session.execute(select(User).where(User.referral_code == referral_code))
         return result.scalar_one_or_none()
 
+    async def get_by_phone(self, phone: str) -> Optional[User]:
+        """Get user by phone number."""
+        result = await self.session.execute(select(User).where(User.phone_number == phone))
+        return result.scalar_one_or_none()
+
+    async def get_or_create_by_phone(self, phone: str, username: Optional[str] = None) -> tuple:
+        """
+        Get user by phone or create new one.
+
+        Returns:
+            Tuple (user, created: bool)
+        """
+        import random
+        import string
+
+        user = await self.get_by_phone(phone)
+        if user:
+            return user, False
+
+        code = "REF" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        user = await self.create(
+            phone_number=phone,
+            username=username,
+            referral_code=code,
+            credits=3,
+        )
+        return user, True
+
     async def get_or_create_by_telegram_id(
         self, telegram_id: int, username: Optional[str] = None, referral_code: Optional[str] = None
     ) -> User:
