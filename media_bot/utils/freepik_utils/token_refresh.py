@@ -31,6 +31,7 @@ _refresh_lock = asyncio.Lock()
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _decode_jwt_exp(token: str) -> float:
     """Возвращает exp из JWT без проверки подписи."""
     try:
@@ -72,6 +73,7 @@ def _save_api_key(key: str) -> None:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def is_token_expired(cookie_file: str, buffer_seconds: int = 120) -> bool:
     """
     Проверяет, истёк ли GR_TOKEN (с буфером buffer_seconds).
@@ -91,12 +93,62 @@ def is_token_expired(cookie_file: str, buffer_seconds: int = 120) -> bool:
         return True
 
 
+async def _get_firebase_api_key_from_web() -> str | None:
+    """
+    Извлекает Firebase API key из публичного HTML/JS Freepik.
+    Firebase API key (AIza...) встроен в JS-бандл и доступен без авторизации.
+    """
+    import re
+    import urllib.request
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+    }
+    urls_to_try = [
+        "https://www.freepik.com",
+        "https://www.freepik.com/pikaso",
+    ]
+    proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
+
+    for url in urls_to_try:
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            if proxy:
+                opener = urllib.request.build_opener(
+                    urllib.request.ProxyHandler({"https": proxy, "http": proxy})
+                )
+            else:
+                opener = urllib.request.build_opener()
+            with opener.open(req, timeout=15) as resp:
+                html = resp.read().decode("utf-8", errors="ignore")
+
+            # Firebase config обычно: {"apiKey":"AIza..."}
+            m = re.search(r'"apiKey"\s*:\s*"(AIza[A-Za-z0-9_\-]{35,})"', html)
+            if m:
+                print(f"[TOKEN REFRESH] Firebase API key найден в {url}")
+                return m.group(1)
+            # Альтернатив: apiKey:"AIza..." или apiKey='AIza...'
+            m = re.search(r"apiKey[\"'\s:=]+(AIza[A-Za-z0-9_\-]{35,})", html)
+            if m:
+                print(f"[TOKEN REFRESH] Firebase API key найден в {url} (alt)")
+                return m.group(1)
+        except Exception as e:
+            print(f"[TOKEN REFRESH] Не удалось получить API key из {url}: {e}")
+
+    return None
+
+
 async def refresh_token(cookie_file: str) -> bool:
     """
     Обновляет GR_TOKEN в cookie_file.
 
-    Сначала пробует прямой Firebase REST вызов (если API-ключ закэширован),
-    иначе запускает браузер и перехватывает запрос.
+    Порядок попыток:
+    1. Прямой Firebase REST (если API-ключ закэширован)
+    2. Извлечь API-ключ из публичного HTML Freepik → прямой REST
+    3. Запустить браузер и перехватить запрос
 
     Возвращает True при успехе.
     """
@@ -106,6 +158,14 @@ async def refresh_token(cookie_file: str) -> bool:
             return True
 
         api_key = _load_api_key()
+
+        # Если ключ не закэширован — пробуем достать из публичного JS
+        if not api_key:
+            print("[TOKEN REFRESH] API key не закэширован, извлекаем из Freepik...")
+            api_key = await _get_firebase_api_key_from_web()
+            if api_key:
+                _save_api_key(api_key)
+
         if api_key:
             ok = await _refresh_direct(cookie_file, api_key)
             if ok:
@@ -130,11 +190,12 @@ async def ensure_token_valid(cookie_file: str) -> bool:
 # Implementation: direct REST refresh
 # ---------------------------------------------------------------------------
 
+
 async def _refresh_direct(cookie_file: str, api_key: str) -> bool:
     """Обновляет токен через Firebase REST API без браузера."""
-    import urllib.request
-    import urllib.parse
     import urllib.error
+    import urllib.parse
+    import urllib.request
 
     with open(cookie_file) as f:
         cookies = json.load(f)
@@ -144,10 +205,12 @@ async def _refresh_direct(cookie_file: str, api_key: str) -> bool:
         return False
 
     url = f"https://securetoken.googleapis.com/v1/token?key={api_key}"
-    body = urllib.parse.urlencode({
-        "grant_type": "refresh_token",
-        "refresh_token": gr_refresh["value"],
-    }).encode()
+    body = urllib.parse.urlencode(
+        {
+            "grant_type": "refresh_token",
+            "refresh_token": gr_refresh["value"],
+        }
+    ).encode()
 
     try:
         req = urllib.request.Request(url, data=body, method="POST")
@@ -189,6 +252,7 @@ async def _refresh_direct(cookie_file: str, api_key: str) -> bool:
 # Implementation: browser-based refresh
 # ---------------------------------------------------------------------------
 
+
 async def _refresh_via_browser(cookie_file: str) -> bool:
     """
     Запускает отдельный Chrome, загружает Freepik с куками,
@@ -217,14 +281,16 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
         # Устанавливаем куки
         for c in cookies:
             try:
-                await tab.send(cdp.network.set_cookie(
-                    name=c["name"],
-                    value=c["value"],
-                    domain=c.get("domain", ".freepik.com"),
-                    path=c.get("path", "/"),
-                    secure=c.get("secure", False),
-                    http_only=c.get("httpOnly", False),
-                ))
+                await tab.send(
+                    cdp.network.set_cookie(
+                        name=c["name"],
+                        value=c["value"],
+                        domain=c.get("domain", ".freepik.com"),
+                        path=c.get("path", "/"),
+                        secure=c.get("secure", False),
+                        http_only=c.get("httpOnly", False),
+                    )
+                )
             except Exception:
                 pass
 
@@ -236,6 +302,7 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
             if "securetoken.googleapis.com" not in evt.request.url:
                 return
             import re
+
             m = re.search(r"[?&]key=([A-Za-z0-9_\-]+)", evt.request.url)
             if m and not api_key_found:
                 key = m.group(1)
@@ -250,9 +317,7 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
                 return
             try:
                 await asyncio.sleep(0.2)
-                body = await tab.send(
-                    cdp.network.get_response_body(request_id=evt.request_id)
-                )
+                body = await tab.send(cdp.network.get_response_body(request_id=evt.request_id))
                 data = json.loads(body.body)
                 if "id_token" in data:
                     token_data["id_token"] = data["id_token"]
@@ -296,8 +361,15 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
         # Читаем актуальные короткоживущие куки из браузера
         try:
             all_cookies = await tab.send(cdp.network.get_all_cookies())
-            short_lived = {"XSRF-TOKEN", "pikaso_session", "ak_bmsc", "__cf_bm",
-                           "_hjSession_1331604", "_cfuvid", "_dd_s"}
+            short_lived = {
+                "XSRF-TOKEN",
+                "pikaso_session",
+                "ak_bmsc",
+                "__cf_bm",
+                "_hjSession_1331604",
+                "_cfuvid",
+                "_dd_s",
+            }
             browser_cookie_map = {bc.name: bc for bc in all_cookies.cookies}
             for c in cookies:
                 if c["name"] in short_lived and c["name"] in browser_cookie_map:
@@ -327,6 +399,7 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
+
 
 def _apply_new_token(cookies: list, id_token: str, refresh_token: str | None) -> None:
     """Обновляет GR_TOKEN и GR_REFRESH в списке кук."""
