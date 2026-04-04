@@ -346,97 +346,54 @@ async def _refresh_via_browser(cookie_file: str) -> bool:
         if api_key_found:
             _save_api_key(api_key_found[0])
 
-        if not token_data.get("id_token"):
-            print("[TOKEN REFRESH] ❌ Firebase не обновил токен за 20с")
-            print("[TOKEN REFRESH] Извлекаем API key из загруженной страницы...")
-
-            # Страница уже загружена через браузер (прошла Cloudflare) —
-            # достаём Firebase API key прямо из JS-контекста.
-            # Firebase SDK в свежем профиле не знает о сессии (нет IndexedDB),
-            # поэтому сам не рефрешит, но ключ в бандле всё равно есть.
-            # Ждём ещё 3 сек чтобы страница точно загрузилась
-            await asyncio.sleep(3)
-
-            extracted_key = None
-            try:
-                extracted_key = await tab.evaluate(
-                    """
-                    (() => {
-                        const RE = /"apiKey"\\s*:\\s*"(AIza[A-Za-z0-9_\\-]{35,})"/;
-
-                        // 1. Firebase Apps object (если SDK инициализирован)
-                        try {
-                            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-                                const k = firebase.apps[0].options.apiKey;
-                                if (k && k.startsWith('AIza')) return k;
-                            }
-                        } catch(e) {}
-
-                        // 2. Next.js __NEXT_DATA__ (inline JSON на всех Next.js страницах)
-                        try {
-                            const el = document.getElementById('__NEXT_DATA__');
-                            if (el) {
-                                const m = el.textContent.match(RE);
-                                if (m) return m[1];
-                            }
-                        } catch(e) {}
-
-                        // 3. Полный innerHTML — ловит и inline-скрипты и вшитые конфиги
-                        try {
-                            const m = document.documentElement.innerHTML.match(RE);
-                            if (m) return m[1];
-                        } catch(e) {}
-
-                        // 4. Инлайн script-теги (text непустой только для inline)
-                        for (const s of document.scripts) {
-                            if (!s.text) continue;
-                            const m = s.text.match(RE);
-                            if (m) return m[1];
-                        }
-
-                        return null;
-                    })()
-                    """
-                )
-            except Exception as _e:
-                print(f"[TOKEN REFRESH] JS evaluate ошибка: {_e}")
-
-            if not extracted_key and api_key_found:
-                extracted_key = api_key_found[0]
-
-            if extracted_key and str(extracted_key).startswith("AIza"):
-                print(f"[TOKEN REFRESH] API key из JS: {str(extracted_key)[:20]}...")
-                _save_api_key(extracted_key)
-                ok = await _refresh_direct(cookie_file, extracted_key)
-                if ok:
-                    return True
-
-            return False
-
-        # Обновляем cookie-файл
-        _apply_new_token(cookies, token_data["id_token"], token_data.get("refresh_token"))
-
-        # Читаем актуальные короткоживущие куки из браузера
+        # Читаем все куки из браузера через CDP (включая httpOnly).
+        # Freepik-сервер обновляет GR_TOKEN через Set-Cookie при загрузке
+        # страницы с валидным GR_REFRESH — даже без участия Firebase SDK.
+        browser_cookie_map: dict = {}
         try:
-            all_cookies = await tab.send(cdp.network.get_all_cookies())
-            short_lived = {
-                "XSRF-TOKEN",
-                "pikaso_session",
-                "ak_bmsc",
-                "__cf_bm",
-                "_hjSession_1331604",
-                "_cfuvid",
-                "_dd_s",
-            }
-            browser_cookie_map = {bc.name: bc for bc in all_cookies.cookies}
-            for c in cookies:
-                if c["name"] in short_lived and c["name"] in browser_cookie_map:
-                    bc = browser_cookie_map[c["name"]]
-                    c["value"] = bc.value
-                    if bc.expires and bc.expires > 0:
-                        c["expires"] = bc.expires
+            all_browser_cookies = await tab.send(cdp.network.get_all_cookies())
+            browser_cookie_map = {bc.name: bc for bc in all_browser_cookies.cookies}
         except Exception as e:
             print(f"[TOKEN REFRESH] Не удалось прочитать куки браузера: {e}")
+
+        # Проверяем, обновил ли сервер GR_TOKEN
+        server_refreshed = False
+        if "GR_TOKEN" in browser_cookie_map:
+            bc_gr = browser_cookie_map["GR_TOKEN"]
+            old_exp = float(
+                next((c for c in cookies if c["name"] == "GR_TOKEN"), {}).get("expires", 0)
+            )
+            new_exp = float(bc_gr.expires) if bc_gr.expires else _decode_jwt_exp(bc_gr.value)
+            if new_exp > old_exp + 60:
+                print("[TOKEN REFRESH] ✅ GR_TOKEN обновлён сервером Freepik")
+                server_refreshed = True
+
+        if not token_data.get("id_token") and not server_refreshed:
+            print("[TOKEN REFRESH] ❌ Токен не обновлён ни Firebase, ни сервером")
+            return False
+
+        # Применяем новый токен из Firebase если он пришёл
+        if token_data.get("id_token"):
+            _apply_new_token(cookies, token_data["id_token"], token_data.get("refresh_token"))
+
+        # Обновляем все куки из браузера (GR_TOKEN, GR_REFRESH и короткоживущие)
+        update_names = {
+            "GR_TOKEN",
+            "GR_REFRESH",
+            "XSRF-TOKEN",
+            "pikaso_session",
+            "ak_bmsc",
+            "__cf_bm",
+            "_hjSession_1331604",
+            "_cfuvid",
+            "_dd_s",
+        }
+        for c in cookies:
+            if c["name"] in update_names and c["name"] in browser_cookie_map:
+                bc = browser_cookie_map[c["name"]]
+                c["value"] = bc.value
+                if bc.expires and bc.expires > 0:
+                    c["expires"] = bc.expires
 
         with open(cookie_file, "w") as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
