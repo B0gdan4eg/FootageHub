@@ -2,6 +2,7 @@
 
 import logging
 import secrets
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -82,8 +83,6 @@ async def download_media(
 @router.get("/file/{token}")
 async def serve_file(token: str):
     """Отдать локальный файл по временному токену (TTL 5 мин)."""
-    import time
-
     entry = _file_tokens.get(token)
     if not entry:
         raise HTTPException(status_code=404, detail="Токен недействителен или истёк")
@@ -106,8 +105,6 @@ async def serve_file(token: str):
 
 def create_file_token(file_path: str) -> str:
     """Создать временный токен для скачивания файла."""
-    import time
-
     token = secrets.token_urlsafe(32)
     _file_tokens[token] = (file_path, time.time() + 300)  # TTL 5 мин
     return token

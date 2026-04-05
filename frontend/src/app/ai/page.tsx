@@ -43,13 +43,10 @@ export default function AIPage() {
   const [pricing, setPricing] = useState<PricingItem[]>([]);
 
   useEffect(() => {
-    aiApi.pricing().then((res) => {
-      const items = res.data as PricingItem[];
-      setPricing(items);
-      const first = items.find((p) => p.type === tab);
-      if (first) setProvider(first.provider);
-    }).catch(() => {});
-  }, [tab]);
+    aiApi.pricing()
+      .then((res) => setPricing(res.data as PricingItem[]))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const first = pricing.find((p) => p.type === tab);

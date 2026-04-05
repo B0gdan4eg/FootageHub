@@ -113,10 +113,10 @@ class KieAIClient:
             TimeoutError: If task doesn't complete within timeout
             Exception: On task failure
         """
-        start_time = asyncio.get_event_loop().time()
+        start_time = asyncio.get_running_loop().time()
 
         while True:
-            elapsed = asyncio.get_event_loop().time() - start_time
+            elapsed = asyncio.get_running_loop().time() - start_time
 
             if elapsed > timeout:
                 raise TimeoutError(f"Task {task_id} timed out after {timeout}s")

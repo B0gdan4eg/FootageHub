@@ -12,7 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.core.constants import BonusCodes, ReferralRewards
 from shared.core.exceptions import BonusException, ReferralException, UserNotFoundException
-from shared.db.models import ReferralReward, ReferralRewardStatus, ReferralTriggerType, UserBonus
+from shared.db.models import (
+    BonusType,
+    ReferralReward,
+    ReferralRewardStatus,
+    ReferralTriggerType,
+    UserBonus,
+)
 from shared.db.repositories.bonus_repository import BonusRepository
 from shared.db.repositories.user_repository import UserRepository
 from shared.services.bonus_service import BonusService
@@ -546,8 +552,6 @@ class ReferralService:
         Returns:
             Список словарей с информацией о каждом реферале
         """
-        from shared.db.models import BonusType
-
         # Получаем все регистрационные награды (каждая = один реферал)
         query = (
             select(ReferralReward)

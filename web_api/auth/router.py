@@ -5,7 +5,6 @@ import hmac
 import re
 import time
 from datetime import datetime, timedelta
-from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -85,6 +84,18 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+def _build_user_response(user) -> UserResponse:
+    return UserResponse(
+        id=user.id,
+        phone_number=user.phone_number,
+        username=user.username,
+        credits=user.credits,
+        ai_credits=user.ai_credits,
+        role=user.role.value,
+        referral_code=user.referral_code,
+    )
+
+
 # ─── Endpoints ───────────────────────────────────────────────────────────────
 
 
@@ -112,18 +123,7 @@ async def verify_code(body: VerifyCodeRequest, db: AsyncSession = Depends(get_db
     user, _ = await repo.get_or_create_by_phone(body.phone)
 
     token = create_access_token(user.id)
-    return TokenResponse(
-        access_token=token,
-        user=UserResponse(
-            id=user.id,
-            phone_number=user.phone_number,
-            username=user.username,
-            credits=user.credits,
-            ai_credits=user.ai_credits,
-            role=user.role.value,
-            referral_code=user.referral_code,
-        ),
-    )
+    return TokenResponse(access_token=token, user=_build_user_response(user))
 
 
 @router.post("/link-bot")
@@ -261,15 +261,7 @@ async def get_link_status(
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     """Получить текущего пользователя."""
-    return UserResponse(
-        id=current_user.id,
-        phone_number=current_user.phone_number,
-        username=current_user.username,
-        credits=current_user.credits,
-        ai_credits=current_user.ai_credits,
-        role=current_user.role.value,
-        referral_code=current_user.referral_code,
-    )
+    return _build_user_response(current_user)
 
 
 # ─── Telegram Login Widget ────────────────────────────────────────────────────
@@ -277,10 +269,10 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 class TelegramAuthData(BaseModel):
     id: int
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    username: Optional[str] = None
-    photo_url: Optional[str] = None
+    first_name: str | None = None
+    last_name: str | None = None
+    username: str | None = None
+    photo_url: str | None = None
     auth_date: int
     hash: str
 
@@ -347,15 +339,4 @@ async def telegram_login(body: TelegramAuthData, db: AsyncSession = Depends(get_
     )
 
     token = create_access_token(user.id)
-    return TokenResponse(
-        access_token=token,
-        user=UserResponse(
-            id=user.id,
-            phone_number=user.phone_number,
-            username=user.username,
-            credits=user.credits,
-            ai_credits=user.ai_credits,
-            role=user.role.value,
-            referral_code=user.referral_code,
-        ),
-    )
+    return TokenResponse(access_token=token, user=_build_user_response(user))

@@ -1,5 +1,7 @@
 """Admin router: user management, statistics."""
 
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -124,8 +126,6 @@ async def get_stats(
     db: AsyncSession = Depends(get_db),
 ):
     """Общая статистика платформы."""
-    from datetime import datetime, timedelta
-
     now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 

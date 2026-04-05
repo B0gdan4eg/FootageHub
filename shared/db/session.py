@@ -1,6 +1,7 @@
 """Database session management for shared models."""
 
 import os
+from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -20,7 +21,7 @@ AsyncSessionLocal = sessionmaker(
 )
 
 
-async def get_session() -> AsyncSession:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Get database session."""
     async with AsyncSessionLocal() as session:
         yield session

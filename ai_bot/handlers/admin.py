@@ -288,8 +288,6 @@ async def admin_pricing_settings(message: Message):
     if not is_admin(message.from_user.id):
         return
 
-    from ai_bot.services import PricingService
-
     pricing_service = PricingService(config.KIE_AI_API_KEY)
     models = pricing_service.get_all_models()
 

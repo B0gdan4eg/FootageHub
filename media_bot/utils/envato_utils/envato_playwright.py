@@ -191,7 +191,7 @@ class EnvatoDownloader:
                     await page.click(
                         "button[data-testid='download-without-license-button']", delay=0
                     )
-                except BaseException:
+                except Exception:
                     pass
 
             # Wait for download event with timeout
@@ -319,7 +319,9 @@ class EnvatoDownloader:
             try:
                 await page.click("button[data-testid='button-download']", timeout=3000)
             except Exception:
-                btn = await page.wait_for_selector("button[data-testid='button-download']", state="visible", timeout=5000)
+                btn = await page.wait_for_selector(
+                    "button[data-testid='button-download']", state="visible", timeout=5000
+                )
                 if btn:
                     await btn.evaluate("el => el.click()")
             await asyncio.sleep(1)  # Wait for modal to appear

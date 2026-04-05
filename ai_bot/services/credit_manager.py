@@ -8,11 +8,7 @@ from typing import Optional
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-try:
-    from shared.db.models import User
-except ImportError:
-    from shared.db.models import User
-
+from shared.db.models import User
 from shared.db.repositories.user_repository import UserRepository
 from shared.services.credit_service import CreditService
 

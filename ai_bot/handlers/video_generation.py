@@ -35,7 +35,7 @@ async def cmd_generate_video(event, state: FSMContext):
         veo_cost = pricing_service.get_model_price("veo-3.1/text-to-video")
         kling_usd = pricing_service.credits_to_usd(kling_cost)
         veo_usd = pricing_service.credits_to_usd(veo_cost)
-    except BaseException:
+    except Exception:
         kling_cost = config.VIDEO_GENERATION_COST
         veo_cost = config.VIDEO_GENERATION_COST
         kling_usd = kling_cost * 0.005

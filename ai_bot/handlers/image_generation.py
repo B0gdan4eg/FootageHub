@@ -33,7 +33,7 @@ async def cmd_generate_image(event, state: FSMContext):
     try:
         cost = pricing_service.get_model_price("google/nano-banana")
         cost_usd = pricing_service.credits_to_usd(cost)
-    except BaseException:
+    except Exception:
         cost = config.IMAGE_GENERATION_COST
         cost_usd = cost * 0.005
 

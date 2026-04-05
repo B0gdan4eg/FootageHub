@@ -96,7 +96,7 @@ async def save_cookies_after_login(service: str, number: int = None):
         import asyncio
 
         # Wait for user to confirm login
-        await asyncio.get_event_loop().run_in_executor(
+        await asyncio.get_running_loop().run_in_executor(
             None, input, "\n>>> Нажмите ENTER после входа в аккаунт... "
         )
 

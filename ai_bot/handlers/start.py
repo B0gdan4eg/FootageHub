@@ -11,6 +11,37 @@ from ai_bot.keyboards import main_menu_kb, tools_menu_kb
 router = Router()
 
 
+def _build_info_text(pricing_service) -> str:
+    """Build info text with dynamic pricing."""
+    info_text = (
+        "ℹ️ <b>Информация об AI Bot</b>\n\n"
+        "<b>📋 Доступные функции:</b>\n"
+        "🎨 Генерация изображений (Nano Banana Pro)\n"
+        "🎬 Генерация видео (Kling 2.6, VEO 3.1)\n\n"
+        "<b>💰 Стоимость:</b>\n"
+    )
+    try:
+        image_price = pricing_service.get_model_price("google/nano-banana")
+        kling_price = pricing_service.get_model_price("kling-2.6/text-to-video")
+        veo_price = pricing_service.get_model_price("veo-3.1/text-to-video")
+        info_text += (
+            f"• Изображение: {image_price} кредитов (${pricing_service.credits_to_usd(image_price):.3f})\n"
+            f"• Видео Kling: {kling_price} кредитов (${pricing_service.credits_to_usd(kling_price):.2f})\n"
+            f"• Видео VEO: {veo_price} кредитов (${pricing_service.credits_to_usd(veo_price):.2f})\n"
+        )
+    except Exception:
+        info_text += "Используйте /pricing для просмотра цен\n"
+    info_text += (
+        "\n<b>📖 Команды:</b>\n"
+        "/balance - Проверить баланс\n"
+        "/pricing - Все цены\n"
+        "/image - Создать изображение\n"
+        "/video - Создать видео\n"
+        "/help - Помощь"
+    )
+    return info_text
+
+
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     """Handle /start command"""
@@ -110,7 +141,7 @@ async def text_balance(message: Message):
                 kie_credits = await pricing_service.get_kie_credits()
                 if kie_credits is not None:
                     balance_text += f"\n\n🌐 Kie.ai баланс: <b>{kie_credits:,} кредитов</b>"
-            except BaseException:
+            except Exception:
                 pass
 
     await message.answer(balance_text, parse_mode="HTML")
@@ -158,39 +189,7 @@ async def text_info(message: Message):
     """Handle info button"""
     from ai_bot.services import PricingService
 
-    pricing_service = PricingService()
-
-    info_text = (
-        "ℹ️ <b>Информация об AI Bot</b>\n\n"
-        "<b>📋 Доступные функции:</b>\n"
-        "🎨 Генерация изображений (Nano Banana Pro)\n"
-        "🎬 Генерация видео (Kling 2.6, VEO 3.1)\n\n"
-        "<b>💰 Стоимость:</b>\n"
-    )
-
-    # Добавляем цены
-    try:
-        image_price = pricing_service.get_model_price("google/nano-banana")
-        kling_price = pricing_service.get_model_price("kling-2.6/text-to-video")
-        veo_price = pricing_service.get_model_price("veo-3.1/text-to-video")
-
-        info_text += (
-            f"• Изображение: {image_price} кредитов (${pricing_service.credits_to_usd(image_price):.3f})\n"
-            f"• Видео Kling: {kling_price} кредитов (${pricing_service.credits_to_usd(kling_price):.2f})\n"
-            f"• Видео VEO: {veo_price} кредитов (${pricing_service.credits_to_usd(veo_price):.2f})\n"
-        )
-    except BaseException:
-        info_text += "Используйте /pricing для просмотра цен\n"
-
-    info_text += (
-        "\n<b>📖 Команды:</b>\n"
-        "/balance - Проверить баланс\n"
-        "/pricing - Все цены\n"
-        "/image - Создать изображение\n"
-        "/video - Создать видео\n"
-        "/help - Помощь"
-    )
-
+    info_text = _build_info_text(PricingService())
     await message.answer(info_text, parse_mode="HTML")
 
 
@@ -228,39 +227,7 @@ async def callback_info(callback):
     """Handle info button - show detailed information"""
     from ai_bot.services import PricingService
 
-    pricing_service = PricingService()
-
-    info_text = (
-        "ℹ️ <b>Информация об AI Bot</b>\n\n"
-        "<b>📋 Доступные функции:</b>\n"
-        "🎨 Генерация изображений (Nano Banana Pro)\n"
-        "🎬 Генерация видео (Kling 2.6, VEO 3.1)\n\n"
-        "<b>💰 Стоимость:</b>\n"
-    )
-
-    # Добавляем цены
-    try:
-        image_price = pricing_service.get_model_price("google/nano-banana")
-        kling_price = pricing_service.get_model_price("kling-2.6/text-to-video")
-        veo_price = pricing_service.get_model_price("veo-3.1/text-to-video")
-
-        info_text += (
-            f"• Изображение: {image_price} кредитов (${pricing_service.credits_to_usd(image_price):.3f})\n"
-            f"• Видео Kling: {kling_price} кредитов (${pricing_service.credits_to_usd(kling_price):.2f})\n"
-            f"• Видео VEO: {veo_price} кредитов (${pricing_service.credits_to_usd(veo_price):.2f})\n"
-        )
-    except BaseException:
-        info_text += "Используйте /pricing для просмотра цен\n"
-
-    info_text += (
-        "\n<b>📖 Команды:</b>\n"
-        "/balance - Проверить баланс\n"
-        "/pricing - Все цены\n"
-        "/image - Создать изображение\n"
-        "/video - Создать видео\n"
-        "/help - Помощь"
-    )
-
+    info_text = _build_info_text(PricingService())
     await callback.message.answer(info_text, parse_mode="HTML")
     await callback.answer()
 
@@ -312,7 +279,7 @@ async def callback_show_balance(callback):
                 kie_credits = await pricing_service.get_kie_credits()
                 if kie_credits is not None:
                     balance_text += f"\n\n🌐 Kie.ai баланс: <b>{kie_credits:,} кредитов</b>"
-            except BaseException:
+            except Exception:
                 pass
 
     builder = InlineKeyboardBuilder()

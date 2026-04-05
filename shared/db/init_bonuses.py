@@ -4,6 +4,8 @@
 Создает или обновляет все необходимые бонусы при старте приложения.
 """
 
+from typing import Any
+
 from shared.core.constants import BonusCodes, ChannelConfig, ReferralRewards
 from shared.core.logger import get_logger
 from shared.db.models import BonusRewardType, BonusType
@@ -184,7 +186,7 @@ async def initialize_bonuses() -> dict[str, int]:
     return {"created": created_count, "updated": updated_count}
 
 
-async def get_bonus_stats() -> dict[str, any]:
+async def get_bonus_stats() -> dict[str, Any]:
     """
     Получить статистику по всем бонусам в системе.
 

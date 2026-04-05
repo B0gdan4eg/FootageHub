@@ -7,10 +7,8 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("access_token")?.value;
   const { pathname } = request.nextUrl;
 
-  const isProtected = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
-
   // TEMP: disabled for preview
-  // if (isProtected && !token) {
+  // if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route)) && !token) {
   //   const loginUrl = new URL(AUTH_ROUTE, request.url);
   //   loginUrl.searchParams.set("redirect", pathname);
   //   return NextResponse.redirect(loginUrl);

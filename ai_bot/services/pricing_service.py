@@ -5,7 +5,7 @@ Service for managing AI model pricing and credits
 Based on Kie.ai documentation and actual costs
 """
 from datetime import datetime, timedelta
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from ai_bot.providers.kie_ai_client import KieAIClient
 
@@ -86,7 +86,7 @@ class PricingService:
 
         return self.MODEL_PRICES[model]["credits"]
 
-    def get_model_info(self, model: str) -> Dict[str, any]:
+    def get_model_info(self, model: str) -> Dict[str, Any]:
         """
         Get detailed information about a model
 

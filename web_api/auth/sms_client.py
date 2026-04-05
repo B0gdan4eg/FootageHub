@@ -1,5 +1,6 @@
 """SMSC.ru SMS client for Russian phone verification."""
 
+import logging
 import random
 from datetime import datetime, timedelta
 
@@ -85,8 +86,6 @@ async def send_verification_sms(db: AsyncSession, phone: str) -> dict:
             raise ValueError(f"Не удалось отправить SMS: {e}") from e
     else:
         # В режиме разработки логируем код
-        import logging
-
         logging.getLogger(__name__).info(f"[DEV] SMS to {phone}: code={code}")
 
     return {"status": "sent", "expires_in": 300}

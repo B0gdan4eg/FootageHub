@@ -1,11 +1,13 @@
 """Users router: profile, history, subscriptions."""
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.db.models import Download, Media, Subscription, User
+from shared.db.models import AIGenerationLog, Download, Media, Subscription, User
 from web_api.dependencies import get_current_user, get_db
 
 router = APIRouter()
@@ -98,8 +100,6 @@ async def get_subscriptions(
     db: AsyncSession = Depends(get_db),
 ):
     """Активные подписки текущего пользователя."""
-    from datetime import datetime
-
     result = await db.execute(
         select(Subscription).where(
             Subscription.user_id == current_user.id,
@@ -132,8 +132,6 @@ async def get_ai_generations(
     db: AsyncSession = Depends(get_db),
 ):
     """История AI генераций текущего пользователя."""
-    from shared.db.models import AIGenerationLog
-
     offset = (page - 1) * per_page
     result = await db.execute(
         select(AIGenerationLog)

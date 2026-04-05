@@ -1,15 +1,21 @@
 """Payments router: plans, invoice creation, webhooks for web users."""
 
+import hashlib
+import hmac
 import json
 import uuid
 from pathlib import Path
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.db.models import Payment, User
+from shared.db.repositories.subscription_repository import SubscriptionRepository
 from shared.db.repositories.user_repository import UserRepository
+from web_api.config import config
 from web_api.dependencies import get_current_user, get_db
 
 router = APIRouter()
@@ -79,10 +85,6 @@ async def create_invoice(
 
 async def _create_cryptobot_invoice(order_id: str, plan: dict) -> str:
     """Создать инвойс в CryptoBot."""
-    import httpx
-
-    from web_api.config import config
-
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             "https://pay.crypt.bot/api/createInvoice",
@@ -104,11 +106,6 @@ async def _create_cryptobot_invoice(order_id: str, plan: dict) -> str:
 
 async def _create_webpay_invoice(order_id: str, plan: dict, user: User) -> str:
     """Создать форму оплаты WebPay."""
-    import hashlib
-    import hmac
-
-    from web_api.config import config
-
     amount = int(plan.get("price", 0) * 100)  # в копейках
     signing_str = f"{config.WEBPAY_RESOURCE_ID}{order_id}{amount}BYR"
     signature = hmac.new(
@@ -161,8 +158,6 @@ async def webpay_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
 async def _process_web_payment(order_id: str, db: AsyncSession) -> None:
     """Обработать успешный платёж от web-пользователя."""
-    from sqlalchemy import select
-
     # order_id формат: WEBUSER_{db_user_id}_{plan_key}_{uuid}
     parts = order_id.split("_", 3)
     if len(parts) < 3:
@@ -182,8 +177,6 @@ async def _process_web_payment(order_id: str, db: AsyncSession) -> None:
     payment.status = "success"
 
     # Активируем подписку
-    from shared.db.repositories.subscription_repository import SubscriptionRepository
-
     sub_repo = SubscriptionRepository(db)
     user_repo = UserRepository(db)
 
@@ -200,8 +193,6 @@ async def get_payment_history(
     db: AsyncSession = Depends(get_db),
 ):
     """История платежей текущего пользователя."""
-    from sqlalchemy import select
-
     result = await db.execute(
         select(Payment)
         .where(Payment.user_id == current_user.id)

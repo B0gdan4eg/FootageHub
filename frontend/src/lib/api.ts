@@ -145,3 +145,10 @@ export interface User {
   role: string;
   referral_code: string | null;
 }
+
+export interface ApiError {
+  response?: {
+    status?: number;
+    data?: { detail?: string };
+  };
+}
