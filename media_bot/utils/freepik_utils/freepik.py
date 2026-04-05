@@ -12,11 +12,6 @@ from .logger import logger
 COOKIE_DIR = os.path.dirname(__file__)
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "freepik_cookie_index.txt")
 
-# Импортируем лениво чтобы избежать циклических импортов
-def _get_token_refresher():
-    from .token_refresh import ensure_token_valid
-    return ensure_token_valid
-
 
 def find_chromium_executable() -> str | None:
     """Ищет Chromium от Playwright если системный Chrome не найден."""
@@ -110,32 +105,20 @@ class FreepikDownloader:
         """
         Get direct download URL using network request interception.
 
-        Args:
-            asset_url: URL of the Freepik asset page
-
-        Returns:
-            Direct download URL or None if failed
+        Простая стратегия: загружаем куки → открываем URL напрямую →
+        если 403, ждём (Akamai sensor работает на 403-странице) → перезагружаем.
         """
         tab = None
         start_time = time.time()
         download_url = None
 
         try:
-            tab = await self.browser.get("about:blank")
-
-            # Загружаем куки через CDP
             cookie_file = get_next_cookie_file()
-
-            # Обновляем GR_TOKEN если истёк (без запуска нового браузера — прямой REST)
-            try:
-                ensure_token_valid = _get_token_refresher()
-                await ensure_token_valid(cookie_file)
-            except Exception as _e:
-                print(f"⚠️ [FREEPIK] Не удалось проверить токен: {_e}")
-
             with open(cookie_file, "r") as f:
                 raw_cookies = json.load(f)
 
+            # Открываем about:blank и загружаем куки
+            tab = await self.browser.get("about:blank")
             for c in raw_cookies:
                 try:
                     await tab.send(
@@ -150,6 +133,56 @@ class FreepikDownloader:
                     )
                 except Exception:
                     pass
+
+            # Очищаем URL от Akamai bm-verify параметра
+            from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+
+            parsed = urlparse(asset_url)
+            clean_params = {
+                k: v
+                for k, v in parse_qs(parsed.query).items()
+                if not k.startswith("bm-verify") and not k.startswith("bm_")
+            }
+            clean_query = urlencode(clean_params, doseq=True)
+            asset_url = urlunparse(parsed._replace(query=clean_query))
+
+            # Открываем ссылку напрямую
+            print(f"[FREEPIK] 📄 Открываем страницу ресурса...")
+            nav_done = asyncio.Event()
+
+            async def _navigate():
+                try:
+                    await tab.get(asset_url)
+                except Exception:
+                    pass
+                nav_done.set()
+
+            asyncio.create_task(_navigate())
+            try:
+                await asyncio.wait_for(nav_done.wait(), timeout=20)
+            except asyncio.TimeoutError:
+                print("[FREEPIK] ⏳ Таймаут навигации, продолжаем...")
+
+            # Сразу перезагружаем — Akamai sensor успевает отработать
+            # на первой загрузке, вторая проходит без 403
+            await asyncio.sleep(0.5)
+            print("[FREEPIK] 🔄 Перезагружаем страницу...")
+            reload_done = asyncio.Event()
+
+            async def _reload():
+                try:
+                    await tab.get(asset_url)
+                except Exception:
+                    pass
+                reload_done.set()
+
+            asyncio.create_task(_reload())
+            try:
+                await asyncio.wait_for(reload_done.wait(), timeout=20)
+            except asyncio.TimeoutError:
+                print("[FREEPIK] ⏳ Таймаут перезагрузки, продолжаем...")
+
+            await asyncio.sleep(2)
 
             # Перехватываем событие начала скачивания — содержит прямой URL
             download_info = {}
@@ -168,27 +201,12 @@ class FreepikDownloader:
                 )
             )
 
-            # Переходим на страницу ресурса
-            # nodriver бросает StopIteration (-> RuntimeError в async) при проблемах навигации
-            try:
-                await tab.get(asset_url)
-            except (StopIteration, RuntimeError) as e:
-                if "StopIteration" in str(type(e).__name__) or "StopIteration" in str(e):
-                    print(f"⚠️ [FREEPIK] Retry navigation after StopIteration...")
-                    await asyncio.sleep(1)
-                    await tab.get(asset_url)
-                else:
-                    raise
-
             # Ищем кнопку скачивания
-            # nodriver бросает StopIteration (-> RuntimeError в async) если элемент не найден
             btn = None
-            # 1) По data-cy атрибуту
             try:
                 btn = await tab.select('button[data-cy="download-button"]', timeout=15)
             except (StopIteration, RuntimeError):
                 pass
-            # 2) Фоллбэк: ищем по тексту "Download" / "Скачать"
             if not btn:
                 for text in ("Download", "Скачать"):
                     try:
@@ -221,7 +239,6 @@ class FreepikDownloader:
             try:
                 await btn.click()
             except (StopIteration, RuntimeError):
-                # nodriver иногда бросает StopIteration при клике
                 await asyncio.sleep(0.5)
                 try:
                     await btn.click()
@@ -294,9 +311,8 @@ class FreepikDownloader:
         finally:
             if tab:
                 try:
-                    # Не закрываем таб — закрытие последнего таба убивает браузер,
-                    # и следующий вызов get_download_url падает с StopIteration.
-                    # Вместо этого просто навигируем на пустую страницу.
+                    # Не закрываем таб — закрытие последнего таба убивает браузер.
+                    # Навигируем на about:blank для очистки.
                     await tab.get("about:blank")
                 except Exception:
                     pass
