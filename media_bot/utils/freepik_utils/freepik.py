@@ -165,7 +165,7 @@ class FreepikDownloader:
 
             # Сразу перезагружаем — Akamai sensor успевает отработать
             # на первой загрузке, вторая проходит без 403
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
             print("[FREEPIK] 🔄 Перезагружаем страницу...")
             reload_done = asyncio.Event()
 
@@ -181,8 +181,6 @@ class FreepikDownloader:
                 await asyncio.wait_for(reload_done.wait(), timeout=20)
             except asyncio.TimeoutError:
                 print("[FREEPIK] ⏳ Таймаут перезагрузки, продолжаем...")
-
-            await asyncio.sleep(2)
 
             # Перехватываем событие начала скачивания — содержит прямой URL
             download_info = {}

@@ -73,7 +73,10 @@ class EnvatoDownloader:
 
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=False)
+        self.browser = await self.playwright.chromium.launch(
+            headless=False,
+            args=["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"],
+        )
         self.context = await self.browser.new_context(viewport={"width": 1920, "height": 1080})
 
         # Получаем следующий файл с куками (ротация)
@@ -133,6 +136,14 @@ class EnvatoDownloader:
         try:
             page = await self.context.new_page()
 
+            # Блокируем тяжёлые ресурсы — не нужны для получения ссылки
+            await page.route(
+                "**/*",
+                lambda route: route.abort()
+                if route.request.resource_type in ("image", "media", "font", "stylesheet")
+                else route.continue_(),
+            )
+
             # Перехватываем download event
             download_info = {}
 
@@ -147,7 +158,7 @@ class EnvatoDownloader:
             page.on("download", handle_download)
 
             # Navigate to asset page
-            await page.goto(asset_url, wait_until="load", timeout=15000)
+            await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
 
             # Wait for redirect to app.envato.com if needed
             if "elements.envato.com" in page.url:
