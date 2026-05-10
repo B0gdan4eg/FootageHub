@@ -14,7 +14,7 @@ const PROVIDERS: Record<string, { name: string; color: string }> = {
 
 function detectProvider(url: string): string | null {
   if (url.includes("elements.envato.com") || url.includes("envato.com")) return "envato";
-  if (url.includes("freepik.com")) return "freepik";
+  if (url.includes("freepik.com") || url.includes("magnific.com")) return "freepik";
   if (url.includes("motionarray.com")) return "motionarray";
   return null;
 }

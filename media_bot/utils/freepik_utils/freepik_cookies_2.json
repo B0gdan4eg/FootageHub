@@ -1,0 +1,212 @@
+[
+  {
+    "name": "_GRECAPTCHA",
+    "value": "09AKhCRwju69vQR3Wxs7eyD8kiaLE6apJFFxRmka11_TPb6JwLOr-GT4ItgA1EhTNIe4pq5O73maxTLDuMz3m4IXA",
+    "domain": "www.google.com",
+    "path": "/recaptcha",
+    "expires": 1793989624.152215,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "magnific_session",
+    "value": "eyJpdiI6IjBSdlh5ZHNCZ3k5WnFnVEFiZVJjQmc9PSIsInZhbHVlIjoiQ3FWYlAwQ1ordzdPdkNyOGJCMk15NmcrTGRzSTZTOFFUbGNHdE1OaWkvOFpZRGxCS3U5dkxTbFNyRXFSejludWpObG1oeHBRb1hlTmF3N2Z1dHJlSXB4bm5CNE41bGdtYVNQWEFzZjdPYTR5cWlDejJ6b0YyWkVFb3FBNk1xdCsiLCJtYWMiOiI3MThhNDFjODU0NWEyZGVlNDA1NzhhY2M4ODgyMzQ4YTVmYWU5YjgyOTJlYWU3ODdmODU0OTIwZDU0MTRiNWMzIiwidGFnIjoiIn0%3D",
+    "domain": "www.magnific.com",
+    "path": "/app",
+    "expires": 1778439442.770586,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ak_bmsc",
+    "value": "08DD8AB38AA7080C18FC0C38178856B3~000000000000000000000000000000~YAAQ46ARApXCTNWdAQAA5UYkEx/cW82DxMdEl30g6cwc5RR8hdTYfpieka+EVuf7Rm+3Ok+9+nP268KdCQBGK127gl6cBo0N4Ulja5Ix0DJ0Ks+r2/ndpax1dHe0RhzXMsPR9qAv9awV6d/MFIp2bnzl1KxfO6zvJDcgD39VLDv/1f6S0gweCB/pCe1g2XAoiMYUoGkVZVWtYoG9q7BhZWF37nHL1li/Dniil0DTevcw5YY02iNYAdSdKixtFx3kP9E++7Ax1dJsTGETAiY3ln6sjn7HNkj9s/DnMt6TaWKXqv2QnJhDAOMdHwu6TrClQzIUfYPDIGEB0y9SYHnj5vpkR9pn2yX8oSz4/leDTuOMogoGILoccDD1KLphVN0ghLAHMu7Lv4ar1obLJw==",
+    "domain": ".freepik.com",
+    "path": "/",
+    "expires": 1778444806.211299,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ak_bmsc",
+    "value": "85AEBD5F54DEBE86EAA3D761658F7EAD~000000000000000000000000000000~YAAQ1aARArBylQ2eAQAAJkgkEx+inQlXvbNyTeeIfGYjk3tSUab20er0OQzec3T5HpulmHYyEjxntOKWMPLrESEmFvM9WRYX2KkE7e0tzH8eFBEiqn4jLACeCxUoq4djuXESJwlsN3MTFzm0uu2e28zFlV7CNfgDH27nalsshddUPYOOvErCG/1co8dbHabr7ol4vILlloHqH9tUEfUhLqzWRRTZG5Melt/FylBr1II+kdP+jQxd+z1W31pAPGMtN+1iC945Enn0th2G3Co50w2tlRRY6bAPr2czl4C6UDTYsbQA8IctTI38F/mrlnc7pgw6aUhxA2+u8T6g+OOSyIEciIkMeEIvYxMSsFODUphbHudOiTE165unyyniIWY2paSvpvVm7ajjahjeVHU=",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1778444806.532776,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_gcl_au",
+    "value": "1.1.256652441.1778437607",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1786213607,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_ga",
+    "value": "GA1.1.1180276563.1778437607",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1812997641.831502,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "pkce_verifier",
+    "value": "05ab9296e4f29432c7da081bdfdd1e791eee693915cc5aded51c0639099db899",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1778438525.008615,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "g_state",
+    "value": "{\"i_l\":0,\"i_ll\":1778437625154,\"i_b\":\"mFXEvtpzkN+lBuZrxggTSKkXvyST4mmOwrxiI9ENztQ\",\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":1778437607661}",
+    "domain": "www.magnific.com",
+    "path": "/",
+    "expires": 1793989625,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "GR_TOKEN",
+    "value": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg2OGU0YWNlMGI2NTE2ZDM2YjlmNTZkZThjZTQ5Nzg4ZmNjZGFjNDMiLCJ0eXAiOiJKV1QifQ.eyJwaWN0dXJlIjoiaHR0cHM6Ly9hdmF0YXIuY2RucGsubmV0L2RlZmF1bHRfMDgucG5nIiwiYWNjb3VudHNfdXNlcl9pZCI6MjI1NTg2NzUwLCJzY29wZXMiOiJmcmVlcGlrL2ltYWdlcyBmcmVlcGlrL3ZpZGVvcyBmbGF0aWNvbi9wbmcgZnJlZXBpay9pbWFnZXMvcHJlbWl1bSBmcmVlcGlrL3ZpZGVvcy9wcmVtaXVtIGZsYXRpY29uL3N2ZyIsImltcGVyc29uYXRlZF9zZXNzaW9uIjpmYWxzZSwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL2ZjLXByb2ZpbGUtcHJvLXJldjEiLCJhdWQiOiJmYy1wcm9maWxlLXByby1yZXYxIiwiYXV0aF90aW1lIjoxNzc4NDM3NjM4LCJ1c2VyX2lkIjoiU2R0bjVWTmVxMk1DWGFHQkFFQnh1am9wdnhXMiIsInN1YiI6IlNkdG41Vk5lcTJNQ1hhR0JBRUJ4dWpvcHZ4VzIiLCJpYXQiOjE3Nzg0Mzc2MzgsImV4cCI6MTc3ODQ0MTIzOCwiZW1haWwiOiJzaGNoZXJiYWtvdi5iQG1haWwucnUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsic2hjaGVyYmFrb3YuYkBtYWlsLnJ1Il19LCJzaWduX2luX3Byb3ZpZGVyIjoiY3VzdG9tIn19.QZjQ0sUCyEidpfTIA6FQrFPJ7JiApMEXzdSOCxNAoXWrYo3cT5r3AewDsed2Pvy0MSqNU8Y0FpEhSmBB5F2nuRT-NGgG5H_y0D0G5_Fba-Wo1n4_yOJ9WCWb5n0bW11z1AO22qV0Ve6XevXpRV224d02LC8UHkTS5vxhyTFtIJs3nnD9XaGuMrd0pRm4k_LUmSSOeZrLydgA2Li4Sk8jNWN2leOjC9lMCC5sbWXswuGMuoJlnkP96HO9lfTqYcrQE3kmf_odSA_4dayDfE7Y2C3Q3xUztFMt3yh6jsv9QOPVXJPt3U27LNEmZYpMNCt5ZtAXhW36L-Sv9-j0oiMJrQ",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1778441239.213823,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "GR_REFRESH",
+    "value": "AMf-vBxpppMuHna6rNXupVz9ASkA0J_xiIzBPGIt_C1hBgaRddRTWZBiiXbmpYeGwnZlCSl545gyeCjjPk7fAvaqWxSzeSEknDu2sDi4KDgmo5zGCJd3aa77I11wg9OnvNq-M-I8fga7aqxn_4BcO4zcyzYv2rHl7eChBubDM5bZ5u2lEaxHRJKegtaJ3M2-bMP3cn-rDa8W",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1781029639.213878,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_fc",
+    "value": "FC.6a088a66-6d97-338f-3402-e30570c57250",
+    "domain": "www.magnific.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_fcid",
+    "value": "FC.6a088a66-6d97-338f-3402-e30570c57250",
+    "domain": "www.magnific.com",
+    "path": "/",
+    "expires": 1809973639.213907,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "AI_MBL",
+    "value": "1",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1779042439.596263,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Strict"
+  },
+  {
+    "name": "OptanonConsent",
+    "value": "isGpcEnabled=0&datestamp=Sun+May+10+2026+21%3A27%3A19+GMT%2B0300+(%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0%2C+%D1%81%D1%82%D0%B0%D0%BD%D0%B4%D0%B0%D1%80%D1%82%D0%BD%D0%BE%D0%B5+%D0%B2%D1%80%D0%B5%D0%BC%D1%8F)&version=202604.1.0&browserGpcFlag=0&isDntEnabled=0&isIABGlobal=false&hosts=&consentId=cb90ee5c-069c-4805-9966-23e16d43d907&interactionCount=1&isAnonUser=1&prevHadToken=0&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A0%2CC0003%3A0%2CC0004%3A0&crTime=1778437638900&AwaitingReconsent=false",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1809973639,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "sb-prefs",
+    "value": "%7B%22mode%22%3A%22anchored%22%7D",
+    "domain": "www.magnific.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ab.storage.deviceId.35bcbbc0-d0b5-4e6c-9926-dfe1d0cd06ab",
+    "value": "g%3A959167f1-b514-2e22-c0a4-1fc05582a840%7Ce%3Aundefined%7Cc%3A1778437641127%7Cl%3A1778437641765",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1812997641,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ab.storage.userId.35bcbbc0-d0b5-4e6c-9926-dfe1d0cd06ab",
+    "value": "g%3A225586750%7Ce%3Aundefined%7Cc%3A1778437641763%7Cl%3A1778437641766",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1812997641,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ab.storage.sessionId.35bcbbc0-d0b5-4e6c-9926-dfe1d0cd06ab",
+    "value": "g%3Abc7ab54c-6684-9971-4835-c725c80cc1cd%7Ce%3A1778473641775%7Cc%3A1778437641764%7Cl%3A1778437641775",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1812997641,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_ga_QWX66025LC",
+    "value": "GS2.1.s1778437607$o1$g1$t1778437641$j26$l0$h0",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1812997641.831226,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ph_phc_Rc6y1yvZwwwR09Pl9NtKBo5gzpxr1Ei4Bdbg3kC1Ihz_posthog",
+    "value": "%7B%22%24device_id%22%3A%22019e1324-d196-72fb-b8fb-49c95c8418b1%22%2C%22distinct_id%22%3A%22225586750%22%2C%22%24epp%22%3Atrue%2C%22%24user_state%22%3A%22identified%22%7D",
+    "domain": ".magnific.com",
+    "path": "/",
+    "expires": 1809973642,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "XSRF-TOKEN",
+    "value": "eyJpdiI6IjFvM1p3S01oN3lOa0NaM0hpZ3FwMEE9PSIsInZhbHVlIjoiK2hvZmViL0dWQlBPbW82VVBwc0xpRm9TcW9CZkhSa2w5ZkNFL1B5YTVsTkN4L1g2STB3NE9nM1pvU1pJeDlMblg0RGswNmw0eFQwazBBMmw3bjFwcm8xNCtGWHRhM3ZMcy91b3RwdkE1U3VpRWdSdzMzS0pMemNFVEpRZjVkOHIiLCJtYWMiOiI1MmY3ODc5OTU5Zjg1OWM4NDllYTlhZTY1MzU0OWFlNjFiYTJkYjE1MWFlN2E2NmFjZTBlNDU2YWFmMWM3ZmIwIiwidGFnIjoiIn0%3D",
+    "domain": "www.magnific.com",
+    "path": "/",
+    "expires": 1778439442.770469,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Lax"
+  }
+]

@@ -27,7 +27,7 @@ def _detect_provider(url: str) -> str:
     url_lower = url.lower()
     if "elements.envato.com" in url_lower or "envato" in url_lower:
         return "ENVATO"
-    if "freepik.com" in url_lower:
+    if "freepik.com" in url_lower or "magnific.com" in url_lower:
         return "FREEPIK"
     if "motionarray.com" in url_lower:
         return "MOTION_ARRAY"

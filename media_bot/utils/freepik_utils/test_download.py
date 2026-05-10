@@ -23,8 +23,10 @@ if __name__ == "__main__":
     sys.path.insert(0, project_root)
 
 
-# URL для теста по умолчанию (бесплатный ресурс)в
+# URL для теста по умолчанию (новый домен magnific.com, бывший freepik.com)
+# Старые freepik.com ссылки должны работать через редирект на magnific.com
 DEFAULT_TEST_URLS = [
+    "https://www.magnific.com/premium-photo/girl-riding-her-yellow-bike-dirt-road-summer_114352911.htm",
     "https://www.freepik.com/free-photo/young-student-learning-library_21138972.htm",
 ]
 

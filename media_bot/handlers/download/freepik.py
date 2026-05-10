@@ -31,7 +31,9 @@ router = Router()
 @router.message(Command("freepik"))
 @router.callback_query(F.data == "freepik_start")
 @router.message(F.text.in_({"Скачать Freepik", "Download Freepik"}))
-async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: Bot, lang: str = "ru"):
+async def ask_for_freepik_link(
+    message: types.Message, state: FSMContext, bot: Bot, lang: str = "ru"
+):
     """Запрос ссылки на Freepik файл"""
     async for session in get_session():
         is_eligible, user = await check_user_eligibility(message, bot, session, lang)
@@ -39,7 +41,9 @@ async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: B
             return
 
         keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="go_back_menu")]]
+            inline_keyboard=[
+                [InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="go_back_menu")]
+            ]
         )
         await message.answer(
             msg("APPLY_DOWNLOAD_FREEPIK", lang).format(credit=user.credits),
@@ -51,12 +55,17 @@ async def ask_for_freepik_link(message: types.Message, state: FSMContext, bot: B
 
 
 @router.message(DownloadFlow.waiting_for_freepik_link)
-async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bot, lang: str = "ru"):
+async def handle_freepik_link(
+    message: types.Message, state: FSMContext, bot: Bot, lang: str = "ru"
+):
     """Обработка ссылки на Freepik файл"""
     url = message.text.strip()
-    if "freepik.com" not in url.lower():
+    url_lower = url.lower()
+    if "freepik.com" not in url_lower and "magnific.com" not in url_lower:
         keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="go_back_menu")]]
+            inline_keyboard=[
+                [InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="go_back_menu")]
+            ]
         )
         await message.answer(
             msg("BAD_URL_FREEPIK", lang),
@@ -74,7 +83,9 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
         user = await user_repo.get_by_telegram_id(telegram_id)
         if not user:
             await message.answer(
-                msg("USER_NOT_FOUND", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
+                msg("USER_NOT_FOUND", lang),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
             )
             await state.clear()
             return
@@ -90,7 +101,9 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
 
             if file_path:
                 keyboard = InlineKeyboardMarkup(
-                    inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_DOWNLOAD", lang), url=file_path)]]
+                    inline_keyboard=[
+                        [InlineKeyboardButton(text=msg("BTN_DOWNLOAD", lang), url=file_path)]
+                    ]
                 )
 
                 sent_message = await message.answer(
@@ -106,7 +119,9 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
                 )
             else:
                 await message.answer(
-                    msg("LINK_NOT_FOUND", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
+                    msg("LINK_NOT_FOUND", lang),
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
                 )
 
             await state.clear()
@@ -154,7 +169,8 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
                     [InlineKeyboardButton(text=msg("BTN_DOWNLOAD_FILE", lang), url=file_path)],
                     [
                         InlineKeyboardButton(
-                            text=msg("BTN_DOWNLOAD_MORE", lang), callback_data="download_more_freepik"
+                            text=msg("BTN_DOWNLOAD_MORE", lang),
+                            callback_data="download_more_freepik",
                         )
                     ],
                 ]
@@ -185,14 +201,18 @@ async def handle_freepik_link(message: types.Message, state: FSMContext, bot: Bo
             await session.commit()
         else:
             await thinking_msg.edit_text(
-                msg("DOWNLOAD_FAILED", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
+                msg("DOWNLOAD_FAILED", lang),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
             )
             await message.answer(msg("DOWNLOAD_RETRY", lang), parse_mode=ParseMode.HTML)
         await state.clear()
 
 
 @router.callback_query(F.data == "download_more_freepik")
-async def download_more_freepik(callback: CallbackQuery, state: FSMContext, bot: Bot, lang: str = "ru"):
+async def download_more_freepik(
+    callback: CallbackQuery, state: FSMContext, bot: Bot, lang: str = "ru"
+):
     """Обработка кнопки 'Скачать ещё' для Freepik"""
     telegram_id = callback.from_user.id
 
@@ -203,7 +223,9 @@ async def download_more_freepik(callback: CallbackQuery, state: FSMContext, bot:
 
         if not user:
             await callback.message.answer(
-                msg("USER_NOT_REGISTERED", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
+                msg("USER_NOT_REGISTERED", lang),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
             )
             await callback.answer()
             return
@@ -214,12 +236,14 @@ async def download_more_freepik(callback: CallbackQuery, state: FSMContext, bot:
                     inline_keyboard=[
                         [
                             InlineKeyboardButton(
-                                text=msg("BTN_SUBSCRIBE_CHANNEL", lang), url=f"https://t.me/{CHANNEL_ID[1:]}"
+                                text=msg("BTN_SUBSCRIBE_CHANNEL", lang),
+                                url=f"https://t.me/{CHANNEL_ID[1:]}",
                             )
                         ],
                         [
                             InlineKeyboardButton(
-                                text=msg("BTN_CHECK_SUBSCRIPTION", lang), callback_data="check_subscription"
+                                text=msg("BTN_CHECK_SUBSCRIPTION", lang),
+                                callback_data="check_subscription",
                             )
                         ],
                     ]
@@ -234,7 +258,9 @@ async def download_more_freepik(callback: CallbackQuery, state: FSMContext, bot:
                 return
 
         keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="go_back_menu")]]
+            inline_keyboard=[
+                [InlineKeyboardButton(text=msg("BTN_BACK", lang), callback_data="go_back_menu")]
+            ]
         )
         await callback.message.answer(
             msg("APPLY_DOWNLOAD_FREEPIK", lang).format(credit=user.credits),
