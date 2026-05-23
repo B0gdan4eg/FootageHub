@@ -1,26 +1,231 @@
 @import "tailwindcss";
 
+/* ============================================================
+   FootageHub design tokens — ported from handoff styles.css
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* accent palette */
+  --accent: #2d6bff;
+  --accent-soft: #4f86ff;
+  --accent-deep: #1b4fe0;
+  --accent-glow: rgba(45, 107, 255, 0.55);
+
+  --green: #00e061;
+  --pink: #ff2ea1;
+  --tg-blue: #229ed9;
+  --warn: #ffa82e;
+
+  /* dark theme defaults */
+  --bg: #07080c;
+  --bg-soft: #0d0f16;
+  --bg-card: rgba(20, 23, 33, 0.72);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #f4f5f7;
+  --text-dim: #9298a8;
+  --text-mute: #5a6076;
+
+  --radius-sm: 10px;
+  --radius: 18px;
+  --radius-lg: 28px;
 }
 
+[data-theme="light"] {
+  --bg: #f4f5f7;
+  --bg-soft: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --border: rgba(15, 17, 25, 0.08);
+  --border-strong: rgba(15, 17, 25, 0.18);
+  --text: #0b0d14;
+  --text-dim: #4a5161;
+  --text-mute: #828aa0;
+}
+
+/* Tailwind v4 theme bridge — exposes tokens as utilities */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-deep: var(--accent-deep);
+  --color-green: var(--green);
+  --color-pink: var(--pink);
+  --color-tg: var(--tg-blue);
+  --color-warn: var(--warn);
+
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-bg-card: var(--bg-card);
+  --color-border-hair: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-text-mute: var(--text-mute);
+
+  --radius-sm: var(--radius-sm);
+  --radius-DEFAULT: var(--radius);
+  --radius-lg: var(--radius-lg);
+
+  --font-sans: var(--font-geist-sans), "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", ui-monospace, monospace;
+
+  --container-page: 1240px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ============================================================
+   Base
+   ============================================================ */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+/* ============================================================
+   Typography helpers
+   ============================================================ */
+.h-display {
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+.h-section {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.eyebrow {
+  font-family: var(--font-geist-mono), "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.mono { font-family: var(--font-geist-mono), "JetBrains Mono", ui-monospace, monospace; }
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 8px 30px -8px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.btn-primary:hover {
+  background: var(--accent-soft);
+  box-shadow: 0 12px 36px -6px var(--accent-glow);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+.btn-ghost:hover { background: var(--border); }
+.btn-tg {
+  background: var(--tg-blue);
+  color: white;
+  box-shadow: 0 8px 30px -8px rgba(34, 158, 217, 0.5);
+}
+.btn-tg:hover { background: #2baeec; }
+
+/* ============================================================
+   Cards & pills
+   ============================================================ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--border);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--green);
+}
+.pill.warn { color: var(--warn); }
+.pill.warn .dot { background: var(--warn); }
+
+/* ============================================================
+   Layout primitives
+   ============================================================ */
+.container-page {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ============================================================
+   Decorative backgrounds
+   ============================================================ */
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 30%, transparent 75%);
+  pointer-events: none;
+}
+
+.bg-glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(120px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Selection & scrollbar
+   ============================================================ */
+::selection { background: var(--accent); color: white; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }

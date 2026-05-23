@@ -136,11 +136,14 @@ class EnvatoDownloader:
         try:
             page = await self.context.new_page()
 
-            # Блокируем тяжёлые ресурсы — не нужны для получения ссылки
+            # Блокируем только тяжёлое превью-видео (media, те самые ~1.5ГБ).
+            # CSS/картинки/шрифты НЕ трогаем: без них страница рендерится сломанной,
+            # кнопка скачивания становится "невидимой" для Playwright (нулевой размер),
+            # а пустой профиль ресурсов — сильный бот-сигнал для Cloudflare.
             await page.route(
                 "**/*",
                 lambda route: route.abort()
-                if route.request.resource_type in ("image", "media", "font", "stylesheet")
+                if route.request.resource_type == "media"
                 else route.continue_(),
             )
 

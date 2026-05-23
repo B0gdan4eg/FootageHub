@@ -6,6 +6,7 @@ import time
 
 import nodriver as uc
 from nodriver import cdp
+from nodriver.core.connection import ProtocolException
 
 from .logger import logger
 
@@ -100,6 +101,41 @@ class FreepikDownloader:
                 self.browser.stop()
             except Exception as e:
                 print(f"⚠️ [FREEPIK] Ошибка при закрытии браузера: {e}")
+
+    async def _find_button(self, tab, timeout: float = 15):
+        """Находит кнопку скачивания заново (свежий node id, без переиспользования)."""
+        try:
+            btn = await tab.select('button[data-cy="download-button"]', timeout=timeout)
+            if btn:
+                return btn
+        except (StopIteration, RuntimeError, ProtocolException):
+            pass
+        for text in ("Download", "Скачать"):
+            try:
+                btn = await tab.find(text, best_match=True, timeout=5)
+                if btn and btn.tag_name in ("button", "a"):
+                    return btn
+            except (StopIteration, RuntimeError, ProtocolException):
+                continue
+        return None
+
+    async def _click_download(self, tab) -> bool:
+        """
+        Кликает по кнопке, перезапрашивая её перед каждой попыткой.
+        Защита от ProtocolException "-32000 Could not find node with given id":
+        React-SPA перерисовывает DOM после гидрации, и старый хэндл протухает.
+        """
+        for attempt in range(3):
+            btn = await self._find_button(tab, timeout=15 if attempt == 0 else 5)
+            if not btn:
+                return False
+            try:
+                await btn.click()
+                return True
+            except (StopIteration, RuntimeError, ProtocolException) as e:
+                print(f"[FREEPIK] клик #{attempt + 1} не удался ({e}), переищем кнопку")
+                await asyncio.sleep(0.5)
+        return False
 
     async def get_download_url(self, asset_url: str) -> str | None:
         """
@@ -199,21 +235,8 @@ class FreepikDownloader:
                 )
             )
 
-            # Ищем кнопку скачивания
-            btn = None
-            try:
-                btn = await tab.select('button[data-cy="download-button"]', timeout=15)
-            except (StopIteration, RuntimeError):
-                pass
-            if not btn:
-                for text in ("Download", "Скачать"):
-                    try:
-                        btn = await tab.find(text, best_match=True, timeout=5)
-                        if btn and btn.tag_name in ("button", "a"):
-                            break
-                        btn = None
-                    except (StopIteration, RuntimeError):
-                        btn = None
+            # Ищем кнопку скачивания (первичная проверка, что она вообще есть)
+            btn = await self._find_button(tab, timeout=15)
             if not btn:
                 self.fail_count += 1
                 elapsed = time.time() - start_time
@@ -234,14 +257,9 @@ class FreepikDownloader:
                 )
                 return None
 
-            try:
-                await btn.click()
-            except (StopIteration, RuntimeError):
-                await asyncio.sleep(0.5)
-                try:
-                    await btn.click()
-                except (StopIteration, RuntimeError):
-                    pass
+            # Кликаем (хелпер перезапрашивает кнопку перед каждой попыткой —
+            # защита от устаревшего node id после ре-рендера React-SPA)
+            await self._click_download(tab)
 
             # Ждём URL скачивания (до 10 секунд)
             for _ in range(100):
@@ -252,10 +270,7 @@ class FreepikDownloader:
             # Если не нашли — повторный клик
             if not download_info.get("url"):
                 print(f"[FREEPIK] Download URL не найден, повторный клик...")
-                try:
-                    await btn.click()
-                except (StopIteration, RuntimeError):
-                    pass
+                await self._click_download(tab)
                 for _ in range(100):
                     if download_info.get("url"):
                         break
