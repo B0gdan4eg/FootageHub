@@ -73,6 +73,25 @@ def get_next_cookie_file():
     return selected_file
 
 
+# Персистентный профиль браузера (подход из Trade/ADR-002): тёплый профиль хранит
+# cf_clearance (Cloudflare) и Akamai-куки (_abck, bm_sz, ak_bmsc) между перезапусками
+# процесса → reload-трюк от Akamai-сенсора проходит надёжнее, меньше 403.
+# Профиль ОДИН (общий), т.к. браузер тут singleton (см. _shared_downloader ниже);
+# auth-куки конкретного аккаунта всё равно подменяются per-download через CDP.
+PROFILE_DIR = os.path.join(COOKIE_DIR, ".profile")
+
+
+def _cleanup_singleton_locks(profile_dir: str) -> None:
+    """Снимаем lock-файлы от прошлого краша Chromium (иначе 'profile in use')."""
+    for lock_name in ("SingletonLock", "SingletonCookie", "SingletonSocket"):
+        try:
+            os.unlink(os.path.join(profile_dir, lock_name))
+        except FileNotFoundError:
+            pass
+        except Exception:
+            pass
+
+
 class FreepikDownloader:
     """
     Freepik downloader using nodriver (undetected Chrome, bypasses Cloudflare).
@@ -88,10 +107,14 @@ class FreepikDownloader:
         # sandbox=False нужен для запуска в Docker (root без песочницы)
         # Если системный Chrome не найден — используем Chromium от Playwright
         chromium_path = find_chromium_executable()
+        # Тёплый персистентный профиль: cf_clearance/Akamai-куки переживают рестарт.
+        os.makedirs(PROFILE_DIR, exist_ok=True)
+        _cleanup_singleton_locks(PROFILE_DIR)
         self.browser = await uc.start(
             headless=False,
             sandbox=False,
             browser_executable_path=chromium_path,  # None = автопоиск системного Chrome
+            user_data_dir=PROFILE_DIR,  # persistent → cf_clearance не сбрасывается
         )
         return self
 

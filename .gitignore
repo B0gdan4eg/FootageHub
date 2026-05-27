@@ -78,6 +78,11 @@ filesta/filesta_cookie_index.txt
 freepik_utils/freepik_cookie_index.txt
 envato_utils/cookie_index.txt
 
+# Persistent browser profiles (warm cf_clearance / Akamai cookies)
+.profile_test/
+.profiles/
+.profile/
+
 # Shell scripts and images
 *.sh
 *.png

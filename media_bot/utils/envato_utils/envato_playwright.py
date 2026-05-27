@@ -57,6 +57,42 @@ def get_next_cookie_file():
     return selected_file
 
 
+# Персистентные профили браузера: по одному на cookie-файл (= на аккаунт).
+# Тёплый профиль хранит cf_clearance от Cloudflare и историю → повторный
+# челлендж не прилетает (подход из Trade/ADR-002). Профиль НЕ чистится между
+# запусками; auth-куки аккаунта подсыпаются заново каждый раз (seed).
+PROFILE_BASE = os.path.join(COOKIE_DIR, ".profiles")
+
+# Один persistent-профиль нельзя открыть двумя процессами Chromium сразу.
+# При MAX_CONCURRENT_DOWNLOADS>1 два скачивания одного аккаунта должны
+# сериализоваться на своём профиле; разные аккаунты идут параллельно.
+_PROFILE_LOCKS: dict[str, asyncio.Lock] = {}
+
+
+def _profile_dir_for(cookie_file: str) -> str:
+    name = os.path.splitext(os.path.basename(cookie_file))[0]  # envato_cookies_2
+    return os.path.join(PROFILE_BASE, name)
+
+
+def _get_profile_lock(profile_dir: str) -> asyncio.Lock:
+    lock = _PROFILE_LOCKS.get(profile_dir)
+    if lock is None:
+        lock = asyncio.Lock()
+        _PROFILE_LOCKS[profile_dir] = lock
+    return lock
+
+
+def _cleanup_singleton_locks(profile_dir: str) -> None:
+    """Снимаем lock-файлы от прошлого краша Chromium (иначе 'profile in use')."""
+    for lock_name in ("SingletonLock", "SingletonCookie", "SingletonSocket"):
+        try:
+            os.unlink(os.path.join(profile_dir, lock_name))
+        except FileNotFoundError:
+            pass
+        except Exception:
+            pass
+
+
 class EnvatoDownloader:
     """
     Advanced Envato Elements downloader using CDP (Chrome DevTools Protocol).
@@ -67,45 +103,81 @@ class EnvatoDownloader:
         self.playwright = None
         self.browser = None
         self.context = None
+        self.profile_dir = None
+        self._profile_lock = None
+        self._lock_acquired = False
         self.total_time = 0
         self.success_count = 0
         self.fail_count = 0
 
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(
-            headless=False,
-            args=["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"],
-        )
-        self.context = await self.browser.new_context(viewport={"width": 1920, "height": 1080})
 
-        # Получаем следующий файл с куками (ротация)
+        # Получаем следующий файл с куками (ротация) и его персистентный профиль
         cookie_file = get_next_cookie_file()
+        self.profile_dir = _profile_dir_for(cookie_file)
 
-        with open(cookie_file, "r") as f:
-            await self.context.add_cookies(json.load(f))
+        # Лочим профиль: два процесса Chromium на одном user_data_dir = краш.
+        self._profile_lock = _get_profile_lock(self.profile_dir)
+        await self._profile_lock.acquire()
+        self._lock_acquired = True
+
+        try:
+            os.makedirs(self.profile_dir, exist_ok=True)
+            _cleanup_singleton_locks(self.profile_dir)
+
+            # Персистентный контекст: тёплый профиль с сохранённым cf_clearance.
+            self.context = await self.playwright.chromium.launch_persistent_context(
+                user_data_dir=self.profile_dir,
+                headless=False,
+                viewport={"width": 1920, "height": 1080},
+                args=[
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-gpu",
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                ],
+            )
+
+            # Подсыпаем auth-куки аккаунта. cf_clearance в профиле НЕ затирается
+            # (его нет в файле кук), поэтому остаётся тёплым между запусками.
+            with open(cookie_file, "r") as f:
+                await self.context.add_cookies(json.load(f))
+        except Exception:
+            # __aexit__ не вызовется если __aenter__ упал — чистим сами
+            if self._lock_acquired and self._profile_lock:
+                self._profile_lock.release()
+                self._lock_acquired = False
+            if self.playwright:
+                try:
+                    await self.playwright.stop()
+                except Exception:
+                    pass
+                self.playwright = None
+            raise
 
         return self
 
     async def __aexit__(self, *args):
-        # Закрываем контекст перед браузером для корректной очистки
+        # launch_persistent_context не создаёт отдельный browser — закрываем контекст
         if self.context:
             try:
                 await self.context.close()
             except Exception as e:
                 print(f"⚠️ [ENVATO] Ошибка при закрытии контекста: {e}")
-
-        if self.browser:
-            try:
-                await self.browser.close()
-            except Exception as e:
-                print(f"⚠️ [ENVATO] Ошибка при закрытии браузера: {e}")
+        self.context = None
 
         if self.playwright:
             try:
                 await self.playwright.stop()
             except Exception as e:
                 print(f"⚠️ [ENVATO] Ошибка при остановке playwright: {e}")
+        self.playwright = None
+
+        # Освобождаем профиль для следующего скачивания этого аккаунта
+        if self._lock_acquired and self._profile_lock:
+            self._profile_lock.release()
+            self._lock_acquired = False
 
         total = self.success_count + self.fail_count
         if total > 0:
