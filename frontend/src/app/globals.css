@@ -229,3 +229,63 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+
+/* ============================================================
+   Component helpers (ported from handoff <style> blocks)
+   ============================================================ */
+.nav-l { transition: color 0.15s; }
+.nav-l:hover { color: var(--text); }
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 999px;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+@keyframes float-up { 0%, 100% { transform: translateY(0) rotate(6deg); } 50% { transform: translateY(-8px) rotate(6deg); } }
+@keyframes float-up-2 { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(-4deg); } }
+.float-tag { animation: float-up 4s ease-in-out infinite; }
+.float-tag-2 { animation: float-up-2 5s ease-in-out infinite; animation-delay: 0.5s; }
+
+.hist-row { transition: background 0.15s; }
+.hist-row:hover { background: var(--bg-soft); }
+
+/* Responsive grid overrides — desktop columns are set inline */
+@media (max-width: 1024px) {
+  .rev-grid { column-count: 2 !important; }
+}
+@media (max-width: 980px) {
+  .hero-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+  .hero-frog { min-height: 380px !important; }
+  .price-grid { grid-template-columns: 1fr !important; }
+  .price-grid .card { transform: none !important; }
+}
+@media (max-width: 880px) {
+  .how-grid { grid-template-columns: 1fr !important; }
+  .cta-grid { grid-template-columns: 1fr !important; }
+  .ftr-grid { grid-template-columns: 1fr 1fr !important; gap: 32px !important; }
+  .dash-grid { grid-template-columns: 1fr !important; }
+  .hist-row { grid-template-columns: 36px 1fr auto !important; }
+  .hist-row > :nth-child(3),
+  .hist-row > :nth-child(4),
+  .hist-row > :nth-child(5) { display: none; }
+  .pay-grid { grid-template-columns: 1fr !important; }
+  .ai-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .feat-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 780px) {
+  .src-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 760px) {
+  .stats-strip { grid-template-columns: repeat(2, 1fr) !important; }
+  .stats-strip > div { border-left: none !important; }
+  .rev-grid { column-count: 1 !important; }
+}
+@media (max-width: 720px) {
+  .vs-row { grid-template-columns: 1fr 0.8fr 0.8fr !important; padding: 14px 16px !important; font-size: 13px !important; }
+}

@@ -438,3 +438,28 @@ class BotLinkRequest(Base):
 
     web_user = relationship("User", foreign_keys=[web_user_id])
     bot_user = relationship("User", foreign_keys=[bot_user_id])
+
+
+class QrLoginSession(Base):
+    """QR/deep-link сессии входа на сайт через Telegram (Upscale-style).
+
+    Сайт создаёт PENDING-сессию и показывает QR с deep-link
+    ``t.me/<bot>?start=login_<token>``. Пользователь подтверждает вход в боте —
+    бот ставит CONFIRMED + user_id, сайт по поллингу получает JWT.
+    """
+
+    __tablename__ = "qr_login_sessions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    token = Column(String(64), unique=True, index=True, nullable=False)
+    status = Column(
+        Enum("PENDING", "CONFIRMED", "REJECTED", "EXPIRED", name="qr_login_status"),
+        default="PENDING",
+        nullable=False,
+    )
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+    confirmed_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])

@@ -61,6 +61,16 @@ export const authApi = {
     api.post<{ access_token: string; user: User }>("/auth/telegram", data),
 };
 
+// ─── Telegram QR Login (Upscale-style: QR → deep-link → подтверждение в боте) ──
+export const qrApi = {
+  start: () =>
+    api.post<{ token: string; deeplink: string; expires_at: string }>("/auth/qr/start"),
+  status: (token: string) =>
+    api.get<{ status: string; access_token?: string; user?: User }>(
+      `/auth/qr/status/${token}`
+    ),
+};
+
 export interface TelegramAuthResult {
   id: number;
   first_name?: string;

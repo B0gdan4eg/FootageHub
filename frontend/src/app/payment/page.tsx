@@ -1,37 +1,59 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { paymentsApi } from "@/lib/api";
+import { PageShell } from "@/components/page-shell";
 
-type PayProvider = "webpay" | "cryptobot";
+type Provider = "webpay" | "cryptobot";
+type PlanRaw = { name?: string; price?: number; currency?: string };
+type Plan = { key: string; name: string; price: number; currency: string };
 
-interface Plan {
-  key: string;
-  name: string;
-  price_usd: number;
-  credits: number;
-  ai_credits: number;
-  description: string;
-  popular?: boolean;
+function money(price: number, currency: string): string {
+  if (currency === "USD") return `$${price}`;
+  if (currency === "RUB") return `${price}₽`;
+  if (currency === "BYN" || currency === "BYR") return `${price} Br`;
+  return `${price} ${currency}`;
+}
+
+function filesFor(key: string): string {
+  if (key === "monthly_50") return "50 файлов / месяц";
+  if (key === "monthly_150") return "150 файлов / месяц";
+  if (key === "monthly_400") return "400 файлов / месяц";
+  if (key === "daily_30") return "30 файлов / день";
+  if (key === "unlimited") return "Безлимит";
+  return "";
 }
 
 export default function PaymentPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [payProvider, setPayProvider] = useState<PayProvider>("webpay");
+  const [tier, setTier] = useState<string>("");
+  const [provider, setProvider] = useState<Provider>("webpay");
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    paymentsApi.plans()
-      .then((res) => setPlans(res.data as Plan[]))
+    paymentsApi
+      .plans()
+      .then((res) => {
+        const raw = res.data as Record<string, PlanRaw>;
+        const list: Plan[] = Object.entries(raw).map(([key, p]) => ({
+          key,
+          name: p.name ?? key,
+          price: p.price ?? 0,
+          currency: p.currency ?? "USD",
+        }));
+        setPlans(list);
+        setTier(list.find((p) => p.key === "monthly_150")?.key ?? list[0]?.key ?? "");
+      })
       .catch(() => setError("Не удалось загрузить тарифы"))
       .finally(() => setLoading(false));
   }, []);
 
-  async function handlePay() {
+  const selected = useMemo(() => plans.find((p) => p.key === tier), [plans, tier]);
+
+  async function pay() {
     if (!selected) {
       setError("Выберите тариф");
       return;
@@ -39,7 +61,7 @@ export default function PaymentPage() {
     setError("");
     setPaying(true);
     try {
-      const res = await paymentsApi.create(selected, payProvider);
+      const res = await paymentsApi.create(selected.key, provider);
       window.location.href = res.data.invoice_url;
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } };
@@ -49,117 +71,163 @@ export default function PaymentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/dashboard" className="text-xl font-bold text-blue-400">FootageHub</Link>
-          <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white transition">← Назад</Link>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="text-2xl font-bold mb-2">Пополнить баланс</h1>
-        <p className="text-gray-400 mb-8">Выберите тариф и способ оплаты</p>
-
-        {loading && (
-          <div className="text-gray-400 text-center py-12">Загрузка тарифов...</div>
-        )}
-
-        {!loading && plans.length === 0 && !error && (
-          <div className="text-gray-400 text-center py-12">Тарифы не найдены</div>
-        )}
-
-        {error && (
-          <div className="bg-red-950 border border-red-800 rounded-lg px-4 py-3 text-red-400 text-sm mb-6">
-            {error}
+    <PageShell>
+      <main style={{ padding: "40px 0 80px", position: "relative" }}>
+        <div className="container-page" style={{ maxWidth: 1100 }}>
+          <div style={{ marginBottom: 28 }}>
+            <Link href="/dashboard" style={{ fontSize: 13, color: "var(--text-dim)" }}>
+              ← назад в кабинет
+            </Link>
+            <h1 className="h-display" style={{ fontSize: 40, margin: "10px 0 6px", letterSpacing: "-0.03em" }}>
+              Оплата тарифа
+            </h1>
+            <p style={{ fontSize: 16, color: "var(--text-dim)", margin: 0 }}>
+              Списание разовое. Без автопродления. Включается мгновенно после оплаты.
+            </p>
           </div>
-        )}
 
-        {/* Plans grid */}
-        {plans.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            {plans.map((plan) => (
-              <button
-                key={plan.key}
-                onClick={() => setSelected(plan.key)}
-                className={`text-left rounded-xl p-5 border transition ${
-                  selected === plan.key
-                    ? "border-blue-500 bg-blue-950"
-                    : plan.popular
-                    ? "border-blue-700 bg-gray-900 hover:border-blue-500"
-                    : "border-gray-700 bg-gray-900 hover:border-gray-500"
-                }`}
-              >
-                {plan.popular && (
-                  <div className="text-xs text-blue-400 font-semibold mb-2">ПОПУЛЯРНЫЙ</div>
-                )}
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="font-bold text-lg">{plan.name}</p>
-                    <p className="text-2xl font-bold text-blue-400">${plan.price_usd}</p>
+          {loading ? (
+            <div style={{ padding: 60, textAlign: "center", color: "var(--text-dim)" }}>Загрузка тарифов…</div>
+          ) : (
+            <div className="pay-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20 }}>
+              {/* Left: tier + method */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div className="card" style={{ padding: 24 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-dim)", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    1 · Тариф
                   </div>
-                  {selected === plan.key && (
-                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-xs">✓</div>
-                  )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {plans.map((p) => (
+                      <button
+                        key={p.key}
+                        onClick={() => setTier(p.key)}
+                        style={{
+                          textAlign: "left",
+                          padding: 18,
+                          borderRadius: 14,
+                          border: `1px solid ${tier === p.key ? "var(--accent)" : "var(--border)"}`,
+                          background: tier === p.key ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--bg-soft)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 16,
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 999,
+                            border: `2px solid ${tier === p.key ? "var(--accent)" : "var(--border-strong)"}`,
+                            background: tier === p.key ? "var(--accent)" : "transparent",
+                            display: "grid",
+                            placeItems: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {tier === p.key && <span style={{ width: 8, height: 8, borderRadius: 999, background: "white" }} />}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+                            <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.01em" }}>{p.name}</span>
+                            {p.key === "monthly_150" && (
+                              <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, background: "var(--accent)", color: "white", fontWeight: 600 }}>
+                                ★ ПОПУЛЯРНЫЙ
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 13, color: "var(--text-dim)" }}>{filesFor(p.key)}</div>
+                        </div>
+                        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>{money(p.price, p.currency)}</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-1 text-sm text-gray-400">
-                  <p>⬇ {plan.credits} кредитов на скачивание</p>
-                  {plan.ai_credits > 0 && <p>🤖 {plan.ai_credits} AI-кредитов</p>}
-                  {plan.description && <p className="text-gray-500 text-xs mt-2">{plan.description}</p>}
+
+                <div className="card" style={{ padding: 24 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-dim)", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    2 · Способ оплаты
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {([
+                      { id: "webpay" as const, name: "Карта", sub: "Visa / Mir / MC · WebPay", icon: "💳" },
+                      { id: "cryptobot" as const, name: "Крипта", sub: "USDT · CryptoBot", icon: "₿" },
+                    ]).map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => setProvider(m.id)}
+                        style={{
+                          padding: 18,
+                          borderRadius: 14,
+                          border: `1px solid ${provider === m.id ? "var(--accent)" : "var(--border)"}`,
+                          background: provider === m.id ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--bg-soft)",
+                          textAlign: "left",
+                          display: "flex",
+                          gap: 12,
+                          alignItems: "center",
+                        }}
+                      >
+                        <div style={{ fontSize: 24 }}>{m.icon}</div>
+                        <div>
+                          <div style={{ fontSize: 15, fontWeight: 600 }}>{m.name}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-dim)" }}>{m.sub}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
+              </div>
 
-        {/* Payment method */}
-        {plans.length > 0 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
-            <h2 className="font-semibold">Способ оплаты</h2>
+              {/* Right: summary */}
+              <div className="card" style={{ padding: 28, position: "sticky", top: 90, alignSelf: "start" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-dim)", marginBottom: 18, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Итого
+                </div>
+                <div style={{ paddingBottom: 16, borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 8 }}>
+                    <span style={{ fontSize: 14, color: "var(--text-dim)" }}>Тариф {selected?.name ?? "—"}</span>
+                    <span style={{ fontSize: 14 }}>{selected ? money(selected.price, selected.currency) : "—"}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                    <span style={{ fontSize: 14, color: "var(--text-dim)" }}>Объём</span>
+                    <span className="mono" style={{ fontSize: 14, color: "var(--text-dim)" }}>{selected ? filesFor(selected.key) : "—"}</span>
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 24 }}>
+                  <span style={{ fontSize: 14 }}>К оплате</span>
+                  <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.03em", color: "var(--accent)" }}>
+                    {selected ? money(selected.price, selected.currency) : "—"}
+                  </span>
+                </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setPayProvider("webpay")}
-                className={`py-4 rounded-xl border flex flex-col items-center gap-2 transition ${
-                  payProvider === "webpay"
-                    ? "border-blue-500 bg-blue-950"
-                    : "border-gray-700 hover:border-gray-500"
-                }`}
-              >
-                <span className="text-2xl">💳</span>
-                <span className="text-sm font-medium">Банковская карта</span>
-                <span className="text-xs text-gray-500">WebPay</span>
-              </button>
+                {error && <div style={{ fontSize: 13, color: "#FF6B6B", marginBottom: 12 }}>{error}</div>}
 
-              <button
-                onClick={() => setPayProvider("cryptobot")}
-                className={`py-4 rounded-xl border flex flex-col items-center gap-2 transition ${
-                  payProvider === "cryptobot"
-                    ? "border-blue-500 bg-blue-950"
-                    : "border-gray-700 hover:border-gray-500"
-                }`}
-              >
-                <span className="text-2xl">₿</span>
-                <span className="text-sm font-medium">Криптовалюта</span>
-                <span className="text-xs text-gray-500">CryptoBot</span>
-              </button>
+                <button
+                  onClick={pay}
+                  disabled={paying || !selected}
+                  className="btn btn-primary"
+                  style={{ width: "100%", padding: "16px 24px", fontSize: 15, marginBottom: 14, opacity: paying || !selected ? 0.7 : 1 }}
+                >
+                  {paying ? "Перенаправление…" : selected ? `Оплатить ${money(selected.price, selected.currency)}` : "Выберите тариф"}
+                </button>
+
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {["Все стоки: Envato, Freepik, Motion Array", "Доставка в Telegram за ~8 секунд", "Возврат в течение 24 часов"].map((p) => (
+                    <li key={p} style={{ fontSize: 13, color: "var(--text-dim)", display: "flex", gap: 8 }}>
+                      <span style={{ color: "var(--green)" }}>✓</span>
+                      <span>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 18, lineHeight: 1.5 }}>
+                  Нажимая «Оплатить», ты соглашаешься с офертой. Оплата проходит через защищённый шлюз провайдера.
+                </div>
+              </div>
             </div>
-
-            <button
-              onClick={handlePay}
-              disabled={!selected || paying}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold transition"
-            >
-              {paying
-                ? "Перенаправление..."
-                : selected
-                ? `Оплатить $${plans.find((p) => p.key === selected)?.price_usd}`
-                : "Выберите тариф"}
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </main>
-    </div>
+    </PageShell>
   );
 }

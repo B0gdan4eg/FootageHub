@@ -37,6 +37,7 @@ class WebApiConfig:
     SMS_MAX_PER_DAY: int = 5
     SMS_COOLDOWN_SECONDS: int = 60
     LINK_REQUEST_TTL_MINUTES: int = 10
+    QR_LOGIN_TTL_MINUTES: int = 5  # Срок жизни QR-сессии входа через Telegram
 
 
 config = WebApiConfig()

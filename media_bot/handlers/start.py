@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 
 from media_bot.config import ADMIN
 from media_bot.handlers.messages import msg
+from media_bot.handlers.qr_login import prompt_qr_login
 from media_bot.keyboards import get_main_menu_kb
 from shared.core.logger import get_logger
 from shared.db.models import UserRole
@@ -25,18 +26,27 @@ BLOCKED_USERS = {472785197, 289997391, 6269570979}
 
 
 @router.message(CommandStart())
-async def cmd_start(message: types.Message, state: FSMContext, command: CommandObject, lang: str = "ru"):
+async def cmd_start(
+    message: types.Message, state: FSMContext, command: CommandObject, lang: str = "ru"
+):
     await state.clear()
     telegram_id = message.from_user.id
 
     # Проверка на заблокированных пользователей
     if telegram_id in BLOCKED_USERS:
         await message.answer(
-            msg("MAINTENANCE_MESSAGE", lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True
+            msg("MAINTENANCE_MESSAGE", lang),
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
         )
         return
 
     args = command.args  # Аргументы после /start (в 3.x так правильно)
+
+    # QR-вход на сайт (deep-link login_<token>) — обрабатываем до реферальной логики
+    if args and args.startswith("login_"):
+        await prompt_qr_login(message, args.removeprefix("login_"), lang)
+        return
 
     async for session in get_session():
         user_repo = UserRepository(session)
@@ -52,7 +62,9 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                 logger.info(f"Creating user {telegram_id} with ADMIN role")
 
             # Создаем пользователя с 0 кредитов (бонусная система добавит)
-            user = await user_repo.create(tg_id=telegram_id, role=user_role, credits=0, username=lang)
+            user = await user_repo.create(
+                tg_id=telegram_id, role=user_role, credits=0, username=lang
+            )
             await session.flush()
             await session.refresh(user)
 
@@ -102,7 +114,9 @@ async def cmd_start(message: types.Message, state: FSMContext, command: CommandO
                         if user_bonus:
                             try:
                                 # Язык реферера берём из его username
-                                ref_lang = referrer.username if referrer.username in {"ru", "en"} else "ru"
+                                ref_lang = (
+                                    referrer.username if referrer.username in {"ru", "en"} else "ru"
+                                )
                                 await message.bot.send_message(
                                     chat_id=referrer.tg_id,
                                     text=msg("REFERRAL_NEW_NOTIFICATION", ref_lang).format(

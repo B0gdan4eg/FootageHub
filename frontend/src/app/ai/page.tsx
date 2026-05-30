@@ -1,292 +1,182 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { CSSProperties, useState } from "react";
 import Link from "next/link";
-import { aiApi } from "@/lib/api";
+import { PageShell } from "@/components/page-shell";
 
-type GenType = "IMAGE" | "VIDEO" | "IMAGE_TO_VIDEO";
-type TaskStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
-
-interface Task {
-  task_id: number;
-  status: TaskStatus;
-  result_url?: string;
-  error_message?: string;
-}
-
-interface PricingItem {
-  provider: string;
-  type: GenType;
-  credits_per_request: number;
-  description: string;
-}
-
-const TABS: { id: GenType; label: string }[] = [
-  { id: "IMAGE", label: "Изображение" },
-  { id: "VIDEO", label: "Видео" },
-  { id: "IMAGE_TO_VIDEO", label: "Из изображения" },
+const FEATURES = [
+  { ico: "🎬", title: "Motion-шаблоны", sub: "Генерация .aep / .mogrt из текстового брифа. Импортируешь в After Effects и работаешь дальше." },
+  { ico: "🎨", title: "Векторы и постеры", sub: "AI рисует векторные иллюстрации в нужном стиле. Сразу .ai / .svg, без растровых артефактов." },
+  { ico: "🔁", title: "Бесконечные правки", sub: "«Сделай ярче», «убери логотип», «другой ритм». Чат с AI прямо в Telegram, итераций сколько надо." },
 ];
 
-const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:3"];
-const DURATIONS = [5, 10, 15, 30];
-
 export default function AIPage() {
-  const [tab, setTab] = useState<GenType>("IMAGE");
-  const [prompt, setPrompt] = useState("");
-  const [provider, setProvider] = useState("");
-  const [aspectRatio, setAspectRatio] = useState("16:9");
-  const [duration, setDuration] = useState(5);
-  const [imageUrl, setImageUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [task, setTask] = useState<Task | null>(null);
-  const [pricing, setPricing] = useState<PricingItem[]>([]);
+  const [username, setUsername] = useState("");
+  const [subbed, setSubbed] = useState(false);
 
-  useEffect(() => {
-    aiApi.pricing()
-      .then((res) => setPricing(res.data as PricingItem[]))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const first = pricing.find((p) => p.type === tab);
-    if (first) setProvider(first.provider);
-  }, [tab, pricing]);
-
-  const pollTask = useCallback((taskId: number) => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await aiApi.status(taskId);
-        const data = res.data;
-        setTask(data as Task);
-        if (data.status === "COMPLETED" || data.status === "FAILED") {
-          clearInterval(interval);
-          setLoading(false);
-        }
-      } catch {
-        clearInterval(interval);
-        setLoading(false);
-      }
-    }, 4000);
-  }, []);
-
-  async function handleGenerate() {
-    if (!prompt.trim()) {
-      setError("Введите промпт");
-      return;
-    }
-    setError("");
-    setLoading(true);
-    setTask(null);
-
-    const params: Record<string, unknown> = { aspect_ratio: aspectRatio };
-    if (tab === "VIDEO" || tab === "IMAGE_TO_VIDEO") {
-      params.duration = duration;
-    }
-    if (tab === "IMAGE_TO_VIDEO" && imageUrl) {
-      params.image_url = imageUrl;
-    }
-
-    try {
-      const res = await aiApi.generate({ type: tab, provider, prompt, parameters: params });
-      const newTask: Task = { task_id: res.data.task_id, status: "PENDING" };
-      setTask(newTask);
-      pollTask(res.data.task_id);
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } } };
-      setError(err.response?.data?.detail || "Ошибка генерации");
-      setLoading(false);
-    }
-  }
-
-  const availableProviders = pricing.filter((p) => p.type === tab);
+  // Локальный акцент страницы — розовый (как в дизайне ai.html)
+  const pink: CSSProperties = { ["--accent" as string]: "#FF2EA1" } as CSSProperties;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <Link href="/dashboard" className="text-xl font-bold text-blue-400">FootageHub</Link>
-          <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white transition">← Назад</Link>
-        </div>
-      </header>
+    <PageShell>
+      <main style={{ ...pink, position: "relative", overflow: "hidden", minHeight: "calc(100vh - 68px)" }}>
+        <div className="bg-grid" />
+        <div className="bg-glow" style={{ width: 700, height: 700, top: -100, right: -200, background: "radial-gradient(circle, var(--accent), transparent 70%)", opacity: 0.5 }} />
+        <div className="bg-glow" style={{ width: 500, height: 500, bottom: -100, left: -100, background: "radial-gradient(circle, #2D6BFF, transparent 70%)", opacity: 0.3 }} />
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="text-2xl font-bold mb-2">AI Генерация</h1>
-        <p className="text-gray-400 mb-8">Создавайте изображения и видео по текстовому описанию</p>
-
-        {/* Tabs */}
-        <div className="flex gap-1 bg-gray-900 rounded-xl p-1 mb-6 border border-gray-800">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => { setTab(t.id); setTask(null); setError(""); }}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
-                tab === t.id
-                  ? "bg-purple-700 text-white"
-                  : "text-gray-400 hover:text-white"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
-          {/* Prompt */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Промпт</label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-              placeholder={tab === "IMAGE" ? "Красивый закат над горами в стиле аниме..." : "Cinematic drone shot of forest, 4K..."}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 resize-none"
-            />
-          </div>
-
-          {/* Image URL for IMAGE_TO_VIDEO */}
-          {tab === "IMAGE_TO_VIDEO" && (
+        <div className="container-page" style={{ position: "relative", padding: "60px 24px" }}>
+          <div className="ai-grid" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 60, alignItems: "center" }}>
             <div>
-              <label className="block text-sm text-gray-400 mb-2">URL исходного изображения</label>
-              <input
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500"
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Provider */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Провайдер</label>
-              <select
-                value={provider}
-                onChange={(e) => setProvider(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500"
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  background: "rgba(255, 46, 161, 0.15)",
+                  color: "var(--accent)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  marginBottom: 24,
+                }}
               >
-                {availableProviders.length === 0 && (
-                  <option value="">Загрузка...</option>
+                <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--accent)", animation: "pulse 1.5s infinite" }} />
+                Скоро · в разработке
+              </div>
+              <h1 className="h-display" style={{ fontSize: "clamp(48px, 7vw, 88px)", margin: 0, marginBottom: 24, letterSpacing: "-0.04em" }}>
+                AI, который <br />
+                <span
+                  style={{
+                    background: "linear-gradient(90deg, var(--accent), #2D6BFF)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                    color: "transparent",
+                  }}
+                >
+                  генерит шаблоны.
+                </span>
+              </h1>
+              <p style={{ fontSize: 19, lineHeight: 1.55, color: "var(--text-dim)", maxWidth: 540, margin: 0, marginBottom: 36 }}>
+                Опишешь идею текстом — получишь готовый <span className="mono" style={{ color: "var(--text)" }}>.aep</span>,{" "}
+                <span className="mono" style={{ color: "var(--text)" }}>.psd</span> или вектор. Бесплатные правки. Прямо в Telegram.
+              </p>
+
+              <div className="card" style={{ padding: 8, display: "flex", gap: 8, maxWidth: 480, marginBottom: 16 }}>
+                {!subbed ? (
+                  <>
+                    <input
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      type="text"
+                      placeholder="@username в Telegram"
+                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--text)", fontSize: 14, padding: "10px 14px", fontFamily: "var(--font-geist-mono), monospace" }}
+                    />
+                    <button
+                      onClick={() => setSubbed(true)}
+                      className="btn btn-primary"
+                      style={{ padding: "12px 20px", fontSize: 13, background: "var(--accent)", boxShadow: "0 8px 30px -8px rgba(255,46,161,0.5)" }}
+                    >
+                      Сообщить о запуске
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ padding: "12px 16px", display: "flex", gap: 10, alignItems: "center", color: "var(--green)", fontSize: 14 }}>
+                    <span style={{ fontSize: 18 }}>✓</span> Подписан! Напишем в Telegram, как только включим.
+                  </div>
                 )}
-                {availableProviders.map((p) => (
-                  <option key={p.provider} value={p.provider}>
-                    {p.provider} — {p.credits_per_request} кр.
-                  </option>
-                ))}
-              </select>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-mute)" }}>
+                Подписалось 4 217 человек · запуск ориентировочно{" "}
+                <span className="mono" style={{ color: "var(--text-dim)" }}>Q3 2026</span>
+              </div>
             </div>
 
-            {/* Aspect ratio */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Соотношение сторон</label>
-              <div className="flex gap-2">
-                {ASPECT_RATIOS.map((ar) => (
-                  <button
-                    key={ar}
-                    onClick={() => setAspectRatio(ar)}
-                    className={`flex-1 py-2 text-xs rounded-lg border transition ${
-                      aspectRatio === ar
-                        ? "border-purple-500 bg-purple-900/30 text-white"
-                        : "border-gray-700 text-gray-400 hover:border-gray-500"
-                    }`}
-                  >
-                    {ar}
-                  </button>
-                ))}
+            {/* Right: mock generation card */}
+            <div style={{ position: "relative" }}>
+              <div className="card" style={{ padding: 24, position: "relative", zIndex: 2, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.5)" }}>
+                <div className="flex items-center justify-between" style={{ marginBottom: 18 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>AI Generator</span>
+                  <span className="pill" style={{ fontSize: 11, color: "var(--accent)", borderColor: "rgba(255,46,161,0.3)" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--accent)" }} />preview
+                  </span>
+                </div>
+
+                <div style={{ padding: 14, background: "var(--bg-soft)", borderRadius: 10, fontFamily: "var(--font-geist-mono), monospace", fontSize: 13, marginBottom: 14, color: "var(--text-dim)" }}>
+                  → &quot;Минималистичная заставка для тревел-блога,
+                  <br />
+                  &nbsp;&nbsp;&nbsp;6 секунд, в стиле Wes Anderson&quot;
+                </div>
+
+                <div
+                  style={{
+                    aspectRatio: "16/9",
+                    borderRadius: 10,
+                    marginBottom: 14,
+                    background: "linear-gradient(135deg, #2D6BFF, #FF2EA1, #FFA82E)",
+                    position: "relative",
+                    overflow: "hidden",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.1em", background: "rgba(0,0,0,0.4)", padding: "6px 12px", borderRadius: 999 }}>
+                    генерация · 47%
+                  </div>
+                  <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(45deg, transparent 0 20px, rgba(255,255,255,0.04) 20px 40px)" }} />
+                </div>
+
+                <div className="flex items-center justify-between" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                  <span className="mono">trip-intro-v2.aep</span>
+                  <span>~ 12 сек</span>
+                </div>
+              </div>
+              <div
+                style={{
+                  position: "absolute",
+                  top: -20,
+                  right: -20,
+                  zIndex: 1,
+                  padding: "8px 16px",
+                  borderRadius: 999,
+                  background: "var(--bg-soft)",
+                  border: "1px solid var(--border-strong)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  transform: "rotate(8deg)",
+                }}
+              >
+                ✦ работает на свежей лягушке
               </div>
             </div>
           </div>
 
-          {/* Duration for video */}
-          {(tab === "VIDEO" || tab === "IMAGE_TO_VIDEO") && (
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Длительность (сек)</label>
-              <div className="flex gap-2">
-                {DURATIONS.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setDuration(d)}
-                    className={`w-14 py-2 text-sm rounded-lg border transition ${
-                      duration === d
-                        ? "border-purple-500 bg-purple-900/30 text-white"
-                        : "border-gray-700 text-gray-400 hover:border-gray-500"
-                    }`}
-                  >
-                    {d}s
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-red-950 border border-red-800 rounded-lg px-4 py-3 text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Task status */}
-          {task && (
-            <div className={`rounded-xl p-4 border ${
-              task.status === "COMPLETED"
-                ? "bg-green-950 border-green-800"
-                : task.status === "FAILED"
-                ? "bg-red-950 border-red-800"
-                : "bg-purple-950 border-purple-800"
-            }`}>
-              {task.status === "PENDING" && (
-                <p className="text-purple-300 text-sm animate-pulse">⏳ В очереди...</p>
-              )}
-              {task.status === "PROCESSING" && (
-                <p className="text-purple-300 text-sm animate-pulse">🔄 Генерируем...</p>
-              )}
-              {task.status === "COMPLETED" && task.result_url && (
-                <div className="space-y-3">
-                  <p className="text-green-400 font-medium">✓ Готово!</p>
-                  {tab === "IMAGE" ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={task.result_url}
-                      alt="Результат генерации"
-                      className="w-full rounded-lg max-h-80 object-contain"
-                    />
-                  ) : (
-                    <video
-                      src={task.result_url}
-                      controls
-                      className="w-full rounded-lg max-h-80"
-                    />
-                  )}
-                  <a
-                    href={task.result_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full py-2 bg-green-600 hover:bg-green-700 rounded-lg text-center text-sm font-medium transition"
-                  >
-                    ⬇ Скачать
-                  </a>
+          {/* Features */}
+          <div style={{ marginTop: 100 }}>
+            <h2 className="h-section" style={{ fontSize: "clamp(28px, 4vw, 44px)", margin: 0, marginBottom: 32, textAlign: "center" }}>
+              Что будет уметь
+            </h2>
+            <div className="feat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+              {FEATURES.map((f) => (
+                <div key={f.title} className="card" style={{ padding: 28, opacity: 0.85 }}>
+                  <div style={{ fontSize: 32, marginBottom: 14 }}>{f.ico}</div>
+                  <h3 style={{ margin: 0, fontSize: 18, marginBottom: 8, letterSpacing: "-0.01em" }}>{f.title}</h3>
+                  <p style={{ margin: 0, fontSize: 14, color: "var(--text-dim)", lineHeight: 1.5 }}>{f.sub}</p>
                 </div>
-              )}
-              {task.status === "FAILED" && (
-                <p className="text-red-400 text-sm">
-                  Ошибка: {task.error_message || "неизвестная ошибка"}
-                </p>
-              )}
+              ))}
             </div>
-          )}
+          </div>
 
-          <button
-            onClick={handleGenerate}
-            disabled={loading}
-            className="w-full py-3 bg-purple-700 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold transition"
-          >
-            {loading ? "Генерируем..." : "Сгенерировать"}
-          </button>
+          <div style={{ textAlign: "center", marginTop: 60, paddingTop: 40, borderTop: "1px solid var(--border)" }}>
+            <Link href="/" style={{ fontSize: 14, color: "var(--text-dim)" }}>
+              ← Вернуться на главную
+            </Link>
+          </div>
         </div>
       </main>
-    </div>
+    </PageShell>
   );
 }

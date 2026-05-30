@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import re
+import secrets
 import time
 from datetime import datetime, timedelta
 
@@ -12,7 +13,7 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.db.models import BotLinkRequest, User
+from shared.db.models import BotLinkRequest, QrLoginSession, User
 from shared.db.repositories.user_repository import UserRepository
 from web_api.auth.jwt_handler import create_access_token
 from web_api.auth.sms_client import send_verification_sms, verify_sms_code
@@ -340,3 +341,56 @@ async def telegram_login(body: TelegramAuthData, db: AsyncSession = Depends(get_
 
     token = create_access_token(user.id)
     return TokenResponse(access_token=token, user=_build_user_response(user))
+
+
+# ─── Telegram QR Login (Upscale-style: QR → deep-link → подтверждение в боте) ───
+
+
+class QrStartResponse(BaseModel):
+    token: str
+    deeplink: str
+    expires_at: str
+
+
+@router.post("/qr/start", response_model=QrStartResponse)
+async def qr_start(db: AsyncSession = Depends(get_db)):
+    """Создать QR-сессию входа через Telegram.
+
+    Фронт показывает QR с ``deeplink`` и опрашивает ``/qr/status/{token}``.
+    """
+    if not config.BOT_USERNAME:
+        raise HTTPException(status_code=503, detail="Telegram-вход не настроен")
+
+    token = secrets.token_urlsafe(24)
+    expires_at = datetime.utcnow() + timedelta(minutes=config.QR_LOGIN_TTL_MINUTES)
+    session = QrLoginSession(token=token, status="PENDING", expires_at=expires_at)
+    db.add(session)
+    await db.commit()
+
+    deeplink = f"https://t.me/{config.BOT_USERNAME}?start=login_{token}"
+    return QrStartResponse(token=token, deeplink=deeplink, expires_at=expires_at.isoformat())
+
+
+@router.get("/qr/status/{token}")
+async def qr_status(token: str, db: AsyncSession = Depends(get_db)):
+    """Поллинг статуса QR-сессии. При CONFIRMED — выдаёт JWT и профиль."""
+    result = await db.execute(select(QrLoginSession).where(QrLoginSession.token == token))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Сессия входа не найдена")
+
+    # Помечаем истёкшие
+    if session.status == "PENDING" and session.expires_at < datetime.utcnow():
+        session.status = "EXPIRED"
+        await db.commit()
+
+    response: dict = {"status": session.status}
+
+    if session.status == "CONFIRMED" and session.user_id:
+        repo = UserRepository(db)
+        user = await repo.get_by_id(session.user_id)
+        if user:
+            response["access_token"] = create_access_token(user.id)
+            response["user"] = _build_user_response(user).model_dump()
+
+    return response
