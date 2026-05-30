@@ -5,9 +5,7 @@ Revises: a1b2c3d4e5f6
 Create Date: 2026-05-30 13:00:00.000000
 
 """
-import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "f1a2b3c4d5e6"
@@ -15,20 +13,12 @@ down_revision = "a1b2c3d4e5f6"
 branch_labels = None
 depends_on = None
 
-# Тип создаём вручную (идемпотентно) в upgrade(), поэтому create_type=False —
-# чтобы create_table НЕ пытался создать enum повторно (иначе DuplicateObjectError).
-qr_login_status = postgresql.ENUM(
-    "PENDING",
-    "CONFIRMED",
-    "REJECTED",
-    "EXPIRED",
-    name="qr_login_status",
-    create_type=False,
-)
-
 
 def upgrade():
-    # Идемпотентное создание enum-типа (безопасно при повторном/частичном прогоне)
+    # Полностью идемпотентно: безопасно при повторном/частичном прогоне.
+    # На проде тип/таблица могли остаться от прошлой неудачной миграции,
+    # при этом alembic_version не успел записаться — поэтому используем
+    # нативные IF NOT EXISTS и DO-блок, чтобы повтор просто записал ревизию.
     op.execute(
         """
         DO $$ BEGIN
@@ -37,23 +27,26 @@ def upgrade():
         END $$;
         """
     )
-
-    op.create_table(
-        "qr_login_sessions",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("token", sa.String(64), nullable=False),
-        sa.Column("status", qr_login_status, nullable=False, server_default="PENDING"),
-        sa.Column("user_id", sa.BigInteger(), nullable=True),
-        sa.Column("expires_at", sa.DateTime(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.text("now()")),
-        sa.Column("confirmed_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("id"),
+    op.execute(
+        """
+        CREATE TABLE IF NOT EXISTS qr_login_sessions (
+            id SERIAL PRIMARY KEY,
+            token VARCHAR(64) NOT NULL,
+            status qr_login_status NOT NULL DEFAULT 'PENDING',
+            user_id BIGINT REFERENCES users (id) ON DELETE CASCADE,
+            expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+            created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
+            confirmed_at TIMESTAMP WITHOUT TIME ZONE
+        );
+        """
     )
-    op.create_index("ix_qr_login_sessions_token", "qr_login_sessions", ["token"], unique=True)
+    op.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_qr_login_sessions_token "
+        "ON qr_login_sessions (token);"
+    )
 
 
 def downgrade():
-    op.drop_index("ix_qr_login_sessions_token", table_name="qr_login_sessions")
-    op.drop_table("qr_login_sessions")
-    op.execute("DROP TYPE IF EXISTS qr_login_status")
+    op.execute("DROP INDEX IF EXISTS ix_qr_login_sessions_token;")
+    op.execute("DROP TABLE IF EXISTS qr_login_sessions;")
+    op.execute("DROP TYPE IF EXISTS qr_login_status;")
