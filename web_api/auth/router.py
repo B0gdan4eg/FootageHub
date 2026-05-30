@@ -368,7 +368,7 @@ async def qr_start(db: AsyncSession = Depends(get_db)):
     await db.commit()
 
     deeplink = f"https://t.me/{config.BOT_USERNAME}?start=login_{token}"
-    return QrStartResponse(token=token, deeplink=deeplink, expires_at=expires_at.isoformat())
+    return QrStartResponse(token=token, deeplink=deeplink, expires_at=expires_at.isoformat() + "Z")
 
 
 @router.get("/qr/status/{token}")

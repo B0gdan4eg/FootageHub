@@ -11,6 +11,12 @@ type Status = "init" | "waiting" | "confirmed" | "expired" | "error";
 
 const TG_BLUE = "#2BAEEC";
 
+// Бэкенд отдаёт время в UTC; без таймзоны JS считает строку локальной → QR «истекал» сразу.
+function parseUtcMs(iso: string): number {
+  const hasTz = /[zZ]|[+-]\d\d:?\d\d$/.test(iso);
+  return new Date(hasTz ? iso : iso + "Z").getTime();
+}
+
 function TgIcon({ size = 32, color = "white" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 240 240" fill={color} aria-hidden="true">
@@ -49,7 +55,7 @@ function AuthPageInner() {
       const res = await qrApi.start();
       setTok(res.data.token);
       setDeeplink(res.data.deeplink);
-      setExpiresAt(new Date(res.data.expires_at).getTime());
+      setExpiresAt(parseUtcMs(res.data.expires_at));
       setStatus("waiting");
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } };
