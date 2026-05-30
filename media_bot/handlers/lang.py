@@ -3,7 +3,12 @@
 from aiogram import Bot, F, Router, types
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.filters import Command
-from aiogram.types import BotCommand, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import (
+    BotCommand,
+    BotCommandScopeChat,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 
 from media_bot.handlers.messages import SUPPORTED_LANGUAGES, msg
 from media_bot.keyboards import get_main_menu_kb
