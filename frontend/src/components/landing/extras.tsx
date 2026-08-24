@@ -3,78 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ACCENT } from "../brand";
-
-// ===================== SOCIAL PROOF =====================
-export function SocialProof() {
-  const stats = [
-    { num: "14 521", label: "файлов выдано" },
-    { num: "2 840", label: "довольных дизайнеров" },
-    { num: "~8 сек", label: "средняя выдача" },
-    { num: "99.2%", label: "аптайм бота" },
-  ];
-  const reviews = [
-    "/assets/review-1.jpg",
-    "/assets/review-2.jpg",
-    "/assets/review-3.jpg",
-    "/assets/review-4.jpg",
-    "/assets/review-5.jpg",
-    "/assets/review-6.jpg",
-  ];
-  return (
-    <section style={{ padding: "100px 0", position: "relative" }}>
-      <div className="container-page">
-        <div
-          className="card stats-strip"
-          style={{ padding: "36px 32px", marginBottom: 48, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}
-        >
-          {stats.map((s, i) => (
-            <div key={s.label} style={{ textAlign: "center", borderLeft: i ? "1px solid var(--border)" : "none" }}>
-              <div style={{ fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 700, letterSpacing: "-0.04em", color: ACCENT }}>{s.num}</div>
-              <div style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 4 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ marginBottom: 40, display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
-          <div>
-            <div className="eyebrow" style={{ marginBottom: 14 }}>Реальные отзывы из Telegram</div>
-            <h2 className="h-section" style={{ fontSize: "clamp(32px, 4.5vw, 52px)", margin: 0, maxWidth: 700 }}>
-              Скриншоты от тех, кто <span style={{ color: ACCENT }}>уже пользуется</span>.
-            </h2>
-          </div>
-          <p style={{ maxWidth: 320, color: "var(--text-dim)", fontSize: 14, lineHeight: 1.55, margin: 0 }}>
-            Без редактуры, без актёров — реальные сообщения в поддержку и боту.
-          </p>
-        </div>
-
-        <div className="rev-grid" style={{ columnCount: 3, columnGap: 16 }}>
-          {reviews.map((src, i) => (
-            <div
-              key={src}
-              style={{
-                breakInside: "avoid",
-                marginBottom: 16,
-                borderRadius: 18,
-                overflow: "hidden",
-                border: "1px solid var(--border)",
-                background: "var(--bg-soft)",
-                boxShadow: "0 12px 40px -16px rgba(0,0,0,0.4)",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt={`Отзыв ${i + 1}`} loading="lazy" style={{ display: "block", width: "100%", height: "auto" }} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+import { LocalizedContent, type LandingLanguage } from "./localized-content";
 
 // ===================== FAQ =====================
 type FaqItem = { section: string; n: string } | { q: string; a: React.ReactNode };
 
-export function FAQ() {
+export function FAQ({ language = "ru" }: { language?: LandingLanguage }) {
   const items: FaqItem[] = [
     { section: "Скачивание и файлы", n: "01" },
     { q: "Файл скачивается не сразу?", a: "Если файл не скачался с первого раза — попробуй ещё раз, это решает 90% проблем." },
@@ -84,7 +18,7 @@ export function FAQ() {
     { q: "Когда начисляются бесплатные загрузки?", a: "Бесплатные загрузки начисляются каждую среду в 3:00 ночи в размере 5 шт." },
     {
       q: "Почему цена отличается от указанной?",
-      a: "Цена формируется в белорусских рублях по курсу банка, выпустившего вашу карту. Итоговая сумма может незначительно отличаться в зависимости от курса конвертации.",
+      a: "На сайте цены указаны в долларах. Провайдер может списать эквивалент в валюте вашей карты по своему курсу.",
     },
     { section: "Поддерживаемые платформы", n: "03" },
     {
@@ -106,12 +40,17 @@ export function FAQ() {
   ];
   const [open, setOpen] = useState(1);
   return (
+    <LocalizedContent language={language}>
     <section id="faq" style={{ padding: "120px 0" }}>
       <div className="container-page" style={{ maxWidth: 880 }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
           <div className="eyebrow" style={{ marginBottom: 14 }}>Частые вопросы</div>
           <h2 className="h-section" style={{ fontSize: "clamp(36px, 5vw, 56px)", margin: 0 }}>
-            Ответим до того, <br />как <span style={{ color: ACCENT }}>спросишь.</span>
+            {language === "en" ? (
+              <>Frequently Asked Questions <br /><span style={{ color: ACCENT }}>About FootageHub</span></>
+            ) : (
+              <>Ответим до того, <br />как <span style={{ color: ACCENT }}>спросишь.</span></>
+            )}
           </h2>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -159,13 +98,15 @@ export function FAQ() {
         </div>
       </div>
     </section>
+    </LocalizedContent>
   );
 }
 
 // ===================== CTA =====================
-export function CTA() {
+export function CTA({ language = "ru" }: { language?: LandingLanguage }) {
   return (
-    <section style={{ padding: "80px 0", position: "relative" }}>
+    <LocalizedContent language={language}>
+    <section className="landing-cta" style={{ padding: "80px 0", position: "relative" }}>
       <div className="container-page">
         <div
           className="card"
@@ -204,5 +145,6 @@ export function CTA() {
         </div>
       </div>
     </section>
+    </LocalizedContent>
   );
 }

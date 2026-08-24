@@ -1,7 +1,5 @@
 """Payments router: plans, invoice creation, webhooks for web users."""
 
-import hashlib
-import hmac
 import json
 import uuid
 from pathlib import Path
@@ -23,10 +21,14 @@ router = APIRouter()
 
 def _load_plans() -> dict:
     """Загрузить список тарифов из JSON файла (тот же что у бота)."""
-    plans_path = Path(__file__).parent.parent.parent / "media_bot" / "prices_list.json"
+    plans_path = Path(__file__).parent.parent.parent / "media_bot" / "handlers" / "prices_list.json"
     if plans_path.exists():
         with open(plans_path, encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            plans = data.get("subscription_plans", data)
+            for plan in plans.values():
+                plan.setdefault("currency", "RUB")
+            return plans
     # fallback
     return {
         "monthly_50": {"name": "Lite", "price": 9.99, "currency": "USD"},
@@ -105,24 +107,23 @@ async def _create_cryptobot_invoice(order_id: str, plan: dict) -> str:
 
 
 async def _create_webpay_invoice(order_id: str, plan: dict, user: User) -> str:
-    """Создать форму оплаты WebPay."""
-    amount = int(plan.get("price", 0) * 100)  # в копейках
-    signing_str = f"{config.WEBPAY_RESOURCE_ID}{order_id}{amount}BYR"
-    signature = hmac.new(
-        config.WEBPAY_SIGNING_KEY.encode(),
-        signing_str.encode(),
-        hashlib.sha1,
-    ).hexdigest()
+    """Создать invoice в WebPay через тот же JSON API, что использует Telegram-бот."""
+    from media_bot.webpay_utils import get_webpay_api
 
-    # Возвращаем URL с параметрами (фронтенд делает POST-форму)
-    params = {
-        "resource_id": config.WEBPAY_RESOURCE_ID,
-        "order_id": order_id,
-        "amount": amount,
-        "currency": "BYR",
-        "signature": signature,
-    }
-    return "https://payment.webpay.by/?" + "&".join(f"{k}={v}" for k, v in params.items())
+    base_url = "https://envato-freepik-download.store"
+    webpay_api = get_webpay_api()
+    result = await webpay_api.create_invoice(
+        order_id=order_id,
+        amount=float(plan.get("price", 0)),
+        description=f"FootageHub: {plan.get('name', order_id)}",
+        return_url=f"{base_url}/dashboard?payment=success",
+        cancel_url=f"{base_url}/payment?payment=cancel",
+        notify_url=f"{base_url}/api/payments/webhook/webpay",
+    )
+    invoice_url = result.get("invoiceUrl")
+    if not invoice_url:
+        raise HTTPException(status_code=500, detail="Ошибка создания инвойса WebPay")
+    return invoice_url
 
 
 @router.post("/webhook/cryptobot")
@@ -182,7 +183,7 @@ async def _process_web_payment(order_id: str, db: AsyncSession) -> None:
 
     user = await user_repo.get_by_id(db_user_id)
     if user:
-        await sub_repo.create_subscription_from_plan(user.id, payment.plan_key)
+        await sub_repo.create_subscription_from_plan(user.id, payment.plan_key, payment.id)
 
     await db.commit()
 

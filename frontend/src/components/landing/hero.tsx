@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ACCENT } from "../brand";
+import { LocalizedContent, type LandingLanguage } from "./localized-content";
 
-export function Hero() {
+export function Hero({ language = "ru" }: { language?: LandingLanguage }) {
   const [url, setUrl] = useState("");
   const [stage, setStage] = useState<"idle" | "loading" | "ready">("idle");
   const fakeFile = "After-Effects-Cinematic-Trailer.aep";
@@ -17,7 +18,8 @@ export function Hero() {
   };
 
   return (
-    <section style={{ position: "relative", overflow: "hidden", paddingTop: 40, paddingBottom: 80 }}>
+    <LocalizedContent language={language}>
+    <section className="hero-section" style={{ position: "relative", overflow: "hidden", paddingTop: 40, paddingBottom: 80 }}>
       <div className="bg-grid" />
       <div
         className="bg-glow"
@@ -66,10 +68,12 @@ export function Hero() {
               className="h-display hero-headline"
               style={{ fontSize: "clamp(48px, 6.5vw, 88px)", margin: 0, marginBottom: 24 }}
             >
-              Устал искать,
+              {language === "en" ? "Instant Envato, Freepik &" : "Устал искать,"}
               <br />
               <span style={{ position: "relative", display: "inline-block" }}>
-                <span style={{ color: ACCENT }}>где взять шаблоны?</span>
+                <span style={{ color: ACCENT }}>
+                  {language === "en" ? "Motion Array Downloader" : "где взять шаблоны?"}
+                </span>
                 <svg
                   viewBox="0 0 300 20"
                   style={{ position: "absolute", left: 0, right: 0, bottom: -8, width: "100%", height: 14 }}
@@ -128,6 +132,7 @@ export function Hero() {
                 placeholder="elements.envato.com/..."
                 style={{
                   flex: 1,
+                  minWidth: 0,
                   background: "transparent",
                   border: "none",
                   outline: "none",
@@ -201,19 +206,21 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Right: tired frog */}
+          {/* Right: hero video */}
           <div className="hero-frog" style={{ position: "relative", minHeight: 480 }}>
-            <FrogScene />
+            <FrogScene language={language} />
           </div>
         </div>
       </div>
     </section>
+    </LocalizedContent>
   );
 }
 
-function FrogScene() {
+function FrogScene({ language }: { language: LandingLanguage }) {
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 480, display: "grid", placeItems: "center" }}>
+    <LocalizedContent language={language}>
+    <div className="hero-scene" style={{ position: "relative", width: "100%", height: "100%", minHeight: 480, display: "grid", placeItems: "center" }}>
       <div
         style={{
           position: "absolute",
@@ -226,6 +233,7 @@ function FrogScene() {
       />
       {/* speech bubble */}
       <div
+        className="hero-speech"
         style={{
           position: "absolute",
           top: 30,
@@ -301,14 +309,15 @@ function FrogScene() {
         <span style={{ fontSize: 11, color: "#888", textDecoration: "line-through" }}>Freepik</span>
       </div>
 
-      {/* the frog */}
+      {/* hero video */}
       <div
+        className="hero-video"
         style={{
           position: "relative",
           zIndex: 2,
           width: "100%",
-          maxWidth: 420,
-          aspectRatio: "3/4",
+          maxWidth: 560,
+          aspectRatio: "16/9",
           borderRadius: 24,
           overflow: "hidden",
           border: "1px solid var(--border-strong)",
@@ -316,35 +325,19 @@ function FrogScene() {
           boxShadow: "0 30px 80px -20px rgba(0,0,0,0.6)",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/assets/frog-tired.jpg"
-          alt="уставшая лягушка"
+        <video
+          src="/assets/hero-demo.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          aria-label="FootageHub preview"
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
-        <div
-          style={{
-            position: "absolute",
-            bottom: 16,
-            left: 16,
-            right: 16,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "10px 14px",
-            borderRadius: 12,
-            background: "rgba(10, 10, 14, 0.85)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          <span style={{ fontSize: 12, fontWeight: 600, color: "white" }}>FROG.exe</span>
-          <span style={{ fontSize: 11, color: "#9298A8", fontFamily: "var(--font-geist-mono), monospace" }}>
-            not_responding
-          </span>
-        </div>
       </div>
     </div>
+    </LocalizedContent>
   );
 }
 

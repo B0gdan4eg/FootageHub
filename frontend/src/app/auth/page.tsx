@@ -66,8 +66,11 @@ function AuthPageInner() {
 
   // Создаём QR-сессию при монтировании
   useEffect(() => {
-    startSession();
-    return clearTimers;
+    const startTimer = window.setTimeout(() => void startSession(), 0);
+    return () => {
+      window.clearTimeout(startTimer);
+      clearTimers();
+    };
   }, [startSession, clearTimers]);
 
   // Поллинг статуса + обратный отсчёт, пока ждём подтверждения

@@ -1,28 +1,26 @@
-"use client";
+import type { Metadata } from "next";
+import { LocalizedLandingPage } from "@/components/landing/localized-landing-page";
 
-import { useState } from "react";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { Hero, StockMarquee } from "@/components/landing/hero";
-import { HowItWorks, Sources, Pricing, Versus } from "@/components/landing/sections";
-import { SocialProof, FAQ, CTA } from "@/components/landing/extras";
+export const metadata: Metadata = {
+  title: "Скачать Envato, Freepik и Motion Array",
+  description: "Скачивайте файлы с Envato Elements, Freepik и Motion Array через FootageHub. Первые 5 файлов бесплатно.",
+  alternates: {
+    canonical: "/",
+    languages: {
+      ru: "/",
+      en: "/en",
+      "x-default": "/en",
+    },
+  },
+  openGraph: {
+    title: "FootageHub — Envato, Freepik и Motion Array",
+    description: "Премиум-файлы со стоковых платформ через Telegram и веб-интерфейс.",
+    url: "/",
+    locale: "ru_RU",
+    alternateLocale: ["en_US"],
+  },
+};
 
 export default function LandingPage() {
-  const [currency, setCurrency] = useState<"rub" | "usd">("rub");
-
-  return (
-    <div style={{ minHeight: "100vh", position: "relative" }}>
-      <SiteHeader />
-      <Hero />
-      <StockMarquee />
-      <HowItWorks />
-      <Sources />
-      <SocialProof />
-      <Versus />
-      <Pricing currency={currency} setCurrency={setCurrency} />
-      <FAQ />
-      <CTA />
-      <SiteFooter />
-    </div>
-  );
+  return <LocalizedLandingPage language="ru" />;
 }

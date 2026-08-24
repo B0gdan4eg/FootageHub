@@ -8,6 +8,8 @@ since the browser automation (nodriver, playwright) runs only here.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from media_bot.services import BotServices
+
 router = APIRouter(prefix="/internal")
 
 
@@ -25,25 +27,20 @@ async def internal_download(req: DownloadRequest):
     provider = req.provider.upper()
 
     try:
-        if provider == "ENVATO":
-            from media_bot.utils.envato_utils.envato_playwright import (
-                get_envato_direct_download_url,
-            )
-
-            result = await get_envato_direct_download_url(req.url)
-
-        elif provider == "FREEPIK":
-            from media_bot.utils.freepik_utils.freepik import get_freepik_direct_download_url
-
-            result = await get_freepik_direct_download_url(req.url)
-
-        elif provider == "MOTION_ARRAY":
-            from media_bot.utils.motion_utils.motion import get_motion_direct_download_url
-
-            result = await get_motion_direct_download_url(req.url)
-
-        else:
+        platform_map = {
+            "ENVATO": "envato",
+            "FREEPIK": "freepik",
+            "MOTION_ARRAY": "motion",
+        }
+        platform = platform_map.get(provider)
+        if not platform:
             raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
+
+        link_processor = BotServices.link_processor
+        if not link_processor:
+            raise HTTPException(status_code=503, detail="Download service is not ready")
+
+        result = await link_processor.submit(req.url, platform=platform)
 
     except HTTPException:
         raise

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { LanguageProvider } from "@/lib/language";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,8 +14,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FootageHub — Скачать Envato, Freepik, Motion Array",
-  description: "Скачивай медиафайлы с Envato Elements, Freepik, Motion Array и генерируй AI-контент",
+  metadataBase: new URL("https://envato-freepik-download.store"),
+  title: {
+    default: "FootageHub",
+    template: "%s | FootageHub",
+  },
+  description: "Download assets from Envato Elements, Freepik, and Motion Array with FootageHub.",
+  openGraph: {
+    siteName: "FootageHub",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +39,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );

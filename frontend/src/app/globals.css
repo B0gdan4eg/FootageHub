@@ -74,7 +74,7 @@
    Base
    ============================================================ */
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; overflow-x: hidden; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -256,11 +256,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .hist-row:hover { background: var(--bg-soft); }
 
 /* Responsive grid overrides — desktop columns are set inline */
-@media (max-width: 1024px) {
-  .rev-grid { column-count: 2 !important; }
-}
 @media (max-width: 980px) {
   .hero-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+  .hero-grid > * { min-width: 0; }
   .hero-frog { min-height: 380px !important; }
   .price-grid { grid-template-columns: 1fr !important; }
   .price-grid .card { transform: none !important; }
@@ -284,8 +282,33 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 @media (max-width: 760px) {
   .stats-strip { grid-template-columns: repeat(2, 1fr) !important; }
   .stats-strip > div { border-left: none !important; }
-  .rev-grid { column-count: 1 !important; }
 }
 @media (max-width: 720px) {
   .vs-row { grid-template-columns: 1fr 0.8fr 0.8fr !important; padding: 14px 16px !important; font-size: 13px !important; }
+}
+
+@media (max-width: 600px) {
+  .container-page { padding-inline: 16px; }
+  .header-try { display: none; }
+  .landing-page section { padding-block: 72px !important; }
+  .hero-section { padding-top: 24px !important; padding-bottom: 48px !important; }
+  .hero-headline { font-size: 44px !important; line-height: 0.98; }
+  .hero-grid { gap: 8px !important; }
+  .hero-frog,
+  .hero-scene { min-height: 230px !important; }
+  .hero-speech,
+  .float-tag { display: none !important; }
+  .hero-video { border-radius: 14px !important; }
+  .how-grid .card,
+  .src-grid .card { padding: 20px !important; }
+  .cta-grid { gap: 20px !important; }
+  .cta-grid > div:last-child { min-height: 0 !important; }
+  .landing-cta .card { padding: 32px 20px !important; }
+  .ftr-grid { grid-template-columns: 1fr !important; }
+  .footer-bottom { align-items: flex-start !important; flex-direction: column; gap: 18px; }
+}
+
+@media (max-width: 420px) {
+  .header-login { padding: 9px 12px !important; font-size: 13px !important; }
+  .vs-row { grid-template-columns: minmax(0, 1.25fr) minmax(62px, 0.75fr) minmax(62px, 0.75fr) !important; padding-inline: 10px !important; font-size: 12px !important; }
 }

@@ -102,9 +102,13 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    loadData()
-      .catch(() => router.push("/auth"))
-      .finally(() => setLoading(false));
+    const loadTimer = window.setTimeout(() => {
+      void loadData()
+        .catch(() => router.push("/auth"))
+        .finally(() => setLoading(false));
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
   }, [loadData, router]);
 
   async function submit(e?: React.FormEvent) {

@@ -5,15 +5,18 @@ import Link from "next/link";
 import { paymentsApi } from "@/lib/api";
 import { PageShell } from "@/components/page-shell";
 
-type Provider = "webpay" | "cryptobot";
 type PlanRaw = { name?: string; price?: number; currency?: string };
 type Plan = { key: string; name: string; price: number; currency: string };
 
-function money(price: number, currency: string): string {
-  if (currency === "USD") return `$${price}`;
-  if (currency === "RUB") return `${price}₽`;
-  if (currency === "BYN" || currency === "BYR") return `${price} Br`;
-  return `${price} ${currency}`;
+const USD_PRICES: Record<string, number> = {
+  monthly_50: 4.99,
+  monthly_150: 10.99,
+  monthly_400: 21.99,
+};
+
+function displayPrice(plan: Plan): string {
+  const price = USD_PRICES[plan.key];
+  return price === undefined ? `$${plan.price.toFixed(2)}` : `$${price.toFixed(2)}`;
 }
 
 function filesFor(key: string): string {
@@ -29,7 +32,6 @@ export default function PaymentPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [tier, setTier] = useState<string>("");
-  const [provider, setProvider] = useState<Provider>("webpay");
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,7 +63,7 @@ export default function PaymentPage() {
     setError("");
     setPaying(true);
     try {
-      const res = await paymentsApi.create(selected.key, provider);
+      const res = await paymentsApi.create(selected.key, "webpay");
       window.location.href = res.data.invoice_url;
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } };
@@ -138,7 +140,7 @@ export default function PaymentPage() {
                           </div>
                           <div style={{ fontSize: 13, color: "var(--text-dim)" }}>{filesFor(p.key)}</div>
                         </div>
-                        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>{money(p.price, p.currency)}</div>
+                        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>{displayPrice(p)}</div>
                       </button>
                     ))}
                   </div>
@@ -148,32 +150,22 @@ export default function PaymentPage() {
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-dim)", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                     2 · Способ оплаты
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    {([
-                      { id: "webpay" as const, name: "Карта", sub: "Visa / Mir / MC · WebPay", icon: "💳" },
-                      { id: "cryptobot" as const, name: "Крипта", sub: "USDT · CryptoBot", icon: "₿" },
-                    ]).map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setProvider(m.id)}
-                        style={{
-                          padding: 18,
-                          borderRadius: 14,
-                          border: `1px solid ${provider === m.id ? "var(--accent)" : "var(--border)"}`,
-                          background: provider === m.id ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--bg-soft)",
-                          textAlign: "left",
-                          display: "flex",
-                          gap: 12,
-                          alignItems: "center",
-                        }}
-                      >
-                        <div style={{ fontSize: 24 }}>{m.icon}</div>
-                        <div>
-                          <div style={{ fontSize: 15, fontWeight: 600 }}>{m.name}</div>
-                          <div style={{ fontSize: 12, color: "var(--text-dim)" }}>{m.sub}</div>
-                        </div>
-                      </button>
-                    ))}
+                  <div
+                    style={{
+                      padding: 18,
+                      borderRadius: 14,
+                      border: "1px solid var(--accent)",
+                      background: "color-mix(in oklab, var(--accent) 8%, transparent)",
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <div style={{ fontSize: 24 }}>💳</div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 600 }}>Карта</div>
+                      <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Visa / Mir / MC · WebPay</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -186,7 +178,7 @@ export default function PaymentPage() {
                 <div style={{ paddingBottom: 16, borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 8 }}>
                     <span style={{ fontSize: 14, color: "var(--text-dim)" }}>Тариф {selected?.name ?? "—"}</span>
-                    <span style={{ fontSize: 14 }}>{selected ? money(selected.price, selected.currency) : "—"}</span>
+                    <span style={{ fontSize: 14 }}>{selected ? displayPrice(selected) : "—"}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                     <span style={{ fontSize: 14, color: "var(--text-dim)" }}>Объём</span>
@@ -196,7 +188,7 @@ export default function PaymentPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 24 }}>
                   <span style={{ fontSize: 14 }}>К оплате</span>
                   <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.03em", color: "var(--accent)" }}>
-                    {selected ? money(selected.price, selected.currency) : "—"}
+                    {selected ? displayPrice(selected) : "—"}
                   </span>
                 </div>
 
@@ -208,11 +200,11 @@ export default function PaymentPage() {
                   className="btn btn-primary"
                   style={{ width: "100%", padding: "16px 24px", fontSize: 15, marginBottom: 14, opacity: paying || !selected ? 0.7 : 1 }}
                 >
-                  {paying ? "Перенаправление…" : selected ? `Оплатить ${money(selected.price, selected.currency)}` : "Выберите тариф"}
+                  {paying ? "Перенаправление…" : selected ? `Оплатить ${displayPrice(selected)}` : "Выберите тариф"}
                 </button>
 
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {["Все стоки: Envato, Freepik, Motion Array", "Доставка в Telegram за ~8 секунд", "Возврат в течение 24 часов"].map((p) => (
+                  {["Все стоки: Envato, Freepik, Motion Array", "Доставка в Telegram за ~8 секунд"].map((p) => (
                     <li key={p} style={{ fontSize: 13, color: "var(--text-dim)", display: "flex", gap: 8 }}>
                       <span style={{ color: "var(--green)" }}>✓</span>
                       <span>{p}</span>

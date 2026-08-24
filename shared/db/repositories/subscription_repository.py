@@ -526,3 +526,27 @@ class SubscriptionRepository(BaseRepository[Subscription]):
         await self.session.commit()
         await self.session.refresh(subscription)
         return subscription
+
+    async def create_subscription_from_plan(
+        self,
+        user_id: int,
+        plan_key: str,
+        payment_id: Optional[int] = None,
+    ) -> Subscription:
+        """Create a subscription from the shared price list plan key."""
+        from media_bot.utils.price_loader import get_plan_config
+
+        plan = get_plan_config(plan_key)
+        if not plan:
+            raise ValueError(f"Plan {plan_key} not found")
+
+        subscription_type = SubscriptionType[plan["subscription_type"]]
+        return await self.create_subscription_with_credits(
+            user_id=user_id,
+            subscription_type=subscription_type,
+            service_type=ServiceType.ALL,
+            total_limit=plan.get("total_limit"),
+            daily_limit=plan.get("daily_limit"),
+            days=plan.get("period_days", 30),
+            payment_id=payment_id,
+        )

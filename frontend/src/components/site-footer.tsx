@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Logo } from "./brand";
+import { LocalizedContent, type LandingLanguage } from "./landing/localized-content";
 
 type Contact = { label: string; href: string; logo: string; shadow: string };
 
@@ -37,8 +40,9 @@ const CONTACTS: Contact[] = [
   },
 ];
 
-export function SiteFooter() {
+export function SiteFooter({ language = "ru" }: { language?: LandingLanguage }) {
   return (
+    <LocalizedContent language={language}>
     <footer style={{ borderTop: "1px solid var(--border)", padding: "60px 0 40px", marginTop: 40 }}>
       <div className="container-page">
         <div
@@ -133,6 +137,7 @@ export function SiteFooter() {
         </div>
 
         <div
+          className="footer-bottom"
           style={{
             paddingTop: 24,
             borderTop: "1px solid var(--border)",
@@ -156,5 +161,6 @@ export function SiteFooter() {
         </div>
       </div>
     </footer>
+    </LocalizedContent>
   );
 }

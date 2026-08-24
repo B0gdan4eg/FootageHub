@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LanguageSwitcher } from "@/lib/language";
 import { Logo } from "./brand";
 
 /** Общая шапка для внутренних страниц (кабинет / оплата / AI / вход). */
@@ -51,6 +52,7 @@ export function PageShell({ children }: { children: React.ReactNode }) {
               ← На главную
             </Link>
           </nav>
+          <LanguageSwitcher />
         </div>
       </header>
       {children}

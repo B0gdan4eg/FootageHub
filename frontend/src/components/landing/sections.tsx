@@ -2,21 +2,27 @@
 
 import Link from "next/link";
 import { ACCENT } from "../brand";
+import { LocalizedContent, type LandingLanguage } from "./localized-content";
 
 // ===================== HOW IT WORKS =====================
-export function HowItWorks() {
+export function HowItWorks({ language = "ru" }: { language?: LandingLanguage }) {
   const steps = [
     { n: "01", title: "Вставь ссылку", desc: "Копируй URL шаблона с Envato, Freepik или Motion Array — в боте или прямо на сайте.", kbd: "Ctrl+V" },
     { n: "02", title: "Бот достаёт файл", desc: "Качаем оригинал с премиум-аккаунта за 5–10 секунд. Без водяных знаков, без обрезок.", kbd: "~ 8 сек" },
     { n: "03", title: "Скачивай и работай", desc: "Прямая ссылка прилетает в Telegram. Работает на всех устройствах.", kbd: ".zip" },
   ];
   return (
+    <LocalizedContent language={language}>
     <section id="how" style={{ padding: "120px 0", position: "relative" }}>
       <div className="container-page">
         <div style={{ textAlign: "center", marginBottom: 64 }}>
           <div className="eyebrow" style={{ marginBottom: 14 }}>Как это работает</div>
           <h2 className="h-section" style={{ fontSize: "clamp(36px, 5vw, 60px)", margin: 0 }}>
-            Три шага. Никакой <span style={{ color: ACCENT }}>магии.</span>
+            {language === "en" ? (
+              <>How to Download Premium Assets <span style={{ color: ACCENT }}>via Telegram</span></>
+            ) : (
+              <>Три шага. Никакой <span style={{ color: ACCENT }}>магии.</span></>
+            )}
           </h2>
         </div>
         <div className="how-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
@@ -54,24 +60,30 @@ export function HowItWorks() {
         </div>
       </div>
     </section>
+    </LocalizedContent>
   );
 }
 
 // ===================== SOURCES =====================
-export function Sources() {
+export function Sources({ language = "ru" }: { language?: LandingLanguage }) {
   const sources = [
     { name: "Envato Elements", sub: "Видео, аудио, шаблоны AE/Premiere", status: "ok", logo: "envato", files: "54M+" },
     { name: "Freepik · Magnifik", sub: "Векторы, фото, PSD, иконки", status: "ok", logo: "freepik", files: "210M+" },
     { name: "Motion Array", sub: "AE, Premiere, DaVinci, плагины", status: "maint", logo: "ma", files: "1M+" },
   ];
   return (
+    <LocalizedContent language={language}>
     <section id="sources" style={{ padding: "100px 0", position: "relative" }}>
       <div className="container-page">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 24, marginBottom: 40 }}>
           <div>
             <div className="eyebrow" style={{ marginBottom: 14 }}>Поддерживаемые стоки</div>
             <h2 className="h-section" style={{ fontSize: "clamp(32px, 4.5vw, 52px)", margin: 0, maxWidth: 700 }}>
-              Один бот — все стоки <br />в одном кармане.
+              {language === "en" ? (
+                <>Supported Stock Platforms <br /><span style={{ color: ACCENT }}>Envato, Freepik & More</span></>
+              ) : (
+                <>Один бот — все стоки <br />в одном кармане.</>
+              )}
             </h2>
           </div>
         </div>
@@ -121,6 +133,7 @@ export function Sources() {
         </div>
       </div>
     </section>
+    </LocalizedContent>
   );
 }
 
@@ -128,7 +141,6 @@ export function Sources() {
 type Tier = {
   name: string;
   tag: string;
-  rub: number;
   usd: number;
   files: number;
   perks: string[];
@@ -136,14 +148,15 @@ type Tier = {
   pop?: boolean;
 };
 
-export function Pricing({ currency, setCurrency }: { currency: "rub" | "usd"; setCurrency: (c: "rub" | "usd") => void }) {
+export function Pricing({ language = "ru" }: { language?: LandingLanguage }) {
   const tiers: Tier[] = [
-    { name: "Lite", tag: "Для теста", rub: 399, usd: 4.99, files: 50, perks: ["50 файлов в месяц", "Все стоки кроме Motion Array", "Хранение 7 дней", "Поддержка в Telegram"], cta: "Начать с Lite" },
-    { name: "Standard", tag: "Самый популярный", rub: 899, usd: 10.99, files: 150, perks: ["150 файлов в месяц", "Все стоки", "Хранение 30 дней", "Приоритет в очереди", "Возврат если файл не работает"], cta: "Взять Standard", pop: true },
-    { name: "Pro", tag: "Для агентств", rub: 1790, usd: 21.99, files: 400, perks: ["400 файлов в месяц", "Все стоки + ранний доступ к новым", "Хранение 90 дней", "API + bulk-режим", "Личный менеджер", "Скидка на AI-генерации"], cta: "Хочу Pro" },
+    { name: "Lite", tag: "Для теста", usd: 4.99, files: 50, perks: ["50 файлов в месяц", "Все стоки кроме Motion Array", "Хранение 7 дней", "Поддержка в Telegram"], cta: "Начать с Lite" },
+    { name: "Standard", tag: "Самый популярный", usd: 10.99, files: 150, perks: ["150 файлов в месяц", "Все стоки", "Хранение 30 дней", "Приоритет в очереди"], cta: "Взять Standard", pop: true },
+    { name: "Pro", tag: "Для агентств", usd: 21.99, files: 400, perks: ["400 файлов в месяц", "Все стоки + ранний доступ к новым", "Хранение 90 дней", "API + bulk-режим", "Личный менеджер", "Скидка на AI-генерации"], cta: "Хочу Pro" },
   ];
 
   return (
+    <LocalizedContent language={language}>
     <section id="pricing" style={{ padding: "120px 0", position: "relative" }}>
       <div
         className="bg-glow"
@@ -153,30 +166,12 @@ export function Pricing({ currency, setCurrency }: { currency: "rub" | "usd"; se
         <div style={{ textAlign: "center", marginBottom: 48 }}>
           <div className="eyebrow" style={{ marginBottom: 14 }}>Тарифы</div>
           <h2 className="h-section" style={{ fontSize: "clamp(36px, 5vw, 60px)", margin: 0, marginBottom: 16 }}>
-            Дешевле любой <span style={{ color: ACCENT }}>подписки.</span>
+            {language === "en" ? (
+              <>Affordable Pricing Plans <span style={{ color: ACCENT }}>for Creators</span></>
+            ) : (
+              <>Дешевле любой <span style={{ color: ACCENT }}>подписки.</span></>
+            )}
           </h2>
-          <p style={{ fontSize: 17, color: "var(--text-dim)", maxWidth: 520, margin: "0 auto 24px" }}>
-            Не понравилось — вернём деньги в течение 24 часов, без вопросов.
-          </p>
-          <div style={{ display: "inline-flex", padding: 4, borderRadius: 999, background: "var(--border)", border: "1px solid var(--border)" }}>
-            {(["rub", "usd"] as const).map((c) => (
-              <button
-                key={c}
-                onClick={() => setCurrency(c)}
-                style={{
-                  padding: "8px 18px",
-                  borderRadius: 999,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  background: currency === c ? "var(--accent)" : "transparent",
-                  color: currency === c ? "white" : "var(--text-dim)",
-                  transition: "all 0.2s",
-                }}
-              >
-                {c === "rub" ? "₽ Рубли" : "$ USD"}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="price-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, alignItems: "stretch" }}>
@@ -224,12 +219,11 @@ export function Pricing({ currency, setCurrency }: { currency: "rub" | "usd"; se
               <div style={{ fontSize: 13, color: "var(--text-dim)", marginBottom: 24 }}>{t.files} файлов / месяц</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
                 <span style={{ fontSize: 52, fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1 }}>
-                  {currency === "rub" ? t.rub : t.usd}
+                  ${t.usd.toFixed(2)}
                 </span>
-                <span style={{ fontSize: 22, fontWeight: 600, color: "var(--text-dim)" }}>{currency === "rub" ? "₽" : "$"}</span>
               </div>
               <div style={{ fontSize: 13, color: "var(--text-dim)", marginBottom: 28 }}>
-                в месяц · {currency === "rub" ? `≈ ${(t.rub / t.files).toFixed(1)}₽` : `≈ $${(t.usd / t.files).toFixed(2)}`} за файл
+                в месяц · ≈ ${(t.usd / t.files).toFixed(2)} за файл
               </div>
               <Link href="/payment" className={`btn ${t.pop ? "btn-primary" : "btn-ghost"}`} style={{ width: "100%", marginBottom: 24 }}>
                 {t.cta}
@@ -247,11 +241,12 @@ export function Pricing({ currency, setCurrency }: { currency: "rub" | "usd"; se
         </div>
       </div>
     </section>
+    </LocalizedContent>
   );
 }
 
 // ===================== VS COMPARISON =====================
-export function Versus() {
+export function Versus({ language = "ru" }: { language?: LandingLanguage }) {
   const rows: [string, { text: string; neg: boolean }, { text: string; neg: boolean; big?: boolean }][] = [
     ["Доступ к Envato Elements", { text: "$33/мес", neg: true }, { text: "$11/мес", neg: false }],
     ["Доступ к Freepik Premium+", { text: "$20/мес", neg: true }, { text: "включено", neg: false }],
@@ -259,15 +254,20 @@ export function Versus() {
     ["Привязка к одному устройству", { text: "Да", neg: true }, { text: "Нет", neg: false }],
     ["VPN для оплаты из РФ", { text: "Нужен", neg: true }, { text: "Не нужен", neg: false }],
     ["Старт за 2 минуты", { text: "Карта + регистрация", neg: true }, { text: "Telegram + СБП", neg: false }],
-    ["Итого в месяц", { text: "~$92 / 8 200₽", neg: true }, { text: "899₽", neg: false, big: true }],
+    ["Итого в месяц", { text: "~$92", neg: true }, { text: "$10.99", neg: false, big: true }],
   ];
   return (
+    <LocalizedContent language={language}>
     <section id="vs" style={{ padding: "100px 0" }}>
       <div className="container-page">
         <div style={{ textAlign: "center", marginBottom: 56 }}>
           <div className="eyebrow" style={{ marginBottom: 14 }}>Сравнение</div>
           <h2 className="h-section" style={{ fontSize: "clamp(36px, 5vw, 56px)", margin: 0 }}>
-            Подписки vs <span style={{ color: ACCENT }}>FootageHub</span>
+            {language === "en" ? (
+              <>FootageHub vs Expensive <span style={{ color: ACCENT }}>Monthly Subscriptions</span></>
+            ) : (
+              <>Подписки vs <span style={{ color: ACCENT }}>FootageHub</span></>
+            )}
           </h2>
         </div>
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
@@ -304,5 +304,6 @@ export function Versus() {
         </div>
       </div>
     </section>
+    </LocalizedContent>
   );
 }

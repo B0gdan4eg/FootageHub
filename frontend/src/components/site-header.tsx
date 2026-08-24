@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/lib/language";
 import { Logo } from "./brand";
+import { LocalizedContent, type LandingLanguage } from "./landing/localized-content";
 
 const NAV = [
   { href: "#how", label: "Как работает" },
@@ -13,7 +15,51 @@ const NAV = [
 ];
 
 /** Шапка лендинга: липкая, с блюром при скролле. */
-export function SiteHeader() {
+function LandingLanguageSwitcher({ language }: { language: LandingLanguage }) {
+  const { setLanguage } = useLanguage();
+
+  const selectLanguage = (nextLanguage: LandingLanguage) => {
+    setLanguage(nextLanguage);
+  };
+
+  return (
+    <div
+      aria-label="Language"
+      style={{
+        display: "inline-flex",
+        padding: 3,
+        borderRadius: 999,
+        background: "var(--border)",
+        border: "1px solid var(--border)",
+      }}
+    >
+      {(["ru", "en"] as const).map((item) => (
+        <Link
+          key={item}
+          href={item === "en" ? "/en" : "/"}
+          hrefLang={item}
+          lang={item}
+          onClick={() => selectLanguage(item)}
+          style={{
+            minWidth: 34,
+            padding: "6px 9px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 700,
+            textAlign: "center",
+            background: language === item ? "var(--accent)" : "transparent",
+            color: language === item ? "white" : "var(--text-dim)",
+            transition: "all 0.15s ease",
+          }}
+        >
+          {item.toUpperCase()}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+export function SiteHeader({ language = "ru" }: { language?: LandingLanguage }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -23,6 +69,7 @@ export function SiteHeader() {
   }, []);
 
   return (
+    <LocalizedContent language={language}>
     <header
       style={{
         position: "sticky",
@@ -67,12 +114,13 @@ export function SiteHeader() {
           </Link>
         </nav>
         <div className="flex items-center gap-3">
-          <Link href="/auth" className="btn btn-ghost" style={{ padding: "10px 18px", fontSize: 14 }}>
+          <LandingLanguageSwitcher language={language} />
+          <Link href="/auth" className="btn btn-ghost header-login" style={{ padding: "10px 18px", fontSize: 14 }}>
             Войти
           </Link>
           <Link
             href="/auth"
-            className="btn btn-primary"
+            className="btn btn-primary header-try"
             style={{ padding: "10px 18px", fontSize: 14 }}
           >
             Попробовать
@@ -80,5 +128,6 @@ export function SiteHeader() {
         </div>
       </div>
     </header>
+    </LocalizedContent>
   );
 }
