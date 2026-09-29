@@ -28,6 +28,7 @@ services:
     image: ghcr.io/b0gdan4eg/footagehub-media-bot:latest
     container_name: footagehub-media-bot
     restart: unless-stopped
+    init: true
     env_file: .env
     depends_on:
       postgres:
@@ -38,6 +39,12 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - ADMIN=${ADMIN}
       - DISPLAY=:99
+      - FREEPIK_HTTP_ENABLED=${FREEPIK_HTTP_ENABLED:-0}
+      - FREEPIK_STATE_DIR=/var/lib/footagehub/freepik
+      - ENVATO_HTTP_ENABLED=${ENVATO_HTTP_ENABLED:-0}
+      - ENVATO_STATE_DIR=/var/lib/footagehub/envato
+      - ENVATO_BROWSER_HTTP_ENABLED=${ENVATO_BROWSER_HTTP_ENABLED:-0}
+      - ENVATO_BROWSER_HTTP_STATE_DIR=/var/lib/footagehub/envato/browser-cache
       # WebPay
       - WEBPAY_RESOURCE_ID=${WEBPAY_RESOURCE_ID}
       - WEBPAY_API_KEY=${WEBPAY_API_KEY}
@@ -51,6 +58,9 @@ services:
       - CHANNEL_BONUS_CREDITS=${CHANNEL_BONUS_CREDITS:-2}
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - freepik_session:/var/lib/footagehub/freepik
+      - envato_session:/var/lib/footagehub/envato
+      - envato_browser_profiles:/app/media_bot/utils/envato_utils/.profiles
     networks:
       - footagehub-network
     ports:
@@ -113,6 +123,8 @@ services:
     restart: unless-stopped
     environment:
       - NEXT_PUBLIC_API_URL=https://envato-freepik-download.store/api
+      - GA4_MEASUREMENT_ID=${GA4_MEASUREMENT_ID:-}
+      - CLARITY_PROJECT_ID=${CLARITY_PROJECT_ID:-}
     networks:
       - footagehub-network
     ports:
@@ -120,6 +132,9 @@ services:
 
 volumes:
   postgres_data:
+  freepik_session:
+  envato_session:
+  envato_browser_profiles:
 
 networks:
   footagehub-network:
