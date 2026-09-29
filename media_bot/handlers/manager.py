@@ -135,7 +135,9 @@ async def get_stats_text():
         users_from_referral_today = await referral_repo.count_referred_users_since(today_start)
 
         # Пользователи подписавшиеся на канал за сегодня
-        users_subscribed_channel_today = await bonus_repo.count_users_with_bonus_since("CHANNEL_SUBSCRIPTION", today_start)
+        users_subscribed_channel_today = await bonus_repo.count_users_with_bonus_since(
+            "CHANNEL_SUBSCRIPTION", today_start
+        )
 
     # Форматируем суммы по валютам
     total_payments_text = (
@@ -260,22 +262,30 @@ async def restart_envato_browser(callback: types.CallbackQuery):
             return
 
         await callback.answer()
+        if link_processor.envato_http_enabled:
+            await callback.message.answer(
+                "Обновляю сессию Envato. После проверки браузер закроется."
+            )
+            ok = await link_processor.envato_downloader.refresh_session()
+            await callback.message.answer(
+                "Сессия Envato обновлена, браузер закрыт."
+                if ok
+                else "Обновление не удалось. Предыдущие cookies сохранены."
+            )
+            return
         await callback.message.answer("🔄 Начинаю рестарт браузера Envato...")
 
-        # Принудительно запускаем рестарт браузера
-        async with link_processor._envato_restart_lock:
-            # Текущее количество запросов
-            current_requests = link_processor.envato_request_count
-
-            # Закрываем старый браузер
-            if link_processor.envato_downloader:
-                await link_processor.envato_downloader.__aexit__(None, None, None)
-
-            # Создаем новый браузер
-            from media_bot.utils.envato_utils.envato_playwright import EnvatoDownloader
-
-            link_processor.envato_downloader = await EnvatoDownloader().__aenter__()
-            link_processor.envato_request_count = 0
+        # Безопасный рестарт: не прерывает активные скачивания.
+        current_requests = link_processor.envato_request_count
+        ok, status = await link_processor.restart_envato_now()
+        if not ok and status == "busy":
+            await callback.message.answer(
+                "⏳ Есть активные скачивания Envato — рестарт отложен. " "Повторите через минуту."
+            )
+            return
+        if not ok:
+            await callback.message.answer(f"❌ Рестарт не выполнен: {status}")
+            return
 
         await callback.message.answer(
             f"✅ <b>Браузер Envato перезапущен!</b>\n\n"
@@ -305,6 +315,17 @@ async def restart_freepik_browser(callback: types.CallbackQuery):
             return
 
         await callback.answer()
+        if link_processor.freepik_http_enabled:
+            await callback.message.answer(
+                "Обновляю сессию Freepik. После проверки браузер закроется."
+            )
+            ok = await link_processor.freepik_downloader.refresh_session()
+            await callback.message.answer(
+                "Сессия Freepik обновлена, браузер закрыт."
+                if ok
+                else "Обновление не удалось. Предыдущие cookies сохранены."
+            )
+            return
         await callback.message.answer("🔄 Начинаю рестарт браузера Freepik...")
 
         # Принудительно запускаем рестарт браузера

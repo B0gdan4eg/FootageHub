@@ -1,12 +1,114 @@
 import asyncio
 import json
+import logging
 import os
 import time
+import uuid
+from urllib.parse import parse_qs, urlsplit
 
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import async_playwright
 
 from media_bot.utils.freepik_utils.logger import logger
+
+from .asset_identity import checked_identity, describe_requested, legacy_asset
+
+audit = logging.getLogger(__name__)
+
+# --- Diagnostics: distinct failure causes, never lump every timeout as Cloudflare.
+# Markers are intentionally narrow; unknown pages stay "page_changed/timeout".
+CLOUDFLARE_MARKERS = (
+    "just a moment",
+    "verifying you are human",
+    "cf-challenge",
+    "challenge-platform",
+    "checking your browser",
+    "attention required",
+    "security verification",
+    "challenges.cloudflare.com",
+    "cdn-cgi/challenge",
+)
+AUTH_URL_MARKERS = ("/login", "/sign-in", "signin", "auth.envato")
+AUTH_PAGE_MARKERS = (
+    "sign in to download",
+    "log in to download",
+    "subscribe to download",
+    "you need a subscription",
+    "join envato elements",
+    "choose a plan",
+)
+NOT_FOUND_MARKERS = (
+    "page not found",
+    "couldn't find",
+    "could not find",
+    "item unavailable",
+    "has been removed",
+    "no longer available",
+    "error 404",
+)
+# Admin is notified at most once per hour per downloader for manual checks.
+MANUAL_ALERT_INTERVAL = 3600.0
+SCREENSHOT_TIMEOUT_MS = 5000
+
+
+def _new_task_id() -> str:
+    return uuid.uuid4().hex[:8]
+
+
+def _contains_any(haystack: str, needles) -> bool:
+    hay = haystack.lower()
+    return any(n in hay for n in needles)
+
+
+def classify_static_failure(page_url: str, title: str, content: str) -> str:
+    """Map page state to a narrow failure reason (no cookies/tokens involved)."""
+    blob = f"{page_url}\n{title}\n{content[:60000]}"
+    if _contains_any(blob, CLOUDFLARE_MARKERS):
+        return "cloudflare_challenge"
+    if _contains_any(page_url, AUTH_URL_MARKERS) or _contains_any(
+        f"{title}\n{content[:20000]}", AUTH_PAGE_MARKERS
+    ):
+        return "auth_required"
+    if _contains_any(blob, NOT_FOUND_MARKERS):
+        return "item_unavailable"
+    return ""
+
+
+async def _inspect_page(page, timeout_ms: int = 3000) -> dict:
+    """Best-effort snapshot for failure classification; never raises."""
+    info: dict = {"url": "", "title": "", "content": ""}
+    if page is None:
+        return info
+    try:
+        info["url"] = page.url or ""
+    except Exception:
+        pass
+    try:
+        info["title"] = await asyncio.wait_for(page.title(), timeout=timeout_ms / 1000)
+    except Exception:
+        pass
+    try:
+        content = await asyncio.wait_for(page.content(), timeout=timeout_ms / 1000)
+        info["content"] = content or ""
+    except Exception:
+        pass
+    return info
+
+
+async def _take_debug_screenshot(page, prefix: str = "error") -> str | None:
+    """Bounded screenshot helper; failures never mask the original error."""
+    if page is None:
+        return None
+    try:
+        screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
+        os.makedirs(screenshot_dir, exist_ok=True)
+        screenshot_path = os.path.join(screenshot_dir, f"{prefix}_{int(time.time())}.png")
+        await page.screenshot(path=screenshot_path, full_page=False, timeout=SCREENSHOT_TIMEOUT_MS)
+        return screenshot_path
+    except Exception as screenshot_error:
+        print(f"[ENVATO] Failed to save screenshot: {screenshot_error}")
+        return None
+
 
 COOKIE_DIR = os.path.dirname(__file__)
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "cookie_index.txt")
@@ -69,6 +171,22 @@ PROFILE_BASE = os.path.join(COOKIE_DIR, ".profiles")
 _PROFILE_LOCKS: dict[str, asyncio.Lock] = {}
 
 
+def missing_seed_cookies(seed, current, now=None):
+    """Keep refreshed profile cookies instead of overwriting them with an old export."""
+    now = time.time() if now is None else now
+    existing = {
+        (c["name"], c["domain"], c.get("path", "/"))
+        for c in current
+        if c.get("expires", -1) == -1 or c.get("expires", 0) > now
+    }
+    return [
+        c
+        for c in seed
+        if (c["name"], c["domain"], c.get("path", "/")) not in existing
+        and (c.get("expires", -1) == -1 or c.get("expires", 0) > now)
+    ]
+
+
 def _profile_dir_for(cookie_file: str) -> str:
     name = os.path.splitext(os.path.basename(cookie_file))[0]  # envato_cookies_2
     return os.path.join(PROFILE_BASE, name)
@@ -99,7 +217,12 @@ class EnvatoDownloader:
     Supports both single and batch processing with URL interception.
     """
 
-    def __init__(self):
+    def __init__(self, *, cookie_file=None, profile_dir=None, cookies=None):
+        self.cookie_file = cookie_file
+        self.profile_override = profile_dir
+        self.seed_cookies = cookies
+        self.last_asset = None
+        self.last_failure = None
         self.playwright = None
         self.browser = None
         self.context = None
@@ -109,17 +232,65 @@ class EnvatoDownloader:
         self.total_time = 0
         self.success_count = 0
         self.fail_count = 0
+        self.http_fast = None
+        # Per-request isolation: shared counters guard against concurrent updates;
+        # last_asset/last_failure remain "last completed" for backwards compat,
+        # task-scoped details go to structured audit logs with task_id.
+        self._stats_lock = asyncio.Lock()
+        self._active_lock = asyncio.Lock()
+        self._active = 0
+        self._last_manual_alert = 0.0
+
+    async def _track_start(self) -> None:
+        async with self._active_lock:
+            self._active += 1
+
+    async def _track_finish(self) -> None:
+        async with self._active_lock:
+            self._active = max(0, self._active - 1)
+
+    async def active_tasks(self) -> int:
+        async with self._active_lock:
+            return self._active
+
+    async def _record_result(self, success: bool, elapsed: float) -> None:
+        async with self._stats_lock:
+            self.total_time += elapsed
+            if success:
+                self.success_count += 1
+            else:
+                self.fail_count += 1
+
+    async def _notify_manual_check(self, task_id: str, reason: str, requested: dict) -> None:
+        now = time.monotonic()
+        if now - self._last_manual_alert < MANUAL_ALERT_INTERVAL:
+            return
+        self._last_manual_alert = now
+        try:
+            await logger.error(
+                f"❌ [ENVATO] Требуется ручная проверка: {reason}\n"
+                f"task={task_id} requested={requested}"
+            )
+        except Exception:
+            pass
 
     async def __aenter__(self):
         self.playwright = await async_playwright().start()
 
         # Получаем следующий файл с куками (ротация) и его персистентный профиль
-        cookie_file = get_next_cookie_file()
-        self.profile_dir = _profile_dir_for(cookie_file)
+        cookie_file = self.cookie_file or get_next_cookie_file()
+        self.cookie_file = cookie_file
+        self.profile_dir = self.profile_override or _profile_dir_for(cookie_file)
 
         # Лочим профиль: два процесса Chromium на одном user_data_dir = краш.
+        # Ждём ограниченное время, чтобы не зависать вечно при занятом профиле.
         self._profile_lock = _get_profile_lock(self.profile_dir)
-        await self._profile_lock.acquire()
+        try:
+            await asyncio.wait_for(self._profile_lock.acquire(), timeout=120)
+        except asyncio.TimeoutError as exc:
+            await self.playwright.stop()
+            self.playwright = None
+            raise RuntimeError(f"Envato profile busy: {self.profile_dir}") from exc
         self._lock_acquired = True
 
         try:
@@ -141,8 +312,14 @@ class EnvatoDownloader:
 
             # Подсыпаем auth-куки аккаунта. cf_clearance в профиле НЕ затирается
             # (его нет в файле кук), поэтому остаётся тёплым между запусками.
-            with open(cookie_file, "r") as f:
-                await self.context.add_cookies(json.load(f))
+            if self.seed_cookies is not None:
+                await self.context.add_cookies(self.seed_cookies)
+            else:
+                with open(cookie_file, "r") as f:
+                    seed = json.load(f)
+                missing = missing_seed_cookies(seed, await self.context.cookies())
+                if missing:
+                    await self.context.add_cookies(missing)
         except Exception:
             # __aexit__ не вызовется если __aenter__ упал — чистим сами
             if self._lock_acquired and self._profile_lock:
@@ -156,9 +333,16 @@ class EnvatoDownloader:
                 self.playwright = None
             raise
 
+        if os.getenv("ENVATO_BROWSER_HTTP_ENABLED", "0") == "1":
+            from .browser_http import BrowserHTTP
+
+            directory = os.getenv("ENVATO_BROWSER_HTTP_STATE_DIR", self.profile_dir)
+            self.http_fast = BrowserHTTP(os.path.join(directory, os.path.basename(cookie_file)))
         return self
 
     async def __aexit__(self, *args):
+        if self.http_fast:
+            await self.http_fast.close()
         # launch_persistent_context не создаёт отдельный browser — закрываем контекст
         if self.context:
             try:
@@ -190,21 +374,68 @@ class EnvatoDownloader:
             print(f"   ⏱️  Среднее время: {avg_time:.2f} сек/ссылка")
             print("=" * 70)
 
-    async def get_download_url(self, asset_url: str) -> str | None:
+    async def get_download_url(self, asset_url: str, task_id: str | None = None) -> str | None:
         """
         Get direct download URL using download event interception.
         Supports both old (elements.envato.com) and new (app.envato.com) site formats.
 
+        Only the item-detail button is eligible; its UUID/type must match the
+        requested item (or the server redirect for legacy URLs). Recommendations
+        or generic matches are never used.
+
         Args:
             asset_url: URL of the Envato Elements asset page
+            task_id: optional correlation id for structured diagnostics
 
         Returns:
             Direct download URL or None if failed
         """
+        task = task_id or _new_task_id()
+        requested = describe_requested(asset_url)
+        overall_start = time.monotonic()
+        stage_marks: dict[str, float] = {}
+
+        def _mark(name: str) -> None:
+            stage_marks[name] = round(time.monotonic() - overall_start, 3)
+
+        def _exc_suffix(exc: BaseException) -> str:
+            if isinstance(exc, (PlaywrightTimeoutError, asyncio.TimeoutError, TimeoutError)):
+                return "timeout"
+            return type(exc).__name__
+
         page = None
         start_time = time.time()
         download_url = None
+        self.last_asset = None
+        self.last_failure = None
+        stage = "navigation"
+        response_tasks = []
+        selected_asset = None
+        legacy_verified = False
 
+        if self.http_fast:
+            http_started = time.monotonic()
+            try:
+                link = await self.http_fast.get(asset_url, task_id=task)
+            except TypeError:
+                link = await self.http_fast.get(asset_url)
+            if link:
+                _mark("http_hit")
+                audit.info(
+                    "Envato http_hit task=%s requested=%s seconds=%.3f",
+                    task,
+                    requested,
+                    round(time.monotonic() - http_started, 3),
+                )
+                return link
+            audit.info(
+                "Envato http_miss task=%s requested=%s seconds=%.3f",
+                task,
+                requested,
+                round(time.monotonic() - http_started, 3),
+            )
+
+        await self._track_start()
         try:
             page = await self.context.new_page()
 
@@ -214,17 +445,18 @@ class EnvatoDownloader:
             # а пустой профиль ресурсов — сильный бот-сигнал для Cloudflare.
             await page.route(
                 "**/*",
-                lambda route: route.abort()
-                if route.request.resource_type == "media"
-                else route.continue_(),
+                lambda route: (
+                    route.abort() if route.request.resource_type == "media" else route.continue_()
+                ),
             )
 
             # Перехватываем download event
-            download_info = {}
+            download_info: dict = {"url": None, "seen": 0, "last_status": 0, "invalid": 0}
 
             async def handle_download(download):
                 try:
-                    download_info["url"] = download.url
+                    if legacy_verified and not selected_asset:
+                        download_info["url"] = download.url
                     # Отменяем скачивание, нам нужна только ссылка
                     await download.cancel()
                 except Exception as e:
@@ -232,8 +464,72 @@ class EnvatoDownloader:
 
             page.on("download", handle_download)
 
+            async def handle_response(response):
+                parsed = urlsplit(response.url)
+                if parsed.hostname != "app.envato.com" or parsed.path != "/download.data":
+                    return
+                download_info["seen"] = int(download_info.get("seen", 0)) + 1
+                try:
+                    download_info["last_status"] = int(response.status)
+                except Exception:
+                    pass
+                params = parse_qs(parsed.query)
+                if not selected_asset or (
+                    params.get("itemUuid") != [selected_asset[1]]
+                    or params.get("itemType") != [selected_asset[0]]
+                ):
+                    return
+                try:
+                    from .http_downloader import download_link
+
+                    link = (
+                        download_link(await response.json(), expected_item=selected_asset[1])
+                        if response.status == 200
+                        else None
+                    )
+                    if link:
+                        if self.http_fast:
+                            try:
+                                await self.http_fast.remember(
+                                    asset_url,
+                                    selected_asset,
+                                    await response.request.all_headers(),
+                                    await self.context.cookies(),
+                                )
+                            except Exception as exc:
+                                audit.warning(
+                                    "Envato mapping persistence failed error=%s", type(exc).__name__
+                                )
+                        download_info["url"] = link
+                        audit.info(
+                            "Envato item resolved task=%s legacy=%s item=%s type=%s",
+                            task,
+                            legacy_asset(asset_url),
+                            selected_asset[1],
+                            selected_asset[0],
+                        )
+                    else:
+                        download_info["invalid"] = int(download_info.get("invalid", 0)) + 1
+                except Exception:
+                    download_info["invalid"] = int(download_info.get("invalid", 0)) + 1
+
+            page.on(
+                "response",
+                lambda response: response_tasks.append(
+                    asyncio.create_task(handle_response(response))
+                ),
+            )
+
             # Navigate to asset page
-            await page.goto(asset_url, wait_until="domcontentloaded", timeout=15000)
+            _mark("goto_start")
+            await page.goto(asset_url, wait_until="domcontentloaded", timeout=45000)
+            _mark("navigated")
+            final_url = ""
+            try:
+                final_url = page.url or ""
+            except Exception:
+                pass
+            redirected = "elements.envato.com" not in final_url
 
             # Wait for redirect to app.envato.com if needed
             if "elements.envato.com" in page.url:
@@ -242,33 +538,136 @@ class EnvatoDownloader:
                 except Exception:
                     # No redirect happened - staying on old format (elements.envato.com)
                     pass
+            _mark("redirect_checked")
 
             # Click download button - универсальный селектор для обоих форматов
             # Используем JS-клик чтобы обойти overlay-попапы (New plans, Easier way to find licenses)
+            # Recommendation cards also have Download buttons. Only the item-detail
+            # control is eligible, and its UUID must match the requested item.
+            stage = "item_button"
+            try:
+                primary = await page.wait_for_selector(
+                    "button[data-cy='idp-download-button'], button[data-testid='button-download']",
+                    state="visible",
+                    timeout=30000,
+                )
+            except Exception as exc:
+                # Раздельная диагностика: Cloudflare / auth / 404 / page change / timeout.
+                info = await _inspect_page(page)
+                refined = classify_static_failure(info["url"], info["title"], info["content"])
+                suffix = refined or _exc_suffix(exc)
+                self.last_failure = f"item_button_{suffix}"
+                await self._record_result(False, time.time() - start_time)
+                _mark("item_button_failed")
+                screenshot_path = await _take_debug_screenshot(page, prefix="error")
+                if suffix in ("cloudflare_challenge", "auth_required"):
+                    await self._notify_manual_check(task, suffix, requested)
+                audit.info(
+                    "Envato browser_failed task=%s requested=%s stage=%s reason=%s "
+                    "page_url=%s title=%.80s seconds=%s",
+                    task,
+                    requested,
+                    stage,
+                    self.last_failure,
+                    (info["url"] or "")[:200],
+                    (info["title"] or ""),
+                    stage_marks.get("item_button_failed"),
+                )
+                await logger.error(
+                    f"❌ [ENVATO] Кнопка скачивания не найдена\n"
+                    f"URL: {asset_url}\n"
+                    f"task={task} reason={self.last_failure}",
+                    screenshot_path=screenshot_path,
+                )
+                return None
+            # Old Elements can render its button before redirecting to the new app.
+            if "elements.envato.com" in page.url:
+                try:
+                    await page.wait_for_url("**/app.envato.com/**", timeout=3000)
+                    primary = await page.wait_for_selector(
+                        "button[data-cy='idp-download-button']", state="visible", timeout=15000
+                    )
+                except PlaywrightTimeoutError:
+                    pass
+            item_id = await primary.get_attribute("data-analytics-item_id")
+            item_type = await primary.get_attribute("data-analytics-item_type")
+            try:
+                selected_asset = checked_identity(asset_url, page.url, item_type, item_id)
+            except ValueError as exc:
+                self.last_failure = "identity_mismatch"
+                await self._record_result(False, time.time() - start_time)
+                _mark("identity_failed")
+                audit.info(
+                    "Envato identity_mismatch task=%s requested=%s page_url=%s "
+                    "button_type=%s button_id=%s error=%s",
+                    task,
+                    requested,
+                    (page.url or "")[:200],
+                    item_type,
+                    item_id,
+                    type(exc).__name__,
+                )
+                screenshot_path = await _take_debug_screenshot(page, prefix="error")
+                await logger.error(
+                    f"❌ [ENVATO] Несоответствие товара (чужой файл исключён)\n"
+                    f"URL: {asset_url}\n"
+                    f"task={task} reason=identity_mismatch",
+                    screenshot_path=screenshot_path,
+                )
+                return None
+            self.last_asset = selected_asset
+            legacy_verified = selected_asset is None
+            _mark("identity_ok")
             download_button_selectors = [
-                "button:has-text('Скачать')",  # Универсальный по тексту (RU)
-                "button:has-text('Download')",  # Универсальный по тексту (EN)
-                "button[data-analytics-name='download']",  # Новый формат
-                "button[data-testid='button-download']",  # Старый формат
+                (
+                    "button[data-cy='idp-download-button']"
+                    if item_id
+                    else "button[data-testid='button-download']"
+                )
             ]
 
+            stage = "click"
             button_clicked = False
             for selector in download_button_selectors:
                 try:
                     btn = await page.wait_for_selector(selector, state="visible", timeout=2000)
                     if btn:
                         try:
-                            await page.click(selector, delay=0, timeout=3000)
+                            await primary.click(delay=0, timeout=3000)
                         except Exception:
                             # Если overlay блокирует клик — кликаем через JS
-                            await btn.evaluate("el => el.click()")
+                            await primary.evaluate("el => el.click()")
                         button_clicked = True
                         break
                 except Exception:
                     continue
+            _mark("clicked")
 
             if not button_clicked:
-                raise Exception("Download button not found")
+                self.last_failure = "click_button_not_found"
+                await self._record_result(False, time.time() - start_time)
+                info = await _inspect_page(page)
+                refined = classify_static_failure(info["url"], info["title"], info["content"])
+                if refined:
+                    self.last_failure = f"click_{refined}"
+                    if refined in ("cloudflare_challenge", "auth_required"):
+                        await self._notify_manual_check(task, refined, requested)
+                screenshot_path = await _take_debug_screenshot(page, prefix="error")
+                audit.info(
+                    "Envato browser_failed task=%s requested=%s stage=%s reason=%s seconds=%s",
+                    task,
+                    requested,
+                    stage,
+                    self.last_failure,
+                    stage_marks.get("clicked"),
+                )
+                await logger.error(
+                    f"❌ [ENVATO] Кнопка скачивания не нажата\n"
+                    f"URL: {asset_url}\n"
+                    f"task={task} reason={self.last_failure}",
+                    screenshot_path=screenshot_path,
+                )
+                return None
 
             # Для старого формата нужен дополнительный клик
             if "elements.envato.com" in page.url:
@@ -281,68 +680,134 @@ class EnvatoDownloader:
                     pass
 
             # Wait for download event with timeout
+            stage = "download_response"
             max_wait = 5
             for i in range(max_wait * 10):  # Check every 0.1 seconds
                 if download_info.get("url"):
                     break
                 await asyncio.sleep(0.1)
+            _mark("response_waited")
 
             # Get download URL
             download_url = download_info.get("url")
 
             elapsed = time.time() - start_time
-            self.total_time += elapsed
 
             if download_url:
-                self.success_count += 1
+                await self._record_result(True, elapsed)
+                _mark("done")
+                audit.info(
+                    "Envato browser_success task=%s requested=%s item=%s type=%s "
+                    "redirected=%s stages=%s seconds=%.3f",
+                    task,
+                    requested,
+                    (selected_asset or (None, None))[1],
+                    (selected_asset or (None, None))[0],
+                    redirected,
+                    stage_marks,
+                    elapsed,
+                )
                 print(f"   ✅ {elapsed:.2f} сек")
             else:
-                self.fail_count += 1
-                print(f"   ❌ Download event не сработал")
+                seen = int(download_info.get("seen", 0))
+                invalid = int(download_info.get("invalid", 0))
+                last_status = int(download_info.get("last_status", 0) or 0)
+                info = await _inspect_page(page)
+                refined = classify_static_failure(info["url"], info["title"], info["content"])
+                if refined in ("cloudflare_challenge", "auth_required", "item_unavailable"):
+                    self.last_failure = f"download_response_{refined}"
+                    await self._notify_manual_check(task, refined, requested)
+                elif seen and last_status and last_status != 200:
+                    self.last_failure = f"download_response_http_{last_status}"
+                elif seen and invalid:
+                    self.last_failure = "download_response_invalid_file_link"
+                elif seen:
+                    self.last_failure = "download_response_item_mismatch"
+                else:
+                    self.last_failure = "missing_download_response"
+                await self._record_result(False, elapsed)
+                print("   ❌ Download event не сработал")
 
-                # Делаем скриншот для отладки
-                import os
-
-                screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
-                os.makedirs(screenshot_dir, exist_ok=True)
-                screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
-                await page.screenshot(path=screenshot_path, full_page=False)
+                screenshot_path = await _take_debug_screenshot(page, prefix="error")
+                audit.info(
+                    "Envato browser_failed task=%s requested=%s stage=%s reason=%s "
+                    "seen=%s invalid=%s http_status=%s stages=%s seconds=%.3f",
+                    task,
+                    requested,
+                    stage,
+                    self.last_failure,
+                    seen,
+                    invalid,
+                    last_status,
+                    stage_marks,
+                    elapsed,
+                )
 
                 await logger.error(
-                    f"❌ [ENVATO] Download event не сработал\n" f"URL: {asset_url}",
+                    f"❌ [ENVATO] Download event не сработал\n"
+                    f"URL: {asset_url}\n"
+                    f"task={task} reason={self.last_failure} "
+                    f"seen={seen} http_status={last_status}",
                     screenshot_path=screenshot_path,
                 )
 
             return download_url
 
         except Exception as e:
+            suffix = _exc_suffix(e)
+            # Не считаем любой таймаут блокировкой Cloudflare: уточняем по странице.
+            refined = ""
+            page_info: dict | None = None
+            if page is not None and stage in ("navigation", "click", "download_response"):
+                try:
+                    page_info = await _inspect_page(page)
+                    refined = classify_static_failure(
+                        page_info["url"], page_info["title"], page_info["content"]
+                    )
+                except Exception:
+                    refined = ""
+            # ValueError идентификации уже обработан выше; здесь только прочие сбои.
+            if isinstance(e, ValueError) and stage == "item_button":
+                self.last_failure = "identity_mismatch"
+            elif refined in ("cloudflare_challenge", "auth_required", "item_unavailable"):
+                self.last_failure = f"{stage}_{refined}"
+                await self._notify_manual_check(task, refined, requested)
+            else:
+                # Совместимость: прежний формат stage + имя исключения,
+                # таймауты помечаем явно как timeout.
+                self.last_failure = stage + "_" + suffix
             elapsed = time.time() - start_time
-            self.total_time += elapsed
-            self.fail_count += 1
+            await self._record_result(False, elapsed)
             print(f"   ❌ Ошибка: {e}")
             print(f"   ⏱️  {elapsed:.2f} сек")
+            audit.info(
+                "Envato browser_failed task=%s requested=%s stage=%s reason=%s "
+                "error=%s seconds=%.3f",
+                task,
+                requested,
+                stage,
+                self.last_failure,
+                type(e).__name__,
+                elapsed,
+            )
 
-            # Делаем скриншот при ошибке, если страница доступна
-            screenshot_path = None
-            if page:
-                try:
-                    import os
-
-                    screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
-                    os.makedirs(screenshot_dir, exist_ok=True)
-                    screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
-                    await page.screenshot(path=screenshot_path, full_page=False)
-                except Exception as e:
-                    print(f"[ENVATO] Failed to save screenshot: {e}")
-                    screenshot_path = None
+            # Делаем скриншот при ошибке; его сбой не скрывает исходную ошибку.
+            screenshot_path = await _take_debug_screenshot(page, prefix="error")
 
             await logger.error(
-                f"❌ [ENVATO] Ошибка при скачивании\n" f"URL: {asset_url}\n" f"Ошибка: {e}",
+                f"❌ [ENVATO] Ошибка при скачивании\n"
+                f"URL: {asset_url}\n"
+                f"task={task} reason={self.last_failure} Ошибка: {e}",
                 screenshot_path=screenshot_path,
             )
             return None
 
         finally:
+            await self._track_finish()
+            for task_item in response_tasks:
+                if not task_item.done():
+                    task_item.cancel()
+            await asyncio.gather(*response_tasks, return_exceptions=True)
             # Close the page
             if page:
                 try:
@@ -350,7 +815,9 @@ class EnvatoDownloader:
                 except Exception:
                     pass
 
-    async def get_download_url_with_license(self, asset_url: str) -> str | None:
+    async def get_download_url_with_license(
+        self, asset_url: str, task_id: str | None = None
+    ) -> str | None:
         """
         Get direct download URL WITH license using CDP network interception.
         This method clicks "Download with license" button instead of "without license".
@@ -358,10 +825,13 @@ class EnvatoDownloader:
 
         Args:
             asset_url: URL of the Envato Elements asset page
+            task_id: optional correlation id for structured diagnostics
 
         Returns:
             Direct download URL or None if failed
         """
+        task = task_id or _new_task_id()
+        requested = describe_requested(asset_url)
         page = None
         client = None
         start_time = time.time()
@@ -425,45 +895,59 @@ class EnvatoDownloader:
             download_url = await self._wait_for_download_url(client, captured_responses, timeout=5)
 
             elapsed = time.time() - start_time
-            self.total_time += elapsed
+            await self._record_result(bool(download_url), elapsed)
 
             if download_url:
-                self.success_count += 1
+                audit.info(
+                    "Envato licensed_success task=%s requested=%s seconds=%.3f",
+                    task,
+                    requested,
+                    elapsed,
+                )
                 print(f"   ✅ {elapsed:.2f} сек (WITH LICENSE)")
             else:
-                self.fail_count += 1
-                print(f"   ❌ Не получен URL (WITH LICENSE)")
+                self.last_failure = "licensed_missing_download_response"
+                audit.info(
+                    "Envato licensed_failed task=%s requested=%s reason=%s seconds=%.3f",
+                    task,
+                    requested,
+                    self.last_failure,
+                    elapsed,
+                )
+                print("   ❌ Не получен URL (WITH LICENSE)")
                 await logger.error(
-                    f"❌ [ENVATO] Download URL не получен (WITH LICENSE)\nURL: {asset_url}"
+                    f"❌ [ENVATO] Download URL не получен (WITH LICENSE)\n"
+                    f"URL: {asset_url}\ntask={task} reason={self.last_failure}"
                 )
 
             return download_url
 
         except Exception as e:
             elapsed = time.time() - start_time
-            self.total_time += elapsed
-            self.fail_count += 1
+            await self._record_result(False, elapsed)
+            self.last_failure = "licensed_" + (
+                "timeout"
+                if isinstance(e, (PlaywrightTimeoutError, asyncio.TimeoutError, TimeoutError))
+                else type(e).__name__
+            )
             print(f"   ❌ Ошибка (WITH LICENSE): {e}")
             print(f"   ⏱️  {elapsed:.2f} сек")
+            audit.info(
+                "Envato licensed_failed task=%s requested=%s reason=%s error=%s seconds=%.3f",
+                task,
+                requested,
+                self.last_failure,
+                type(e).__name__,
+                elapsed,
+            )
 
-            # Делаем скриншот при ошибке, если страница доступна
-            screenshot_path = None
-            if page:
-                try:
-                    import os
-
-                    screenshot_dir = os.path.join(os.path.dirname(__file__), "debug_screenshots")
-                    os.makedirs(screenshot_dir, exist_ok=True)
-                    screenshot_path = os.path.join(screenshot_dir, f"error_{int(time.time())}.png")
-                    await page.screenshot(path=screenshot_path, full_page=False)
-                except Exception as e:
-                    print(f"[ENVATO] Failed to save screenshot: {e}")
-                    screenshot_path = None
+            # Делаем скриншот при ошибке; его сбой не скрывает исходную ошибку.
+            screenshot_path = await _take_debug_screenshot(page, prefix="error")
 
             await logger.error(
                 f"❌ [ENVATO] Ошибка при скачивании (WITH LICENSE)\n"
                 f"URL: {asset_url}\n"
-                f"Ошибка: {e}",
+                f"task={task} reason={self.last_failure} Ошибка: {e}",
                 screenshot_path=screenshot_path,
             )
             return None
