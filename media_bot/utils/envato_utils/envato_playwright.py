@@ -545,41 +545,68 @@ class EnvatoDownloader:
             # Recommendation cards also have Download buttons. Only the item-detail
             # control is eligible, and its UUID must match the requested item.
             stage = "item_button"
-            try:
-                primary = await page.wait_for_selector(
-                    "button[data-cy='idp-download-button'], button[data-testid='button-download']",
-                    state="visible",
-                    timeout=30000,
-                )
-            except Exception as exc:
-                # Раздельная диагностика: Cloudflare / auth / 404 / page change / timeout.
-                info = await _inspect_page(page)
-                refined = classify_static_failure(info["url"], info["title"], info["content"])
-                suffix = refined or _exc_suffix(exc)
-                self.last_failure = f"item_button_{suffix}"
-                await self._record_result(False, time.time() - start_time)
-                _mark("item_button_failed")
-                screenshot_path = await _take_debug_screenshot(page, prefix="error")
-                if suffix in ("cloudflare_challenge", "auth_required"):
-                    await self._notify_manual_check(task, suffix, requested)
-                audit.info(
-                    "Envato browser_failed task=%s requested=%s stage=%s reason=%s "
-                    "page_url=%s title=%.80s seconds=%s",
-                    task,
-                    requested,
-                    stage,
-                    self.last_failure,
-                    (info["url"] or "")[:200],
-                    (info["title"] or ""),
-                    stage_marks.get("item_button_failed"),
-                )
-                await logger.error(
-                    f"❌ [ENVATO] Кнопка скачивания не найдена\n"
-                    f"URL: {asset_url}\n"
-                    f"task={task} reason={self.last_failure}",
-                    screenshot_path=screenshot_path,
-                )
-                return None
+            # Cloudflare-проверка иногда проходит со 2-й попытки (визит греет
+            # челлендж-профиль): при cloudflare_challenge перезагружаем страницу,
+            # максимум 2 повтора с паузами. Остальные причины — сразу в ошибку.
+            primary = None
+            challenge_retries = 0
+            button_timeout = 30000
+            while True:
+                try:
+                    primary = await page.wait_for_selector(
+                        "button[data-cy='idp-download-button'], button[data-testid='button-download']",
+                        state="visible",
+                        timeout=button_timeout,
+                    )
+                    break
+                except Exception as exc:
+                    # Раздельная диагностика: Cloudflare / auth / 404 / page change / timeout.
+                    info = await _inspect_page(page)
+                    refined = classify_static_failure(info["url"], info["title"], info["content"])
+                    if refined == "cloudflare_challenge" and challenge_retries < 2:
+                        challenge_retries += 1
+                        _mark(f"challenge_retry_{challenge_retries}")
+                        audit.info(
+                            "Envato challenge_retry task=%s requested=%s attempt=%s",
+                            task,
+                            requested,
+                            challenge_retries,
+                        )
+                        try:
+                            await page.reload(wait_until="domcontentloaded", timeout=30000)
+                        except Exception:
+                            pass
+                        await asyncio.sleep(3)
+                        button_timeout = 20000
+                        continue
+                    suffix = refined or _exc_suffix(exc)
+                    self.last_failure = f"item_button_{suffix}"
+                    await self._record_result(False, time.time() - start_time)
+                    _mark("item_button_failed")
+                    screenshot_path = await _take_debug_screenshot(page, prefix="error")
+                    if suffix in ("cloudflare_challenge", "auth_required"):
+                        await self._notify_manual_check(task, suffix, requested)
+                    audit.info(
+                        "Envato browser_failed task=%s requested=%s stage=%s reason=%s "
+                        "challenge_retries=%s page_url=%s title=%.80s seconds=%s",
+                        task,
+                        requested,
+                        stage,
+                        self.last_failure,
+                        challenge_retries,
+                        (info["url"] or "")[:200],
+                        (info["title"] or ""),
+                        stage_marks.get("item_button_failed"),
+                    )
+                    await logger.error(
+                        f"❌ [ENVATO] Кнопка скачивания не найдена\n"
+                        f"URL: {asset_url}\n"
+                        f"task={task} reason={self.last_failure}",
+                        screenshot_path=screenshot_path,
+                    )
+                    return None
+            if challenge_retries:
+                _mark("challenge_passed")
             # Old Elements can render its button before redirecting to the new app.
             if "elements.envato.com" in page.url:
                 try:

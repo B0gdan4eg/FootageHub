@@ -108,6 +108,7 @@ class ItemButtonDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
             url=PROBE_URL,
             route=AsyncMock(),
             goto=AsyncMock(),
+            reload=AsyncMock(),
             close=AsyncMock(),
             screenshot=AsyncMock(),
             wait_for_selector=AsyncMock(side_effect=PwTimeout("timeout")),
@@ -122,7 +123,31 @@ class ItemButtonDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(browser.logger, "error", new_callable=AsyncMock):
             self.assertIsNone(await d.get_download_url(PROBE_URL, task_id="task1"))
         self.assertEqual(d.last_failure, "item_button_cloudflare_challenge")
+        self.assertEqual(page.reload.await_count, 2)
         d._notify_manual_check.assert_awaited_once()
+
+    async def test_challenge_retry_then_success(self):
+        from playwright.async_api import TimeoutError as PwTimeout
+
+        link = "https://video-downloads.elements.envatousercontent.com/files/9/retry.zip"
+        page = make_browser_page(
+            UUID_A,
+            title="Just a moment...",
+            content="Verifying you are human",
+            link=link,
+        )
+        page.reload = AsyncMock()
+        page.wait_for_selector = AsyncMock(
+            side_effect=[PwTimeout("timeout"), page.button, page.button]
+        )
+        d = EnvatoDownloader()
+        d.context = SimpleNamespace(
+            new_page=AsyncMock(return_value=page), cookies=AsyncMock(return_value=[])
+        )
+        with patch.object(browser.logger, "error", new_callable=AsyncMock):
+            self.assertEqual(await d.get_download_url(PROBE_URL, task_id="task-retry"), link)
+        page.reload.assert_awaited_once()
+        self.assertEqual(d.last_asset, modern_asset(PROBE_URL))
 
     async def test_timeout_without_markers_is_not_cloudflare(self):
         from playwright.async_api import TimeoutError as PwTimeout
@@ -131,6 +156,7 @@ class ItemButtonDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
             url=PROBE_URL,
             route=AsyncMock(),
             goto=AsyncMock(),
+            reload=AsyncMock(),
             close=AsyncMock(),
             screenshot=AsyncMock(),
             wait_for_selector=AsyncMock(side_effect=PwTimeout("timeout")),
@@ -145,6 +171,7 @@ class ItemButtonDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(browser.logger, "error", new_callable=AsyncMock):
             self.assertIsNone(await d.get_download_url(PROBE_URL, task_id="task2"))
         self.assertEqual(d.last_failure, "item_button_timeout")
+        page.reload.assert_not_awaited()
         d._notify_manual_check.assert_not_awaited()
 
     async def test_identity_mismatch_never_clicks(self):
