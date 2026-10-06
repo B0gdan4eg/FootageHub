@@ -147,6 +147,22 @@ async def main():
 
     # 4. Планировщик
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+    if BotServices.link_processor.freepik_http_enabled:
+        from media_bot.utils.freepik_utils.http_downloader import schedule_refresh
+
+        schedule_refresh(scheduler, BotServices.link_processor.freepik_downloader)
+        logger.info(
+            "Freepik session refresh: daily at 05:00 Europe/Minsk; HTTP with browser fallback"
+        )
+    if BotServices.link_processor.envato_http_enabled:
+        from media_bot.utils.envato_utils.http_downloader import (
+            schedule_refresh as schedule_envato_refresh,
+        )
+
+        schedule_envato_refresh(scheduler, BotServices.link_processor.envato_downloader)
+        logger.info(
+            "Envato session refresh: daily at 05:15 Europe/Minsk; HTTP with browser fallback"
+        )
     # Еженедельное начисление бесплатных кредитов (каждый понедельник в 03:00)
     scheduler.add_job(scheduler_job, "cron", day_of_week="wed", hour=3, minute=0, args=[bot])
     # Обработка месячных подписок (MONTHLY_50, MONTHLY_150, MONTHLY_400) в 03:05
@@ -169,6 +185,7 @@ async def main():
         # 5. Запуск сервера и бота параллельно
         await asyncio.gather(start_server(), start_bot())
     finally:
+        scheduler.shutdown(wait=False)
         # Остановка LinkProcessor при завершении
         logger.info("Остановка LinkProcessor...")
         await BotServices.link_processor.stop()

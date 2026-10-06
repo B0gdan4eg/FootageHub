@@ -5,20 +5,30 @@ FastAPI application for the web version of FootageHub.
 Runs separately from the Telegram bots on port 8080.
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from web_api.auth.router import router as auth_router
-from web_api.config import config
+from web_api.config import config, validate_security_config
 from web_api.routers.admin import router as admin_router
 from web_api.routers.ai import router as ai_router
 from web_api.routers.downloads import router as downloads_router
 from web_api.routers.payments import router as payments_router
 from web_api.routers.users import router as users_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    validate_security_config()
+    yield
+
+
 app = FastAPI(
     title="FootageHub Web API",
     version="1.0.0",
+    lifespan=lifespan,
     description="REST API для веб-версии FootageHub",
     docs_url="/api/docs",
     redoc_url="/api/redoc",

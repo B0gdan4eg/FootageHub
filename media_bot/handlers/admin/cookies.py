@@ -45,7 +45,10 @@ async def receive_cookies_json(message: types.Message, state: FSMContext, bot: B
         return await message.answer(f"❌ Ошибка при скачивании файла: {e}")
 
     # Сохраняем рядом с проектом
-    cookies_path = Path(__file__).resolve().parents[2] / "envato_utils" / "envato_cookies.json"
+    from shared.provider_storage import cookie_directory
+
+    fallback = Path(__file__).resolve().parents[2] / "utils" / "envato_utils"
+    cookies_path = Path(cookie_directory("envato", str(fallback))) / "envato_cookies.json"
 
     try:
         with open(cookies_path, "w", encoding="utf-8") as f:

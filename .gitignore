@@ -82,7 +82,19 @@ envato_utils/cookie_index.txt
 .profile_test/
 .profiles/
 .profile/
+.session/
+freepik_cookies*.json
 
 # Shell scripts and images
 *.sh
 *.png
+
+# Private runtimes, release artifacts and provider sessions
+.venv/
+.artifacts/
+frontend/.next/
+frontend/*.tsbuildinfo
+provider-cookies/
+browser-profiles/
+.release.env
+**/*cookies*.json
