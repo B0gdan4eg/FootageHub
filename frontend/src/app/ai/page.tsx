@@ -1,8 +1,10 @@
 "use client";
 
-import { CSSProperties, useState } from "react";
+import { CSSProperties } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
+import { useHomeHref } from "@/lib/language";
+import { ExternalLink } from "lucide-react";
 
 const FEATURES = [
   { ico: "🎬", title: "Motion-шаблоны", sub: "Генерация .aep / .mogrt из текстового брифа. Импортируешь в After Effects и работаешь дальше." },
@@ -11,8 +13,7 @@ const FEATURES = [
 ];
 
 export default function AIPage() {
-  const [username, setUsername] = useState("");
-  const [subbed, setSubbed] = useState(false);
+  const homeHref = useHomeHref();
 
   // Локальный акцент страницы — розовый (как в дизайне ai.html)
   const pink: CSSProperties = { ["--accent" as string]: "#FF2EA1" } as CSSProperties;
@@ -65,33 +66,13 @@ export default function AIPage() {
                 <span className="mono" style={{ color: "var(--text)" }}>.psd</span> или вектор. Бесплатные правки. Прямо в Telegram.
               </p>
 
-              <div className="card" style={{ padding: 8, display: "flex", gap: 8, maxWidth: 480, marginBottom: 16 }}>
-                {!subbed ? (
-                  <>
-                    <input
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      type="text"
-                      placeholder="@username в Telegram"
-                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--text)", fontSize: 14, padding: "10px 14px", fontFamily: "var(--font-geist-mono), monospace" }}
-                    />
-                    <button
-                      onClick={() => setSubbed(true)}
-                      className="btn btn-primary"
-                      style={{ padding: "12px 20px", fontSize: 13, background: "var(--accent)", boxShadow: "0 8px 30px -8px rgba(255,46,161,0.5)" }}
-                    >
-                      Сообщить о запуске
-                    </button>
-                  </>
-                ) : (
-                  <div style={{ padding: "12px 16px", display: "flex", gap: 10, alignItems: "center", color: "var(--green)", fontSize: 14 }}>
-                    <span style={{ fontSize: 18 }}>✓</span> Подписан! Напишем в Telegram, как только включим.
-                  </div>
-                )}
-              </div>
+              <a href="https://t.me/FootageHub_channel" target="_blank" rel="noopener noreferrer"
+                className="btn btn-primary" style={{ marginBottom: 16, whiteSpace: "normal", textAlign: "center" }}>
+                <ExternalLink size={18} aria-hidden="true" style={{ flexShrink: 0 }} />
+                Новости о запуске в Telegram
+              </a>
               <div style={{ fontSize: 12, color: "var(--text-mute)" }}>
-                Подписалось 4 217 человек · запуск ориентировочно{" "}
-                <span className="mono" style={{ color: "var(--text-dim)" }}>Q3 2026</span>
+                Анонс появится в канале новостей.
               </div>
             </div>
 
@@ -171,7 +152,7 @@ export default function AIPage() {
           </div>
 
           <div style={{ textAlign: "center", marginTop: 60, paddingTop: 40, borderTop: "1px solid var(--border)" }}>
-            <Link href="/" style={{ fontSize: 14, color: "var(--text-dim)" }}>
+            <Link href={homeHref} style={{ fontSize: 14, color: "var(--text-dim)" }}>
               ← Вернуться на главную
             </Link>
           </div>

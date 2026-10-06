@@ -1,6 +1,6 @@
 "use client";
 
-import { cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
+import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { translateText } from "@/lib/language";
 
 export type LandingLanguage = "ru" | "en";
@@ -9,7 +9,7 @@ const TRANSLATABLE_ATTRIBUTES = ["alt", "aria-label", "placeholder", "title"] as
 
 function localizeNode(node: ReactNode): ReactNode {
   if (typeof node === "string") return translateText(node);
-  if (Array.isArray(node)) return node.map(localizeNode);
+  if (Array.isArray(node)) return Children.map(node, localizeNode);
   if (!isValidElement(node)) return node;
 
   const element = node as ReactElement<Record<string, unknown>>;

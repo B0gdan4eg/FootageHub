@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { LanguageProvider } from "@/lib/language";
+import { AnalyticsConsentBanner } from "@/components/analytics-consent";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,9 +38,10 @@ export default function RootLayout({
   return (
     <html lang="ru" data-theme="dark">
       <body
+        data-ph-mask="true"
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>{children}<AnalyticsConsentBanner /></LanguageProvider>
       </body>
     </html>
   );

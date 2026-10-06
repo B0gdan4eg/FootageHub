@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getToken } from "@/lib/auth";
 import Link from "next/link";
 import { paymentsApi } from "@/lib/api";
+import { trackEvent } from "@/lib/analytics";
 import { PageShell } from "@/components/page-shell";
 
 type PlanRaw = { name?: string; price?: number; currency?: string };
@@ -28,7 +31,11 @@ function filesFor(key: string): string {
   return "";
 }
 
-export default function PaymentPage() {
+function PaymentPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedPlan = searchParams.get("plan");
+  const submitting = useRef(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [tier, setTier] = useState<string>("");
@@ -47,19 +54,26 @@ export default function PaymentPage() {
           currency: p.currency ?? "USD",
         }));
         setPlans(list);
-        setTier(list.find((p) => p.key === "monthly_150")?.key ?? list[0]?.key ?? "");
       })
       .catch(() => setError("Не удалось загрузить тарифы"))
       .finally(() => setLoading(false));
   }, []);
 
-  const selected = useMemo(() => plans.find((p) => p.key === tier), [plans, tier]);
+  const selected = useMemo(() => plans.find((p) => p.key === tier)
+    ?? plans.find((p) => p.key === requestedPlan)
+    ?? plans.find((p) => p.key === "monthly_150") ?? plans[0], [plans, tier, requestedPlan]);
 
   async function pay() {
+    if (submitting.current) return;
     if (!selected) {
       setError("Выберите тариф");
       return;
     }
+    if (!getToken()) {
+      router.push(`/auth?redirect=${encodeURIComponent(`/payment?plan=${selected.key}`)}`);
+      return;
+    }
+    submitting.current = true;
     setError("");
     setPaying(true);
     try {
@@ -69,6 +83,7 @@ export default function PaymentPage() {
       const err = e as { response?: { data?: { detail?: string } } };
       setError(err.response?.data?.detail || "Ошибка создания платежа");
       setPaying(false);
+      submitting.current = false;
     }
   }
 
@@ -102,13 +117,16 @@ export default function PaymentPage() {
                     {plans.map((p) => (
                       <button
                         key={p.key}
-                        onClick={() => setTier(p.key)}
+                        type="button"
+                        disabled={paying}
+                        aria-pressed={selected?.key === p.key}
+                        onClick={() => { setTier(p.key); trackEvent("plan_selected", { plan: p.key }); }}
                         style={{
                           textAlign: "left",
                           padding: 18,
                           borderRadius: 14,
-                          border: `1px solid ${tier === p.key ? "var(--accent)" : "var(--border)"}`,
-                          background: tier === p.key ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--bg-soft)",
+                          border: `1px solid ${selected?.key === p.key ? "var(--accent)" : "var(--border)"}`,
+                          background: selected?.key === p.key ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--bg-soft)",
                           display: "flex",
                           alignItems: "center",
                           gap: 16,
@@ -120,17 +138,17 @@ export default function PaymentPage() {
                             width: 22,
                             height: 22,
                             borderRadius: 999,
-                            border: `2px solid ${tier === p.key ? "var(--accent)" : "var(--border-strong)"}`,
-                            background: tier === p.key ? "var(--accent)" : "transparent",
+                            border: `2px solid ${selected?.key === p.key ? "var(--accent)" : "var(--border-strong)"}`,
+                            background: selected?.key === p.key ? "var(--accent)" : "transparent",
                             display: "grid",
                             placeItems: "center",
                             flexShrink: 0,
                           }}
                         >
-                          {tier === p.key && <span style={{ width: 8, height: 8, borderRadius: 999, background: "white" }} />}
+                          {selected?.key === p.key && <span style={{ width: 8, height: 8, borderRadius: 999, background: "white" }} />}
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: 4 }}>
                             <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.01em" }}>{p.name}</span>
                             {p.key === "monthly_150" && (
                               <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, background: "var(--accent)", color: "white", fontWeight: 600 }}>
@@ -171,7 +189,7 @@ export default function PaymentPage() {
               </div>
 
               {/* Right: summary */}
-              <div className="card" style={{ padding: 28, position: "sticky", top: 90, alignSelf: "start" }}>
+              <div className="card" data-testid="payment-summary" aria-live="polite" style={{ padding: 28, position: "sticky", top: 90, alignSelf: "start" }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-dim)", marginBottom: 18, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                   Итого
                 </div>
@@ -222,4 +240,8 @@ export default function PaymentPage() {
       </main>
     </PageShell>
   );
+}
+
+export default function PaymentPage() {
+  return <Suspense fallback={<PageShell><main className="container-page">Загрузка тарифов…</main></PageShell>}><PaymentPageInner /></Suspense>;
 }

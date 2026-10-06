@@ -1,12 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useHomeHref } from "@/lib/language";
 
 /** Основной акцент бренда (используется в инлайн-градиентах/тенях). */
 export const ACCENT = "#2D6BFF";
 
 /** Логотип FootageHub: лягушка-аватар + «footage·hub». */
 export function Logo({ size = 38 }: { size?: number }) {
+  const homeHref = useHomeHref();
   return (
-    <Link href="/" className="flex items-center gap-3" style={{ textDecoration: "none" }}>
+    <Link href={homeHref} className="flex items-center gap-3" style={{ textDecoration: "none" }}>
       <div
         style={{
           width: size,

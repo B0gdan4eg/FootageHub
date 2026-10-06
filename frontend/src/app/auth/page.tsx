@@ -5,7 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { qrApi } from "@/lib/api";
 import { setToken } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
 import { PageShell } from "@/components/page-shell";
+import Link from "next/link";
+import { safeReturnPath } from "@/lib/navigation";
 
 type Status = "init" | "waiting" | "confirmed" | "expired" | "error";
 
@@ -28,7 +31,7 @@ function TgIcon({ size = 32, color = "white" }: { size?: number; color?: string 
 function AuthPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const redirect = safeReturnPath(searchParams.get("redirect"));
 
   const [status, setStatus] = useState<Status>("init");
   const [token, setTok] = useState<string | null>(null);
@@ -39,6 +42,7 @@ function AuthPageInner() {
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const trackedLogin = useRef(false);
 
   const clearTimers = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -94,6 +98,10 @@ function AuthPageInner() {
         if (res.data.status === "CONFIRMED" && res.data.access_token) {
           clearTimers();
           setToken(res.data.access_token);
+          if (!trackedLogin.current) {
+            trackedLogin.current = true;
+            trackEvent("login");
+          }
           setStatus("confirmed");
           setTimeout(() => router.push(redirect), 900);
         } else if (res.data.status === "EXPIRED" || res.data.status === "REJECTED") {
@@ -137,7 +145,7 @@ function AuthPageInner() {
         />
 
         <div
-          className="card"
+          className="card auth-card"
           style={{ width: "100%", maxWidth: 460, padding: 40, position: "relative", zIndex: 2 }}
         >
           {/* Header */}
@@ -193,14 +201,15 @@ function AuthPageInner() {
                   background: "white",
                   borderRadius: 16,
                   padding: 16,
-                  width: 240,
-                  height: 240,
+                  width: "100%",
+                  maxWidth: 240,
+                  aspectRatio: "1 / 1",
                   margin: "0 auto 20px",
                   display: "grid",
                   placeItems: "center",
                 }}
               >
-                <QRCodeSVG value={deeplink} size={208} level="M" bgColor="#ffffff" fgColor="#000000" />
+                <QRCodeSVG value={deeplink} size={208} style={{ width: "100%", height: "auto" }} level="M" bgColor="#ffffff" fgColor="#000000" />
               </div>
 
               <a
@@ -291,7 +300,7 @@ function AuthPageInner() {
             >
               офертой
             </a>{" "}
-            и политикой
+            <Link href="/privacy" style={{ color: "var(--text-dim)", textDecoration: "underline" }}>и информацией о cookie</Link>
           </div>
         </div>
       </div>

@@ -1,0 +1,19 @@
+.root { position: fixed; z-index: 1000; bottom: 16px; left: 16px; max-width: calc(100vw - 32px); letter-spacing: 0; }
+.panel { width: 520px; max-width: 100%; max-height: calc(100dvh - 32px); overflow-y: auto; background: var(--bg-soft); color: var(--text); border: 1px solid var(--border-strong); border-radius: 8px; padding: 20px; box-shadow: 0 8px 32px #0005; }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.heading h2 { font-size: 17px; line-height: 1.4; font-weight: 650; margin: 0; overflow-wrap: anywhere; }
+.panel p { font-size: 13px; line-height: 1.6; margin: 12px 0; color: var(--text-dim); }
+.options { display: grid; gap: 10px; font-size: 13px; }
+.options[hidden] { display: none; }
+.options label { display: flex; align-items: center; gap: 10px; min-height: 32px; cursor: pointer; }
+.options input { width: 18px; height: 18px; flex: 0 0 18px; accent-color: var(--accent); }
+.links { display: flex; gap: 8px 16px; flex-wrap: wrap; margin: 12px 0; font-size: 11px; }
+.links a { text-decoration: underline; color: var(--text-dim); }
+.actions { display: flex; flex-direction: column; gap: 8px; }
+.actions button { width: 100%; padding: 10px 12px; min-height: 44px; border: 1px solid var(--border-strong); border-radius: 6px; font-size: 13px; font-weight: 600; background: var(--border); color: var(--text); cursor: pointer; }
+.actions button:hover { border-color: var(--accent); }
+.actions button:first-child { background: var(--accent); border-color: var(--accent); color: #fff; }
+.icon { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; color: var(--text); cursor: pointer; border-radius: 6px; }
+.reopen { width: 44px; height: 44px; border: 1px solid var(--border-strong); background: var(--bg-soft); }
+.root button:focus-visible, .root a:focus-visible, .root input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 540px) { .root { left: 10px; bottom: 10px; max-width: calc(100vw - 20px); } .panel { padding: 16px; max-height: calc(100dvh - 20px); } }

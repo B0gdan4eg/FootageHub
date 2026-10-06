@@ -225,7 +225,7 @@ export function Pricing({ language = "ru" }: { language?: LandingLanguage }) {
               <div style={{ fontSize: 13, color: "var(--text-dim)", marginBottom: 28 }}>
                 в месяц · ≈ ${(t.usd / t.files).toFixed(2)} за файл
               </div>
-              <Link href="/payment" className={`btn ${t.pop ? "btn-primary" : "btn-ghost"}`} style={{ width: "100%", marginBottom: 24 }}>
+              <Link href={`/payment?plan=monthly_${t.files}`} className={`btn ${t.pop ? "btn-primary" : "btn-ghost"}`} style={{ width: "100%", marginBottom: 24 }}>
                 {t.cta}
               </Link>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
