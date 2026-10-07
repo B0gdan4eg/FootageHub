@@ -53,5 +53,7 @@ COPY scripts/ /app/scripts/
 ENV PYTHONPATH=/app
 ENV DISPLAY=:99
 ENV PYTHONIOENCODING=utf-8
+ARG APP_REVISION=unknown
+ENV APP_REVISION=$APP_REVISION
 
 CMD ["python", "-m", "media_bot.main"]

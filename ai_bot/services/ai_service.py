@@ -11,6 +11,7 @@ from ai_bot.config import config
 from ai_bot.providers import KlingProvider, NanoBananaProvider, VeoProvider
 from ai_bot.providers.base import AbstractAIProvider
 from ai_bot.services.pricing_service import PricingService
+from shared.error_tracking import report_exception
 
 
 class AIService:
@@ -81,6 +82,7 @@ class AIService:
             }
 
         except Exception as e:
+            report_exception(e)
             return {
                 "success": False,
                 "provider": provider.provider_name,
@@ -158,6 +160,7 @@ class AIService:
             }
 
         except Exception as e:
+            report_exception(e)
             return {
                 "success": False,
                 "provider": provider.provider_name,
@@ -186,6 +189,7 @@ class AIService:
             status = await provider.check_status(task_id)
             return {"success": True, **status}
         except Exception as e:
+            report_exception(e)
             return {"success": False, "error": str(e)}
 
     def get_provider_cost(self, provider_name: str) -> int:

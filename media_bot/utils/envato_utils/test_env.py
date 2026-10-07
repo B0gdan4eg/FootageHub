@@ -9,6 +9,8 @@ from media_bot.config import BROWSER_RESTART_AFTER
 from media_bot.utils.envato_utils.browser_factory import EnvatoDownloader
 from media_bot.utils.freepik_utils.freepik import FreepikDownloader
 from media_bot.utils.motion_utils.motion import MotionDownloader
+from shared.asset_urls import validate_asset_url
+from shared.error_tracking import report_exception
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -299,6 +301,7 @@ class LinkProcessor:
                         )
                     task.future.set_result(result)
                 except Exception as e:
+                    report_exception(e)
                     print(f"[Worker {idx}] ❌ Error: {e}")
                     logger.error(f"Worker {idx} task={task_id} error for {task.url[:50]}...: {e}")
                     if not task.future.done():
@@ -310,6 +313,7 @@ class LinkProcessor:
                 logger.info(f"Worker {idx} cancelled")
                 break
             except Exception as e:
+                report_exception(e)
                 print(f"[Worker {idx}] Unexpected error: {e}")
                 logger.error(f"Worker {idx} unexpected error: {e}")
 
@@ -325,6 +329,7 @@ class LinkProcessor:
         Returns:
             Direct download URL or None if failed
         """
+        validate_asset_url(url, platform)
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         task_id = uuid.uuid4().hex[:8]

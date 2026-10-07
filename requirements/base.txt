@@ -24,6 +24,7 @@ apscheduler==3.11.0
 
 # Configuration
 python-dotenv==1.1.1
+posthog==7.64.1
 
 # Pydantic for validation
 pydantic==2.11.7

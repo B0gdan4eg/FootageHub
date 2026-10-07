@@ -53,7 +53,7 @@ class PaymentRepository(BaseRepository[Payment]):
         await self.session.refresh(payment)
         return payment
 
-    async def get_by_invoice_id(self, invoice_id: str) -> Optional[Payment]:
+    async def get_by_invoice_id(self, invoice_id: str, *, lock: bool = False) -> Optional[Payment]:
         """
         Получить платеж по invoice_id.
 
@@ -63,7 +63,10 @@ class PaymentRepository(BaseRepository[Payment]):
         Returns:
             Payment or None if not found
         """
-        result = await self.session.execute(select(Payment).where(Payment.invoice_id == invoice_id))
+        query = select(Payment).where(Payment.invoice_id == invoice_id)
+        if lock:
+            query = query.with_for_update()
+        result = await self.session.execute(query)
         return result.scalars().first()
 
     async def update_status(self, invoice_id: str, status: str) -> None:

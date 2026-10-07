@@ -12,9 +12,11 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from shared.asset_urls import validate_asset_url
 from shared.db.models import Download, Media, ServiceType
 from shared.db.repositories.subscription_repository import SubscriptionRepository
 from shared.db.repositories.user_repository import UserRepository
+from shared.internal_auth import internal_headers
 
 # media-bot internal API URL — доступен через Docker-сеть footagehub-network
 MEDIA_BOT_URL = os.getenv("MEDIA_BOT_INTERNAL_URL", "http://media-bot:8443")
@@ -54,6 +56,9 @@ class WebDownloadAdapter:
             PermissionError: Если недостаточно кредитов или нет подписки
         """
         provider = provider.upper()
+        validate_asset_url(
+            url, {"ENVATO": "envato", "FREEPIK": "freepik", "MOTION_ARRAY": "motion"}.get(provider)
+        )
         if provider not in _SERVICE_TYPES:
             raise ValueError(
                 f"Неизвестный провайдер: {provider}. Используйте: {list(_SERVICE_TYPES.keys())}"
@@ -87,6 +92,7 @@ class WebDownloadAdapter:
                 resp = await client.post(
                     f"{MEDIA_BOT_URL}/internal/download",
                     json={"url": url, "provider": provider},
+                    headers=internal_headers(),
                 )
                 resp.raise_for_status()
                 data = resp.json()

@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from shared import error_tracking
 from web_api.auth.router import router as auth_router
 from web_api.config import config, validate_security_config
 from web_api.routers.admin import router as admin_router
@@ -22,7 +23,11 @@ from web_api.routers.users import router as users_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_security_config()
-    yield
+    error_tracking.configure("web-api")
+    try:
+        yield
+    finally:
+        await error_tracking.shutdown()
 
 
 app = FastAPI(
@@ -35,6 +40,7 @@ app = FastAPI(
 )
 
 # CORS
+app.add_middleware(error_tracking.TrackingHTTPMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,

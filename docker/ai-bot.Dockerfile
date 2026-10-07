@@ -25,5 +25,7 @@ COPY alembic.ini /app/alembic.ini
 # Environment
 ENV PYTHONPATH=/app
 ENV PYTHONIOENCODING=utf-8
+ARG APP_REVISION=unknown
+ENV APP_REVISION=$APP_REVISION
 
 CMD ["python", "-m", "ai_bot.main"]

@@ -21,5 +21,7 @@ COPY alembic.ini /app/alembic.ini
 
 ENV PYTHONPATH=/app
 ENV PYTHONIOENCODING=utf-8
+ARG APP_REVISION=unknown
+ENV APP_REVISION=$APP_REVISION
 
 CMD ["uvicorn", "web_api.main:app", "--host", "0.0.0.0", "--port", "8080"]

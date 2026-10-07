@@ -35,6 +35,7 @@ from media_bot.services import BotServices
 from media_bot.utils.envato_utils.test_env import LinkProcessor
 from media_bot.utils.freepik_utils.logger import logger as error_logger
 from media_bot.webhook.server_start import start_server
+from shared import error_tracking
 from shared.core.logger import get_logger
 from shared.db.base import create_tables, run_migrations
 from shared.db.init_bonuses import initialize_bonuses
@@ -120,6 +121,8 @@ async def start_bot():
 
 
 async def main():
+    error_tracking.configure("media-bot")
+    dp.update.outer_middleware(error_tracking.TrackingMiddleware())
     # 1. Миграции перед стартом
     try:
         await run_migrations()
@@ -147,6 +150,11 @@ async def main():
 
     # 4. Планировщик
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+    from apscheduler.events import EVENT_JOB_ERROR
+
+    scheduler.add_listener(
+        lambda event: error_tracking.report_exception(event.exception), EVENT_JOB_ERROR
+    )
     if BotServices.link_processor.freepik_http_enabled:
         from media_bot.utils.freepik_utils.http_downloader import schedule_refresh
 
@@ -185,6 +193,7 @@ async def main():
         # 5. Запуск сервера и бота параллельно
         await asyncio.gather(start_server(), start_bot())
     finally:
+        await error_tracking.shutdown()
         scheduler.shutdown(wait=False)
         # Остановка LinkProcessor при завершении
         logger.info("Остановка LinkProcessor...")

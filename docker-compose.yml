@@ -1,10 +1,17 @@
 version: '3.8'
 
+x-logging: &bounded-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Shared PostgreSQL database
   postgres:
     image: postgres:15-alpine
     container_name: footagehub-db
+    logging: *bounded-logging
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -27,6 +34,7 @@ services:
   media-bot:
     image: ${MEDIA_BOT_IMAGE:-ghcr.io/b0gdan4eg/footagehub-media-bot:latest}
     container_name: footagehub-media-bot
+    logging: *bounded-logging
     restart: unless-stopped
     init: true
     env_file: .env
@@ -74,6 +82,7 @@ services:
   ai-bot:
     image: ${AI_BOT_IMAGE:-ghcr.io/b0gdan4eg/footagehub-ai-bot:latest}
     container_name: footagehub-ai-bot
+    logging: *bounded-logging
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -95,6 +104,7 @@ services:
   web-api:
     image: ${WEB_API_IMAGE:-ghcr.io/b0gdan4eg/footagehub-web-api:latest}
     container_name: footagehub-web-api
+    logging: *bounded-logging
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -123,6 +133,7 @@ services:
   frontend:
     image: ${FRONTEND_IMAGE:-ghcr.io/b0gdan4eg/footagehub-frontend:latest}
     container_name: footagehub-frontend
+    logging: *bounded-logging
     restart: unless-stopped
     environment:
       - NEXT_PUBLIC_API_URL=https://envato-freepik-download.store/api

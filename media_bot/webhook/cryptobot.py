@@ -1,16 +1,20 @@
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 
 from aiogram.enums.parse_mode import ParseMode
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from media_bot.config import CRYPTO_BOT_API_KEY
 from media_bot.handlers.messages import SUBSCRIPTION_ACTIVATED
 from media_bot.services import BotServices
 from media_bot.utils.price_loader import load_subscription_plans
 from shared.db.models import ServiceType, SubscriptionType
 from shared.db.repositories import PaymentRepository, SubscriptionRepository, UserRepository
 from shared.db.session import get_session
+from shared.error_tracking import report_exception
+from shared.payment_validation import positive_amount, verify_crypto_signature
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +23,21 @@ router = APIRouter()
 
 @router.post("/webhook/cryptobot")
 async def webhook(request: Request):
+    body = await request.body()
+    if not verify_crypto_signature(
+        body, request.headers.get("crypto-pay-api-signature", ""), CRYPTO_BOT_API_KEY
+    ):
+        raise HTTPException(status_code=403, detail="Invalid payment signature")
     try:
-        data = await request.json()
-    except json.JSONDecodeError:
-        print("❌ Invalid JSON in webhook")
-        return JSONResponse(
-            content={"status": "ok"}, status_code=200
-        )  # Возвращаем 200 чтобы не повторяли
+        data = json.loads(body)
+        sent = datetime.fromisoformat(data["request_date"].replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        if sent.tzinfo is None or not now - timedelta(days=3, minutes=5) <= sent <= now + timedelta(
+            minutes=5
+        ):
+            raise ValueError("Invalid callback date")
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise HTTPException(status_code=400, detail="Invalid payment notification")
 
     update_type = data.get("update_type")
 
@@ -34,6 +46,8 @@ async def webhook(request: Request):
         return JSONResponse(content={"status": "ok"}, status_code=200)
 
     payload = data.get("payload", {})
+    if not isinstance(payload, dict) or payload.get("status") != "paid":
+        raise HTTPException(status_code=400, detail="Invalid paid invoice")
     invoice_id = payload.get("invoice_id")
     amount = payload.get("amount")
     currency = payload.get("asset")
@@ -57,22 +71,31 @@ async def webhook(request: Request):
         async for session in get_session():
             # Проверяем пользователя
             user_repo = UserRepository(session)
-            user = await user_repo.get_by_telegram_id(user_id)
+            user = await user_repo.get_by_telegram_id(user_id, lock=True)
             if not user:
                 print(f"⚠️ Пользователь с id {user_id} не найден в БД, игнорируем")
                 return JSONResponse(content={"status": "ok"}, status_code=200)
 
             # Проверяем платеж в БД
             payment_repo = PaymentRepository(session)
-            payment = await payment_repo.get_by_invoice_id(str(invoice_id))
+            payment = await payment_repo.get_by_invoice_id(str(invoice_id), lock=True)
             if not payment:
                 print(f"⚠️ Платеж с invoice_id {invoice_id} не найден в БД, игнорируем")
                 return JSONResponse(content={"status": "ok"}, status_code=200)
 
+            if (
+                payment.user_id != user.id
+                or payment.plan_key != plan_key
+                or currency != payment.currency
+                or positive_amount(amount) != positive_amount(payment.amount)
+            ):
+                raise HTTPException(status_code=400, detail="Payment does not match invoice")
             # Проверяем, что платеж еще не обработан
             if payment.status == "success":
                 print(f"✅ Платеж {invoice_id} уже обработан ранее, игнорируем")
                 return JSONResponse(content={"status": "ok"}, status_code=200)
+            if payment.status != "pending":
+                raise HTTPException(status_code=409, detail="Payment is not pending")
 
             # Получаем план из JSON
             plan_data = plans.get(plan_key)
@@ -95,10 +118,12 @@ async def webhook(request: Request):
                 daily_limit=daily_limit,
                 days=period_days,
                 payment_id=payment.id,
+                commit=False,
             )
 
             # Помечаем платеж как успешный
-            await payment_repo.mark_success(str(invoice_id))
+            payment.status = "success"
+            await session.commit()
 
             print(
                 f"✅ Подписка {plan_key} создана: user={user_id}, period={period_days}д, limits=(total={total_limit}, daily={daily_limit})"
@@ -134,13 +159,16 @@ async def webhook(request: Request):
             else:
                 print("⚠️ BotServices.bot не инициализирован, уведомление не отправлено")
 
+    except HTTPException:
+        raise
     except Exception as e:
+        report_exception(e)
         print(f"❌ Ошибка при обработке платежа {invoice_id}: {e}")
         import traceback
 
         traceback.print_exc()
         # Возвращаем 200 чтобы CryptoBot не повторял запрос, но логируем ошибку
-        return JSONResponse(content={"status": "ok"}, status_code=200)
+        return JSONResponse(content={"status": "error"}, status_code=500)
 
     return JSONResponse(content={"status": "ok"}, status_code=200)
 
