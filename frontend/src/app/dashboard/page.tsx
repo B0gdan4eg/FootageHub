@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { usersApi, downloadsApi, type User } from "@/lib/api";
 import { PageShell } from "@/components/page-shell";
 import { ACCENT } from "@/components/brand";
+import { assetFileName, normalizeAssetUrl, takeDownloadIntent } from "@/lib/download-intent";
 
 interface DownloadItem {
   id: number;
@@ -55,16 +56,6 @@ function sourceBg(s: string | null): string {
   return "var(--border)";
 }
 
-function fileName(url: string): string {
-  try {
-    const clean = url.split("?")[0].replace(/\/$/, "");
-    const seg = decodeURIComponent(clean.split("/").pop() || url);
-    return seg.length > 2 ? seg : url;
-  } catch {
-    return url;
-  }
-}
-
 function timeAgo(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso).getTime();
@@ -104,7 +95,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadTimer = window.setTimeout(() => {
       void loadData()
-        .catch(() => router.push("/auth"))
+        .then(() => {
+          const pending = takeDownloadIntent();
+          if (pending) setUrl(pending);
+        })
+        .catch(() => router.push("/auth?redirect=%2Fdashboard"))
         .finally(() => setLoading(false));
     }, 0);
 
@@ -113,11 +108,17 @@ export default function DashboardPage() {
 
   async function submit(e?: React.FormEvent) {
     e?.preventDefault();
-    if (!url.trim()) return;
+    if (stage === "loading") return;
+    const normalized = normalizeAssetUrl(url);
+    if (!normalized) {
+      setDlError("Введите ссылку на файл Envato, Freepik или Motion Array");
+      setStage("error");
+      return;
+    }
     setStage("loading");
     setDlError("");
     try {
-      const res = await downloadsApi.download(url.trim());
+      const res = await downloadsApi.download(normalized);
       setStage("ok");
       if (res.data?.download_url) {
         window.open(res.data.download_url, "_blank", "noopener,noreferrer");
@@ -130,7 +131,6 @@ export default function DashboardPage() {
       const err = e as { response?: { data?: { detail?: string } } };
       setDlError(err.response?.data?.detail || "Не удалось получить файл");
       setStage("error");
-      setTimeout(() => setStage("idle"), 4000);
     }
   }
 
@@ -191,7 +191,7 @@ export default function DashboardPage() {
 
           {/* Paster + quota */}
           <div className="dash-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, marginBottom: 24 }}>
-            <div className="card" style={{ padding: 28 }}>
+            <div className="card" style={{ padding: 28, minWidth: 0 }}>
               <div className="flex items-center justify-between" style={{ marginBottom: 18 }}>
                 <h2 style={{ margin: 0, fontSize: 18, letterSpacing: "-0.01em" }}>Получить файл</h2>
                 <span className="mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>1 ссылка = 1 файл</span>
@@ -215,16 +215,19 @@ export default function DashboardPage() {
                 <input
                   type="text"
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(e) => { setUrl(e.target.value); if (stage === "error") setStage("idle"); }}
+                  aria-label="Ссылка на файл"
+                  aria-invalid={stage === "error"}
+                  aria-describedby={stage === "error" ? "download-error" : undefined}
                   placeholder="https://elements.envato.com/..."
-                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--text)", fontFamily: "var(--font-geist-mono), monospace", fontSize: 14, padding: "10px 0" }}
+                  style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "none", color: "var(--text)", fontFamily: "var(--font-geist-mono), monospace", fontSize: 14, padding: "10px 0" }}
                 />
                 <button type="submit" disabled={stage === "loading"} className="btn btn-primary" style={{ padding: "10px 20px", fontSize: 13, opacity: stage === "loading" ? 0.7 : 1 }}>
                   {stage === "loading" ? "Качаем…" : stage === "ok" ? "✓ Готово" : "Получить"}
                 </button>
               </form>
               {stage === "error" && dlError && (
-                <div style={{ fontSize: 13, color: "#FF6B6B", marginBottom: 10 }}>{dlError}</div>
+                <div id="download-error" role="alert" style={{ fontSize: 13, color: "#FF6B6B", marginBottom: 10 }}>{dlError}</div>
               )}
               <div className="flex items-center gap-3" style={{ flexWrap: "wrap", fontSize: 12, color: "var(--text-dim)" }}>
                 <span>Поддерживаем:</span>
@@ -234,7 +237,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="card" style={{ padding: 28 }}>
+            <div className="card" style={{ padding: 28, minWidth: 0 }}>
               <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Остаток</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
                 <div style={{ fontSize: 48, fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1, color: "var(--accent)" }}>{left}</div>
@@ -302,7 +305,7 @@ export default function DashboardPage() {
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {fileName(f.url)}
+                          {assetFileName(f.url)}
                         </div>
                         <div style={{ fontSize: 12, color: "var(--text-dim)" }}>{label}</div>
                       </div>

@@ -8,9 +8,11 @@ import nodriver as uc
 from nodriver import cdp
 from nodriver.core.connection import ProtocolException
 
+from shared.provider_storage import cookie_directory
+
 from .logger import logger
 
-COOKIE_DIR = os.path.dirname(__file__)
+COOKIE_DIR = cookie_directory("freepik", os.path.dirname(__file__))
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "freepik_cookie_index.txt")
 
 
@@ -78,7 +80,7 @@ def get_next_cookie_file():
 # процесса → reload-трюк от Akamai-сенсора проходит надёжнее, меньше 403.
 # Профиль ОДИН (общий), т.к. браузер тут singleton (см. _shared_downloader ниже);
 # auth-куки конкретного аккаунта всё равно подменяются per-download через CDP.
-PROFILE_DIR = os.path.join(COOKIE_DIR, ".profile")
+PROFILE_DIR = os.path.join(os.path.dirname(__file__), ".profile")
 
 
 def _cleanup_singleton_locks(profile_dir: str) -> None:
@@ -97,8 +99,10 @@ class FreepikDownloader:
     Freepik downloader using nodriver (undetected Chrome, bypasses Cloudflare).
     """
 
-    def __init__(self):
+    def __init__(self, *, cookies=None, profile_dir=None):
         self.browser = None
+        self.cookies = cookies
+        self.profile_dir = profile_dir or PROFILE_DIR
         self.total_time = 0
         self.success_count = 0
         self.fail_count = 0
@@ -108,13 +112,13 @@ class FreepikDownloader:
         # Если системный Chrome не найден — используем Chromium от Playwright
         chromium_path = find_chromium_executable()
         # Тёплый персистентный профиль: cf_clearance/Akamai-куки переживают рестарт.
-        os.makedirs(PROFILE_DIR, exist_ok=True)
-        _cleanup_singleton_locks(PROFILE_DIR)
+        os.makedirs(self.profile_dir, exist_ok=True)
+        _cleanup_singleton_locks(self.profile_dir)
         self.browser = await uc.start(
             headless=False,
             sandbox=False,
             browser_executable_path=chromium_path,  # None = автопоиск системного Chrome
-            user_data_dir=PROFILE_DIR,  # persistent → cf_clearance не сбрасывается
+            user_data_dir=self.profile_dir,  # persistent → cf_clearance не сбрасывается
         )
         return self
 
@@ -127,12 +131,22 @@ class FreepikDownloader:
 
     async def _find_button(self, tab, timeout: float = 15):
         """Находит кнопку скачивания заново (свежий node id, без переиспользования)."""
-        try:
-            btn = await tab.select('button[data-cy="download-button"]', timeout=timeout)
-            if btn:
-                return btn
-        except (StopIteration, RuntimeError, ProtocolException):
-            pass
+        deadline = time.monotonic() + timeout
+        # Hydration can replace the document before nodriver's selector wait completes.
+        # Poll the live DOM and resolve a fresh node only after the button is ready.
+        while time.monotonic() < deadline:
+            try:
+                ready = await tab.evaluate(
+                    "(() => { const b = document.querySelector('button[data-cy=\"download-button\"]');"
+                    " return !!b && !b.disabled && b.getClientRects().length > 0; })()"
+                )
+                if ready:
+                    btn = await tab.select('button[data-cy="download-button"]', timeout=1)
+                    if btn:
+                        return btn
+            except (StopIteration, RuntimeError, ProtocolException):
+                pass
+            await asyncio.sleep(0.25)
         for text in ("Download", "Скачать"):
             try:
                 btn = await tab.find(text, best_match=True, timeout=5)
@@ -142,14 +156,16 @@ class FreepikDownloader:
                 continue
         return None
 
-    async def _click_download(self, tab) -> bool:
+    async def _click_download(self, tab, button=None) -> bool:
         """
-        Кликает по кнопке, перезапрашивая её перед каждой попыткой.
+        Кликает по найденной кнопке, перезапрашивая её при повторной попытке.
         Защита от ProtocolException "-32000 Could not find node with given id":
         React-SPA перерисовывает DOM после гидрации, и старый хэндл протухает.
         """
         for attempt in range(3):
-            btn = await self._find_button(tab, timeout=15 if attempt == 0 else 5)
+            btn = button if attempt == 0 else None
+            if btn is None:
+                btn = await self._find_button(tab, timeout=15 if attempt == 0 else 5)
             if not btn:
                 return False
             try:
@@ -168,13 +184,16 @@ class FreepikDownloader:
         если 403, ждём (Akamai sensor работает на 403-странице) → перезагружаем.
         """
         tab = None
+        on_download = None
         start_time = time.time()
         download_url = None
 
         try:
-            cookie_file = get_next_cookie_file()
-            with open(cookie_file, "r") as f:
-                raw_cookies = json.load(f)
+            raw_cookies = self.cookies
+            if raw_cookies is None:
+                cookie_file = get_next_cookie_file()
+                with open(cookie_file, "r") as f:
+                    raw_cookies = json.load(f)
 
             # Открываем about:blank и загружаем куки
             tab = await self.browser.get("about:blank")
@@ -203,7 +222,8 @@ class FreepikDownloader:
                 if not k.startswith("bm-verify") and not k.startswith("bm_")
             }
             clean_query = urlencode(clean_params, doseq=True)
-            asset_url = urlunparse(parsed._replace(query=clean_query))
+            # Search fragments are tracking metadata, not part of the asset address.
+            asset_url = urlunparse(parsed._replace(query=clean_query, fragment=""))
 
             # Открываем ссылку напрямую
             print(f"[FREEPIK] 📄 Открываем страницу ресурса...")
@@ -243,11 +263,14 @@ class FreepikDownloader:
 
             # Перехватываем событие начала скачивания — содержит прямой URL
             download_info = {}
+            download_ready = asyncio.Event()
 
-            def on_download(evt: cdp.page.DownloadWillBegin):
+            def handle_download(evt: cdp.page.DownloadWillBegin):
                 if not download_info.get("url"):
                     download_info["url"] = evt.url
+                    download_ready.set()
 
+            on_download = handle_download
             tab.add_handler(cdp.page.DownloadWillBegin, on_download)
 
             # Запрещаем реальное скачивание файла — нам нужна только ссылка
@@ -280,24 +303,23 @@ class FreepikDownloader:
                 )
                 return None
 
-            # Кликаем (хелпер перезапрашивает кнопку перед каждой попыткой —
-            # защита от устаревшего node id после ре-рендера React-SPA)
-            await self._click_download(tab)
+            # Reuse the fresh node; the helper resolves it again if hydration invalidates it.
+            await self._click_download(tab, button=btn)
 
             # Ждём URL скачивания (до 10 секунд)
-            for _ in range(100):
-                if download_info.get("url"):
-                    break
-                await asyncio.sleep(0.1)
+            try:
+                await asyncio.wait_for(download_ready.wait(), timeout=10)
+            except asyncio.TimeoutError:
+                pass
 
             # Если не нашли — повторный клик
             if not download_info.get("url"):
                 print(f"[FREEPIK] Download URL не найден, повторный клик...")
                 await self._click_download(tab)
-                for _ in range(100):
-                    if download_info.get("url"):
-                        break
-                    await asyncio.sleep(0.1)
+                try:
+                    await asyncio.wait_for(download_ready.wait(), timeout=10)
+                except asyncio.TimeoutError:
+                    pass
 
             download_url = download_info.get("url")
             elapsed = time.time() - start_time
@@ -346,10 +368,15 @@ class FreepikDownloader:
 
         finally:
             if tab:
+                # nodriver's remove_handler also removes other callbacks for this event.
+                callbacks = tab.handlers.get(cdp.page.DownloadWillBegin, [])
+                if on_download in callbacks:
+                    callbacks.remove(on_download)
                 try:
                     # Не закрываем таб — закрытие последнего таба убивает браузер.
                     # Навигируем на about:blank для очистки.
-                    await tab.get("about:blank")
+                    # Wait for navigation acknowledgement without Tab.get's idle delay.
+                    await tab.send(cdp.page.navigate("about:blank"))
                 except Exception:
                     pass
 
@@ -386,6 +413,13 @@ async def get_freepik_direct_download_url(asset_url: str) -> str | None:
     Example:
         url = await get_freepik_direct_download_url("https://www.freepik.com/...")
     """
+    if os.getenv("FREEPIK_HTTP_ENABLED", "0") == "1":
+        from media_bot.services import BotServices
+
+        if BotServices.link_processor:
+            return await BotServices.link_processor.submit(asset_url, platform="freepik")
+        return None
+
     # Проверяем наличие хотя бы одного файла с куками
     try:
         get_next_cookie_file()

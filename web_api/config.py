@@ -5,7 +5,7 @@ import os
 
 class WebApiConfig:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "")
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 дней
 
@@ -41,3 +41,11 @@ class WebApiConfig:
 
 
 config = WebApiConfig()
+
+
+def validate_security_config() -> None:
+    if (
+        len(config.JWT_SECRET_KEY.strip()) < 32
+        or config.JWT_SECRET_KEY == "change-me-in-production"  # nosec B105: reject legacy default
+    ):
+        raise RuntimeError("JWT_SECRET_KEY must be a non-default secret of at least 32 characters")

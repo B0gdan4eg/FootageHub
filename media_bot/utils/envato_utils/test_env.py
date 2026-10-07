@@ -6,7 +6,7 @@ import uuid
 from typing import NamedTuple
 
 from media_bot.config import BROWSER_RESTART_AFTER
-from media_bot.utils.envato_utils.envato_playwright import EnvatoDownloader
+from media_bot.utils.envato_utils.browser_factory import EnvatoDownloader
 from media_bot.utils.freepik_utils.freepik import FreepikDownloader
 from media_bot.utils.motion_utils.motion import MotionDownloader
 
@@ -79,7 +79,7 @@ class LinkProcessor:
                 return ok, "refreshed" if ok else "refresh_failed"
             if self.envato_downloader:
                 await self.envato_downloader.__aexit__(None, None, None)
-            from media_bot.utils.envato_utils.envato_playwright import EnvatoDownloader
+            from media_bot.utils.envato_utils.browser_factory import EnvatoDownloader
 
             self.envato_downloader = await EnvatoDownloader().__aenter__()
             self.envato_request_count = 0
@@ -252,7 +252,8 @@ class LinkProcessor:
                     else:  # envato
                         # Check if Envato browser needs restart
                         await self._restart_envato_browser_if_needed()
-                        await self._enter("envato")
+                        async with self._envato_restart_lock:
+                            await self._enter("envato")
                         try:
                             # Use appropriate method based on license flag
                             if task.with_license:

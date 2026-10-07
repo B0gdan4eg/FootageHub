@@ -10,6 +10,7 @@ from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import async_playwright
 
 from media_bot.utils.freepik_utils.logger import logger
+from shared.provider_storage import cookie_directory
 
 from .asset_identity import checked_identity, describe_requested, legacy_asset
 
@@ -110,7 +111,7 @@ async def _take_debug_screenshot(page, prefix: str = "error") -> str | None:
         return None
 
 
-COOKIE_DIR = os.path.dirname(__file__)
+COOKIE_DIR = cookie_directory("envato", os.path.dirname(__file__))
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "cookie_index.txt")
 
 
@@ -163,7 +164,7 @@ def get_next_cookie_file():
 # Тёплый профиль хранит cf_clearance от Cloudflare и историю → повторный
 # челлендж не прилетает (подход из Trade/ADR-002). Профиль НЕ чистится между
 # запусками; auth-куки аккаунта подсыпаются заново каждый раз (seed).
-PROFILE_BASE = os.path.join(COOKIE_DIR, ".profiles")
+PROFILE_BASE = os.path.join(os.path.dirname(__file__), ".profiles")
 
 # Один persistent-профиль нельзя открыть двумя процессами Chromium сразу.
 # При MAX_CONCURRENT_DOWNLOADS>1 два скачивания одного аккаунта должны
@@ -513,12 +514,12 @@ class EnvatoDownloader:
                 except Exception:
                     download_info["invalid"] = int(download_info.get("invalid", 0)) + 1
 
-            page.on(
-                "response",
-                lambda response: response_tasks.append(
-                    asyncio.create_task(handle_response(response))
-                ),
-            )
+            def queue_download_response(response):
+                parsed = urlsplit(response.url)
+                if parsed.hostname == "app.envato.com" and parsed.path == "/download.data":
+                    response_tasks.append(asyncio.create_task(handle_response(response)))
+
+            page.on("response", queue_download_response)
 
             # Navigate to asset page
             _mark("goto_start")
@@ -697,11 +698,12 @@ class EnvatoDownloader:
                 return None
 
             # Для старого формата нужен дополнительный клик
-            if "elements.envato.com" in page.url:
+            if legacy_verified and not download_info.get("url"):
                 try:
-                    await asyncio.sleep(0.5)
                     await page.click(
-                        "button[data-testid='download-without-license-button']", delay=0
+                        "button[data-testid='download-without-license-button']",
+                        delay=0,
+                        timeout=3000,
                     )
                 except Exception:
                     pass

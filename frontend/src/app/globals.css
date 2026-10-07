@@ -254,6 +254,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .hist-row { transition: background 0.15s; }
 .hist-row:hover { background: var(--bg-soft); }
+.dash-grid > *, .pay-grid > * { min-width: 0; }
 
 /* Responsive grid overrides — desktop columns are set inline */
 @media (max-width: 980px) {
@@ -268,10 +269,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .cta-grid { grid-template-columns: 1fr !important; }
   .ftr-grid { grid-template-columns: 1fr 1fr !important; gap: 32px !important; }
   .dash-grid { grid-template-columns: 1fr !important; }
-  .hist-row { grid-template-columns: 36px 1fr auto !important; }
+  .hist-row { grid-template-columns: 36px minmax(0, 1fr) auto !important; gap: 10px !important; padding: 16px !important; }
   .hist-row > :nth-child(3),
-  .hist-row > :nth-child(4),
-  .hist-row > :nth-child(5) { display: none; }
+  .hist-row > :nth-child(4) { display: none; }
   .pay-grid { grid-template-columns: 1fr !important; }
   .ai-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
   .feat-grid { grid-template-columns: 1fr !important; }
@@ -284,6 +284,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .stats-strip > div { border-left: none !important; }
 }
 @media (max-width: 720px) {
+  .auth-card { padding: 24px !important; }
   .vs-row { grid-template-columns: 1fr 0.8fr 0.8fr !important; padding: 14px 16px !important; font-size: 13px !important; }
 }
 

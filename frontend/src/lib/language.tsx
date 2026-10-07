@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { nextTranslation, type TranslationState } from "./translation-state";
 
 type Language = "ru" | "en";
 
@@ -183,6 +185,16 @@ const exactTranslations: Record<string, string> = {
   "Остаток": "Remaining",
   "кредитов": "credits",
   "Пополнить баланс на странице оплаты": "Top up on the payment page",
+  "Пополни баланс на странице оплаты": "Top up on the payment page",
+  "Загрузка…": "Loading...",
+  "Не удалось получить файл": "Could not get the file",
+  "Введите ссылку на файл Envato, Freepik или Motion Array": "Enter an Envato, Freepik or Motion Array asset link",
+  "Не удалось сохранить ссылку. Откройте кабинет и вставьте её там.": "Could not save the link. Open the dashboard and paste it there.",
+  "✓ Готово": "Ready",
+  "Новости о запуске в Telegram": "Launch news on Telegram",
+  "Анонс появится в канале новостей.": "The launch announcement will be posted in our news channel.",
+  "Cookie и аналитика": "Cookies and analytics",
+  "и информацией о cookie": "and cookie information",
   "Всего скачано": "Total downloads",
   "по подписке": "by subscription",
   "В этом месяце": "This month",
@@ -274,8 +286,8 @@ const phraseTranslations: [string, string][] = [
   ["тех. работы", "maintenance"],
 ];
 
-const originals = new WeakMap<Text, string>();
-const originalAttrs = new WeakMap<Element, Record<string, string>>();
+const originals = new WeakMap<Text, TranslationState>();
+const originalAttrs = new WeakMap<Element, Record<string, TranslationState>>();
 
 export function translateText(value: string): string {
   const leading = value.match(/^\s*/)?.[0] ?? "";
@@ -316,54 +328,46 @@ function translateNode(root: ParentNode, language: Language) {
   for (const node of textNodes) {
     if (shouldSkip(node.parentElement)) continue;
     const current = node.nodeValue ?? "";
-    if (!originals.has(node)) originals.set(node, current);
-    let original = originals.get(node) ?? "";
-
-    if (language === "en" && current !== translateText(original) && /[А-Яа-яЁё]/.test(current)) {
-      originals.set(node, current);
-      original = current;
-    }
-
-    const translated = language === "en" ? translateText(original) : original;
-    if (current !== translated) node.nodeValue = translated;
+    const next = nextTranslation(current, originals.get(node), language === "en" ? translateText : value => value);
+    originals.set(node, next);
+    if (current !== next.rendered) node.nodeValue = next.rendered;
   }
 
   const elements = root instanceof Element ? [root, ...Array.from(root.querySelectorAll("*"))] : Array.from(root.querySelectorAll("*"));
   for (const element of elements) {
     if (shouldSkip(element)) continue;
-    const attrs = ["placeholder", "title", "aria-label"];
-    let saved = originalAttrs.get(element);
-    if (!saved) {
-      saved = {};
-      for (const attr of attrs) {
-        const value = element.getAttribute(attr);
-        if (value) saved[attr] = value;
-      }
-      originalAttrs.set(element, saved);
-    }
+    const attrs = ["placeholder", "title", "aria-label", "alt"];
+    const saved = originalAttrs.get(element) ?? {};
+    originalAttrs.set(element, saved);
     for (const attr of attrs) {
-      const original = saved[attr];
-      if (!original) continue;
-      const translated = language === "en" ? translateText(original) : original;
-      if (element.getAttribute(attr) !== translated) element.setAttribute(attr, translated);
+      const current = element.getAttribute(attr);
+      if (current === null) { delete saved[attr]; continue; }
+      const next = nextTranslation(current, saved[attr], language === "en" ? translateText : value => value);
+      saved[attr] = next;
+      if (current !== next.rendered) element.setAttribute(attr, next.rendered);
     }
   }
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("ru");
+  const pathname = usePathname();
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    const nextLanguage = saved === "ru" || saved === "en"
+    let saved: string | null = null;
+    try { saved = window.localStorage.getItem(STORAGE_KEY); } catch { /* Storage may be unavailable. */ }
+    const nextLanguage = pathname === "/en" ? "en" : pathname === "/" ? "ru" : saved === "ru" || saved === "en"
       ? saved
       : detectPreferredLanguage();
-
-    window.requestAnimationFrame(() => setLanguageState(nextLanguage));
-  }, []);
+    if (pathname === "/" || pathname === "/en") {
+      try { window.localStorage.setItem(STORAGE_KEY, nextLanguage); } catch { /* Keep language in memory. */ }
+    }
+    const frame = window.requestAnimationFrame(() => setLanguageState(nextLanguage));
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
 
   const setLanguage = (next: Language) => {
-    window.localStorage.setItem(STORAGE_KEY, next);
+    try { window.localStorage.setItem(STORAGE_KEY, next); } catch { /* Keep language in memory. */ }
     document.cookie = `${STORAGE_KEY}=${next}; path=/; max-age=31536000; SameSite=Lax`;
     setLanguageState(next);
   };
@@ -394,9 +398,14 @@ function GlobalTranslator({ language }: { language: Language }) {
     };
 
     run();
-    const observer = new MutationObserver(() => window.requestAnimationFrame(run));
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
+    let frame = 0;
+    const observer = new MutationObserver(() => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(run);
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true,
+      attributes: true, attributeFilter: ["placeholder", "title", "aria-label", "alt"] });
+    return () => { observer.disconnect(); window.cancelAnimationFrame(frame); };
   }, [language]);
 
   return null;
@@ -406,6 +415,12 @@ export function useLanguage() {
   const value = useContext(LanguageContext);
   if (!value) throw new Error("useLanguage must be used inside LanguageProvider");
   return value;
+}
+
+export function useHomeHref() {
+  const { language } = useLanguage();
+  const pathname = usePathname();
+  return pathname === "/en" || (pathname !== "/" && language === "en") ? "/en" : "/";
 }
 
 export function LanguageSwitcher() {

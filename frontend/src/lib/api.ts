@@ -4,6 +4,9 @@
  */
 
 import axios from "axios";
+import { assetProvider, trackEvent } from "./analytics";
+import { clearToken } from "./auth";
+import { safeReturnPath } from "./navigation";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "https://envato-freepik-download.store/api",
@@ -26,7 +29,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      window.location.href = "/auth";
+      clearToken();
+      if (window.location.pathname !== "/auth") {
+        const redirect = safeReturnPath(window.location.pathname + window.location.search);
+        window.location.href = `/auth?redirect=${encodeURIComponent(redirect)}`;
+      }
     }
     return Promise.reject(error);
   }
@@ -93,11 +100,21 @@ export const usersApi = {
 // ─── Downloads ────────────────────────────────────────────────────────────────
 
 export const downloadsApi = {
-  download: (url: string, provider?: string) =>
-    api.post<{ download_url: string; remaining_credits: number; is_file_token: boolean }>(
-      "/downloads/",
-      { url, provider }
-    ),
+  download: async (url: string, provider?: string) => {
+    const started = Date.now();
+    const source = assetProvider(url);
+    trackEvent("download_requested", { provider: source });
+    try {
+      const result = await api.post<{ download_url: string; remaining_credits: number; is_file_token: boolean }>(
+        "/downloads/", { url, provider }
+      );
+      trackEvent("download_link_ready", { provider: source, duration_ms: Date.now() - started });
+      return result;
+    } catch (error) {
+      trackEvent("download_error", { provider: source, duration_ms: Date.now() - started });
+      throw error;
+    }
+  },
 };
 
 // ─── AI ───────────────────────────────────────────────────────────────────────
@@ -124,11 +141,17 @@ export const aiApi = {
 
 export const paymentsApi = {
   plans: () => api.get("/payments/plans"),
-  create: (plan_key: string, provider: "webpay" | "cryptobot") =>
-    api.post<{ invoice_url: string; order_id: string }>("/payments/create", {
-      plan_key,
-      provider,
-    }),
+  create: async (plan_key: string, provider: "webpay" | "cryptobot") => {
+    trackEvent("begin_checkout", { plan: plan_key, provider });
+    try {
+      const result = await api.post<{ invoice_url: string; order_id: string }>("/payments/create", { plan_key, provider });
+      trackEvent("payment_redirect", { plan: plan_key, provider });
+      return result;
+    } catch (error) {
+      trackEvent("checkout_error", { plan: plan_key, provider });
+      throw error;
+    }
+  },
   history: () => api.get("/payments/history"),
 };
 

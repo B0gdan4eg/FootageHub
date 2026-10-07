@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { safeReturnPath } from "./lib/navigation";
 
 const AUTH_ROUTE = "/auth";
 
@@ -14,7 +15,7 @@ export function middleware(request: NextRequest) {
   // }
 
   if (pathname === AUTH_ROUTE && token) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL(safeReturnPath(request.nextUrl.searchParams.get("redirect")), request.url));
   }
 
   return NextResponse.next();

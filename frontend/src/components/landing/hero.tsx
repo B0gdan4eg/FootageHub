@@ -1,20 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { normalizeAssetUrl, saveDownloadIntent } from "@/lib/download-intent";
 import { ACCENT } from "../brand";
 import { LocalizedContent, type LandingLanguage } from "./localized-content";
 
 export function Hero({ language = "ru" }: { language?: LandingLanguage }) {
   const [url, setUrl] = useState("");
-  const [stage, setStage] = useState<"idle" | "loading" | "ready">("idle");
-  const fakeFile = "After-Effects-Cinematic-Trailer.aep";
+  const [error, setError] = useState("");
 
   const submit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!url) return;
-    setStage("loading");
-    setTimeout(() => setStage("ready"), 1200);
+    const normalized = normalizeAssetUrl(url);
+    if (!normalized) {
+      setError("Введите ссылку на файл Envato, Freepik или Motion Array");
+      return;
+    }
+    if (!saveDownloadIntent(normalized)) {
+      setError("Не удалось сохранить ссылку. Откройте кабинет и вставьте её там.");
+      return;
+    }
+    setError("");
+    // Discard any home-page replay SDK before showing private content.
+    window.location.assign("/dashboard");
   };
 
   return (
@@ -104,7 +112,7 @@ export function Hero({ language = "ru" }: { language?: LandingLanguage }) {
                 alignItems: "center",
                 maxWidth: 560,
                 marginBottom: 20,
-                borderColor: stage === "ready" ? "var(--green)" : "var(--border-strong)",
+                borderColor: error ? "#FF6B6B" : "var(--border-strong)",
                 transition: "border-color 0.3s",
               }}
             >
@@ -128,7 +136,10 @@ export function Hero({ language = "ru" }: { language?: LandingLanguage }) {
               <input
                 type="text"
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                onChange={(e) => { setUrl(e.target.value); setError(""); }}
+                aria-label={language === "en" ? "File link" : "Ссылка на файл"}
+                aria-invalid={!!error}
+                aria-describedby={error ? "hero-link-error" : undefined}
                 placeholder="elements.envato.com/..."
                 style={{
                   flex: 1,
@@ -143,58 +154,11 @@ export function Hero({ language = "ru" }: { language?: LandingLanguage }) {
                 }}
               />
               <button type="submit" className="btn btn-primary" style={{ padding: "12px 20px", fontSize: 14 }}>
-                {stage === "idle" && "→ Получить"}
-                {stage === "loading" && (
-                  <span className="flex items-center gap-2">
-                    <span className="spinner" />
-                    Ищу…
-                  </span>
-                )}
-                {stage === "ready" && "✓ Готово"}
+                → Получить
               </button>
             </form>
 
-            {stage === "ready" && (
-              <div
-                className="card"
-                style={{
-                  padding: 16,
-                  maxWidth: 560,
-                  marginBottom: 20,
-                  borderColor: "var(--green)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 8,
-                    background: "rgba(0, 224, 97, 0.15)",
-                    color: "var(--green)",
-                    display: "grid",
-                    placeItems: "center",
-                  }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{fakeFile}</div>
-                  <div style={{ fontSize: 12, color: "var(--text-dim)" }} className="mono">
-                    218 МБ · готово к скачиванию
-                  </div>
-                </div>
-                <Link href="/auth" className="btn btn-primary" style={{ padding: "8px 14px", fontSize: 13 }}>
-                  Скачать
-                </Link>
-              </div>
-            )}
+            {error && <p id="hero-link-error" role="alert" style={{ color: "#FF6B6B", marginBottom: 20 }}>{error}</p>}
 
             <div className="flex items-center gap-4" style={{ flexWrap: "wrap", fontSize: 13, color: "var(--text-dim)" }}>
               <span className="flex items-center gap-2">

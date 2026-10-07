@@ -10,8 +10,9 @@ import time
 from playwright.async_api import async_playwright
 
 from media_bot.utils.freepik_utils.logger import logger
+from shared.provider_storage import cookie_directory
 
-COOKIE_DIR = os.path.dirname(__file__)
+COOKIE_DIR = cookie_directory("motion", os.path.dirname(__file__))
 COOKIE_INDEX_FILE = os.path.join(COOKIE_DIR, "motion_cookie_index.txt")
 
 

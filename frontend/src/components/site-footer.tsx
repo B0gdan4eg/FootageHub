@@ -76,7 +76,7 @@ export function SiteFooter({ language = "ru" }: { language?: LandingLanguage }) 
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
               {PRODUCT.map(([label, href]) => (
                 <li key={label}>
-                  <Link href={href} style={{ fontSize: 14, color: "var(--text-dim)" }} className="nav-l">
+                  <Link href={language === "en" && (href === "/" || href.startsWith("/#")) ? `/en${href.slice(1)}` : href} style={{ fontSize: 14, color: "var(--text-dim)" }} className="nav-l">
                     {label}
                   </Link>
                 </li>
@@ -155,8 +155,8 @@ export function SiteFooter({ language = "ru" }: { language?: LandingLanguage }) 
             <a href="/assets/public_offer_footagehub.pdf" target="_blank" rel="noopener noreferrer">
               Оферта
             </a>
-            <a href="#">Политика</a>
-            <a href="#">Правила</a>
+            <Link href="/privacy">Cookie и аналитика</Link>
+            <a href="/assets/public_offer_footagehub.pdf" target="_blank" rel="noopener noreferrer">Правила</a>
           </div>
         </div>
       </div>

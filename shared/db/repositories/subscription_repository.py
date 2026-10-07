@@ -474,6 +474,8 @@ class SubscriptionRepository(BaseRepository[Subscription]):
         daily_limit: Optional[int] = None,
         days: int = 30,
         payment_id: Optional[int] = None,
+        *,
+        commit: bool = True,
     ) -> Subscription:
         """
         Создать подписку и начислить кредиты пользователю.
@@ -523,8 +525,11 @@ class SubscriptionRepository(BaseRepository[Subscription]):
                 user.credits = daily_limit
                 print(f"[SUBSCRIPTION] Установлено {daily_limit} кредитов пользователю {user_id}")
 
-        await self.session.commit()
-        await self.session.refresh(subscription)
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(subscription)
+        else:
+            await self.session.flush()
         return subscription
 
     async def create_subscription_from_plan(
@@ -532,6 +537,8 @@ class SubscriptionRepository(BaseRepository[Subscription]):
         user_id: int,
         plan_key: str,
         payment_id: Optional[int] = None,
+        *,
+        commit: bool = True,
     ) -> Subscription:
         """Create a subscription from the shared price list plan key."""
         from media_bot.utils.price_loader import get_plan_config
@@ -549,4 +556,5 @@ class SubscriptionRepository(BaseRepository[Subscription]):
             daily_limit=plan.get("daily_limit"),
             days=plan.get("period_days", 30),
             payment_id=payment_id,
+            commit=commit,
         )
