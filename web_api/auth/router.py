@@ -233,19 +233,21 @@ async def get_link_status(
 ):
     """Получить статус запроса привязки (polling с фронтенда)."""
     result = await db.execute(
-        select(BotLinkRequest).where(
+        select(BotLinkRequest)
+        .where(
             and_(
                 BotLinkRequest.id == request_id,
                 BotLinkRequest.web_user_id == current_user.id,
             )
         )
+        .with_for_update()
     )
     req = result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Запрос не найден")
 
     # Проверяем истечение
-    if req.status == "PENDING" and req.expires_at < datetime.utcnow():
+    if req.status in {"PENDING", "CONFIRMED"} and req.expires_at < datetime.utcnow():
         req.status = "EXPIRED"
         await db.commit()
 
@@ -255,6 +257,8 @@ async def get_link_status(
     if req.status == "CONFIRMED":
         new_token = create_access_token(req.bot_user_id)
         response["access_token"] = new_token
+        req.status = "CONSUMED"
+        await db.commit()
 
     return response
 
@@ -304,7 +308,7 @@ def _verify_telegram_auth(data: TelegramAuthData) -> bool:
     expected_hash = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
 
     # Проверяем что данные не старше 24 часов
-    if time.time() - data.auth_date > 86400:
+    if not -300 <= time.time() - data.auth_date <= 86400:
         return False
 
     return hmac.compare_digest(expected_hash, data.hash)
@@ -374,13 +378,15 @@ async def qr_start(db: AsyncSession = Depends(get_db)):
 @router.get("/qr/status/{token}")
 async def qr_status(token: str, db: AsyncSession = Depends(get_db)):
     """Поллинг статуса QR-сессии. При CONFIRMED — выдаёт JWT и профиль."""
-    result = await db.execute(select(QrLoginSession).where(QrLoginSession.token == token))
+    result = await db.execute(
+        select(QrLoginSession).where(QrLoginSession.token == token).with_for_update()
+    )
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Сессия входа не найдена")
 
     # Помечаем истёкшие
-    if session.status == "PENDING" and session.expires_at < datetime.utcnow():
+    if session.status in {"PENDING", "CONFIRMED"} and session.expires_at < datetime.utcnow():
         session.status = "EXPIRED"
         await db.commit()
 
@@ -392,5 +398,7 @@ async def qr_status(token: str, db: AsyncSession = Depends(get_db)):
         if user:
             response["access_token"] = create_access_token(user.id)
             response["user"] = _build_user_response(user).model_dump()
+            session.status = "CONSUMED"
+            await db.commit()
 
     return response

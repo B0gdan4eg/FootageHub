@@ -1,7 +1,7 @@
 """SMSC.ru SMS client for Russian phone verification."""
 
 import logging
-import random
+import secrets
 from datetime import datetime, timedelta
 
 import httpx
@@ -14,7 +14,7 @@ from web_api.config import config
 
 def _generate_code() -> str:
     """Generate 6-digit verification code."""
-    return f"{random.randint(100000, 999999)}"
+    return str(100000 + secrets.randbelow(900000))
 
 
 async def _count_today_sms(db: AsyncSession, phone: str) -> int:
@@ -111,6 +111,7 @@ async def verify_sms_code(db: AsyncSession, phone: str, code: str) -> bool:
         )
         .order_by(SmsVerification.created_at.desc())
         .limit(1)
+        .with_for_update()
     )
     record = result.scalar_one_or_none()
     if not record:

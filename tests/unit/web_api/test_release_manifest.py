@@ -78,7 +78,7 @@ def test_failed_release_restores_configuration_and_retained_images(tmp_path, mon
     def output(args, **kwargs):
         commands.append(args)
         if args[:2] == ("docker", "inspect"):
-            return json.dumps([{"Mounts": []}])
+            return json.dumps([{"Mounts": [], "State": {"Health": {"Status": "healthy"}}}])
         if args[:3] == ("docker", "image", "inspect"):
             return "a" * 40 if "org.opencontainers" in args[-1] else "sha256:" + "c" * 64
         if "psql" in args:
@@ -106,9 +106,19 @@ def test_failed_release_restores_configuration_and_retained_images(tmp_path, mon
     assert (root / ".env").read_text() == "PRIVATE=retained\n"
     assert "rollback-" in (root / ".release.env").read_text()
     assert not (root / "deployed-release.json").exists()
-    recreation = [command for command in commands if "compose" in command and "up" in command]
+    recreation = [
+        command
+        for command in commands
+        if "compose" in command and "up" in command and "frontend" in command
+    ]
     assert len(recreation) == (2 if failure == "health" else 0)
     assert all("postgres" not in command for command in recreation)
+    database_updates = [
+        command
+        for command in commands
+        if "compose" in command and "up" in command and "postgres" in command
+    ]
+    assert len(database_updates) == (2 if failure == "health" else 0)
 
 
 def test_browser_cleanup_preserves_sessions_and_symlink_targets(tmp_path):
