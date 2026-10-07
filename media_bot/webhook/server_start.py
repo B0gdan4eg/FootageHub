@@ -2,9 +2,11 @@ import uvicorn
 from fastapi import FastAPI
 
 from media_bot.webhook import cryptobot, internal, webpay
+from shared.error_tracking import TrackingHTTPMiddleware
 
 # Создаём FastAPI приложение
 app = FastAPI()
+app.add_middleware(TrackingHTTPMiddleware)
 app.include_router(webpay.router)
 app.include_router(cryptobot.router)
 app.include_router(internal.router)

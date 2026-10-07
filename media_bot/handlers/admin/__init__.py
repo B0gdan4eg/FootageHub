@@ -5,6 +5,7 @@ This module combines all admin functionality from separate sub-modules.
 """
 
 from aiogram import Router
+from aiogram.filters import BaseFilter
 
 # Import from individual modules
 from media_bot.handlers.admin import (
@@ -45,8 +46,16 @@ from media_bot.handlers.admin.subscriptions import (
     receive_subscription_user_id,
 )
 
+
 # Combine all routers into one
+class AdminAccessFilter(BaseFilter):
+    async def __call__(self, event):
+        return bool(event.from_user and await is_admin(event.from_user.id))
+
+
 router = Router()
+router.message.filter(AdminAccessFilter())
+router.callback_query.filter(AdminAccessFilter())
 router.include_router(core.router)
 router.include_router(stats.router)
 router.include_router(credits.router)

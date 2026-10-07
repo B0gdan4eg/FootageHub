@@ -12,6 +12,7 @@ from aiogram.enums import ParseMode
 
 from ai_bot.config import config
 from ai_bot.handlers import setup_handlers
+from shared import error_tracking
 
 # Configure logging
 logging.basicConfig(
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 async def main():
     """Main entry point for AI Bot"""
+    error_tracking.configure("ai-bot")
     # Validate configuration
     try:
         config.validate()
@@ -30,13 +32,12 @@ async def main():
         return
 
     logger.info("Starting AI Bot...")
-    logger.info(f"Bot token: {config.AI_BOT_TOKEN[:10]}...")
-    logger.info(f"Database URL: {config.DATABASE_URL.split('@')[-1]}")
 
     # Initialize bot and dispatcher
     bot = Bot(token=config.AI_BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
     dp = Dispatcher()
+    dp.update.outer_middleware(error_tracking.TrackingMiddleware())
 
     # Setup handlers
     main_router = setup_handlers()
@@ -47,8 +48,10 @@ async def main():
         logger.info("Bot started successfully! Polling for updates...")
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     except Exception as e:
+        error_tracking.report_exception(e)
         logger.error(f"Error during polling: {e}")
     finally:
+        await error_tracking.shutdown()
         await bot.session.close()
         logger.info("Bot stopped.")
 

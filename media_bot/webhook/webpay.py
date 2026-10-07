@@ -3,22 +3,25 @@ import logging
 from urllib.parse import parse_qs
 
 from aiogram.enums.parse_mode import ParseMode
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 
-from media_bot.config import WEBPAY_SIGNING_KEY
+from media_bot.config import WEBPAY_SANDBOX, WEBPAY_SIGNING_KEY
 from media_bot.handlers.messages import PERPETUAL_CREDITS_PURCHASED, SUBSCRIPTION_ACTIVATED
 from media_bot.services import BotServices
 from media_bot.utils.price_loader import load_subscription_plans
-from media_bot.webpay_utils import get_webpay_api
 from shared.db.models import ServiceType, SubscriptionType
 from shared.db.repositories import PaymentRepository, SubscriptionRepository, UserRepository
 from shared.db.session import get_session
+from shared.error_tracking import report_exception
+from shared.payment_validation import positive_amount, verify_webpay_signature, webpay_amount
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-async def handle_perpetual_credits_purchase(session, user_id: int, order_id: str, plan_key: str):
+async def handle_perpetual_credits_purchase(
+    session, user_id: int, order_id: str, plan_key: str, amount, currency
+):
     """
     Обработка покупки несгораемых кредитов (без создания подписки).
 
@@ -44,17 +47,18 @@ async def handle_perpetual_credits_purchase(session, user_id: int, order_id: str
 
     # Находим пользователя
     user_repo = UserRepository(session)
-    user = await user_repo.get_by_telegram_id(user_id)
+    user = await user_repo.get_by_telegram_id(user_id, lock=True)
     if not user:
         logger.warning(f"⚠️ [WEBPAY] Пользователь {user_id} не найден")
         return
 
     # Проверяем платеж в БД
     payment_repo = PaymentRepository(session)
-    payment = await payment_repo.get_by_invoice_id(order_id)
+    payment = await payment_repo.get_by_invoice_id(order_id, lock=True)
     if not payment:
         logger.warning(f"⚠️ [WEBPAY] Платеж с order_id {order_id} не найден в БД")
         return
+    validate_payment(payment, user.id, plan_key, amount, currency)
 
     # Проверяем, что платеж еще не обработан
     if payment.status == "success":
@@ -64,10 +68,10 @@ async def handle_perpetual_credits_purchase(session, user_id: int, order_id: str
     # Добавить кредиты пользователю
     old_credits = user.credits
     user.credits += quantity
+    payment.status = "success"
     await session.commit()
 
     # Отметить платёж как успешный
-    await payment_repo.mark_success(order_id)
 
     logger.info(
         f"✅ [WEBPAY] Perpetual credits: {quantity} credits added to user {user_id} "
@@ -109,16 +113,15 @@ async def webpay_webhook(request: Request):
         body_str = body.decode("utf-8")
 
         # Парсим URL-encoded данные
-        parsed = parse_qs(body_str)
+        parsed = parse_qs(body_str, keep_blank_values=True)
+        if any(len(values) != 1 for values in parsed.values()):
+            raise HTTPException(status_code=400, detail="Duplicate payment fields")
         # parse_qs возвращает списки значений, берем первый элемент
         params = {k: v[0] if v else None for k, v in parsed.items()}
 
-        print(f"💳 [WEBPAY] Получено уведомление: {params}")
-
         # Проверяем подпись
-        webpay_api = get_webpay_api()
-        if not webpay_api.verify_webhook_signature(params, WEBPAY_SIGNING_KEY):
-            logger.warning(f"❌ [WEBPAY] Неверная подпись! Params: {params}")
+        if not verify_webpay_signature(params, WEBPAY_SIGNING_KEY):
+            logger.warning("[WEBPAY] Invalid notification signature")
             return Response(
                 content='{"code": 400, "message": "Invalid signature"}', status_code=400
             )
@@ -129,6 +132,8 @@ async def webpay_webhook(request: Request):
         transaction_id = params.get("transaction_id")
         amount = params.get("amount")
         currency = params.get("currency_id")
+        if params.get("payment_method") == "test" and not WEBPAY_SANDBOX:
+            raise HTTPException(status_code=400, detail="Test payment rejected")
 
         # Проверяем, что платеж успешный (payment_type = 1 или 4)
         if payment_type not in ["1", "4"]:
@@ -167,22 +172,25 @@ async def webpay_webhook(request: Request):
             if plan_key and plan_key.startswith("perpetual_credits_"):
                 logger.info("💎 [WEBPAY] Detected perpetual credits purchase, delegating to handler")
                 # Обрабатываем покупку несгораемых кредитов
-                await handle_perpetual_credits_purchase(session, user_id, order_id, plan_key)
+                await handle_perpetual_credits_purchase(
+                    session, user_id, order_id, plan_key, amount, currency
+                )
                 return Response(content='{"code": 200}', status_code=200)
 
             # Находим пользователя
             user_repo = UserRepository(session)
-            user = await user_repo.get_by_telegram_id(user_id)
+            user = await user_repo.get_by_telegram_id(user_id, lock=True)
             if not user:
                 logger.warning(f"⚠️ [WEBPAY] Пользователь {user_id} не найден")
                 return Response(content='{"code": 200}', status_code=200)
 
             # Проверяем платеж в БД
             payment_repo = PaymentRepository(session)
-            payment = await payment_repo.get_by_invoice_id(order_id)
+            payment = await payment_repo.get_by_invoice_id(order_id, lock=True)
             if not payment:
                 logger.warning(f"⚠️ [WEBPAY] Платеж с order_id {order_id} не найден в БД")
                 return Response(content='{"code": 200}', status_code=200)
+            validate_payment(payment, user.id, plan_key, amount, currency)
 
             # Проверяем, что платеж еще не обработан
             if payment.status == "success":
@@ -210,10 +218,12 @@ async def webpay_webhook(request: Request):
                 daily_limit=daily_limit,
                 days=period_days,
                 payment_id=payment.id,
+                commit=False,
             )
 
             # Помечаем платеж как успешный
-            await payment_repo.mark_success(order_id)
+            payment.status = "success"
+            await session.commit()
 
             logger.info(
                 f"✅ [WEBPAY] Подписка {plan_key} создана: user={user_id}, period={period_days}д, limits=(total={total_limit}, daily={daily_limit})"
@@ -256,9 +266,30 @@ async def webpay_webhook(request: Request):
         # Возвращаем успешный ответ
         return Response(content='{"code": 200}', status_code=200)
 
+    except HTTPException:
+        raise
     except Exception as e:
+        report_exception(e)
         logger.error(f"❌ [WEBPAY] Ошибка обработки webhook: {e}", exc_info=True)
         import traceback
 
         traceback.print_exc()
-        return Response(content='{"code": 500}', status_code=200)
+        return Response(content='{"code": 500}', status_code=500)
+
+
+def validate_payment(payment, user_id, plan_key, amount, currency):
+    expected = webpay_amount(payment.amount) if payment.currency == "RUB" else payment.amount
+    try:
+        matches = positive_amount(amount) == positive_amount(expected)
+    except ValueError:
+        matches = False
+    if (
+        payment.user_id != user_id
+        or payment.plan_key != plan_key
+        or currency != "BYN"
+        or payment.currency not in {"RUB", "BYN"}
+        or not matches
+    ):
+        raise HTTPException(status_code=400, detail="Payment does not match invoice")
+    if payment.status not in {"success", "pending"}:
+        raise HTTPException(status_code=409, detail="Payment is not pending")

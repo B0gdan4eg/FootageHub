@@ -5,12 +5,13 @@ Web-api calls these endpoints to perform downloads via media-bot,
 since the browser automation (nodriver, playwright) runs only here.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from media_bot.services import BotServices
+from shared.internal_auth import require_internal_auth
 
-router = APIRouter(prefix="/internal")
+router = APIRouter(prefix="/internal", dependencies=[Depends(require_internal_auth)])
 
 
 class DownloadRequest(BaseModel):
