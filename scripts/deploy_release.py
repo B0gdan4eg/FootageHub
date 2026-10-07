@@ -12,6 +12,20 @@ from pathlib import Path
 SERVICES = ("media-bot", "ai-bot", "web-api", "frontend")
 
 
+def clear_browser_locks(directory):
+    """Remove only Chromium lock links after the owning bot has stopped."""
+    profiles = [directory]
+    if directory.is_dir():
+        profiles += [
+            child for child in directory.iterdir() if child.is_dir() and not child.is_symlink()
+        ]
+    for profile in profiles:
+        for name in ("SingletonLock", "SingletonSocket", "SingletonCookie"):
+            path = profile / name
+            if path.is_symlink():
+                path.unlink()
+
+
 def validate_manifest(manifest):
     if not re.fullmatch(r"[0-9a-f]{40}", manifest.get("revision", "")):
         raise ValueError("Invalid Git revision")
@@ -49,10 +63,44 @@ def deploy(root, incoming):
             shutil.copy2(root / name, backup / name)
             os.chmod(backup / name, 0o600)
     old_images = {}
+    previous_container = json.loads(run("docker", "inspect", "footagehub-media-bot", capture=True))[
+        0
+    ]
+    browser_roots = [root / "browser-profiles" / "freepik"]
+    for mount in previous_container.get("Mounts", []):
+        if (
+            mount.get("Type") == "volume"
+            and mount.get("Destination") == "/app/media_bot/utils/envato_utils/.profiles"
+        ):
+            browser_roots.append(Path(mount["Source"]))
     for service in SERVICES:
         # Commit retains historical container edits as well as the underlying image.
         tag = "footagehub-" + service + ":rollback-" + backup.name
         run("docker", "commit", "footagehub-" + service, tag, capture=True)
+        if service == "media-bot":
+            # A running-container snapshot includes Freepik's volatile profile locks.
+            # Clean them in an isolated copy, keeping the live bot and session data intact.
+            temporary = "footagehub-rollback-prep-" + backup.name
+            code = "from pathlib import Path; p=Path('/app/media_bot/utils/freepik_utils/.profile'); [(p/n).unlink() for n in ['SingletonLock','SingletonSocket','SingletonCookie'] if (p/n).is_symlink()]"
+            run(
+                "docker",
+                "create",
+                "--name",
+                temporary,
+                "--network",
+                "none",
+                "--entrypoint",
+                "python",
+                tag,
+                "-c",
+                code,
+                capture=True,
+            )
+            try:
+                run("docker", "start", "-a", temporary)
+                run("docker", "commit", temporary, tag, capture=True)
+            finally:
+                run("docker", "rm", temporary, capture=True)
         old_images[service] = run(
             "docker", "image", "inspect", tag, "--format", "{{.Id}}", capture=True
         )
@@ -168,6 +216,9 @@ def deploy(root, incoming):
                 "Pending migrations require a separately reviewed migration/rollback procedure"
             )
         switched = True
+        compose("stop", "media-bot")
+        for directory in browser_roots:
+            clear_browser_locks(directory)
         compose("up", "-d", "--no-deps", "--force-recreate", *SERVICES)
         for attempt in range(45):
             try:
@@ -212,6 +263,9 @@ def deploy(root, incoming):
         )
         os.chmod(root / ".release.env", 0o600)
         if switched:
+            compose("stop", "media-bot")
+            for directory in browser_roots:
+                clear_browser_locks(directory)
             compose("up", "-d", "--no-deps", "--force-recreate", *SERVICES)
         print("ROLLBACK retained at " + str(backup), flush=True)
         raise
