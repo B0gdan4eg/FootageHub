@@ -173,6 +173,8 @@ def deploy(root, incoming):
             try:
                 for url in [
                     "http://127.0.0.1:8080/api/health",
+                    # Media server starts only after browser/download initialization.
+                    "http://127.0.0.1:8443/openapi.json",
                     "http://127.0.0.1:3000/en",
                     "http://127.0.0.1:3000/google0dee334ff7a6a8b1.html",
                 ]:
