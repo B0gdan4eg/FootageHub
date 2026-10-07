@@ -11,6 +11,15 @@ LINK = "https://video-downloads.elements.envatousercontent.com/files/1/file.mov"
 
 
 class RetryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_health_probe_detects_dead_browser(self):
+        d = EnvatoDownloader()
+        self.assertFalse(await d.browser_healthy())
+        sender = AsyncMock(side_effect=ConnectionRefusedError())
+        d.browser = SimpleNamespace(main_tab=SimpleNamespace(send=sender))
+        self.assertFalse(await d.browser_healthy())
+        sender.side_effect = None
+        self.assertTrue(await d.browser_healthy())
+
     def downloader(self):
         d = EnvatoDownloader()
         d.http_fast = SimpleNamespace(get=AsyncMock(return_value=None))

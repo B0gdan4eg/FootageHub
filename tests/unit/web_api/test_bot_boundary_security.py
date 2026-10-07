@@ -13,6 +13,7 @@ from shared.internal_auth import internal_headers, require_internal_auth
     "url,provider",
     [
         ("https://elements.envato.com/asset-ABC123", "envato"),
+        ("https://app.envato.com/stock-video/1111f4fa-5b8c-4734-9582-ff71de6dbef3", "envato"),
         ("https://www.freepik.com/premium-photo/asset_123.htm", "freepik"),
         ("https://www.magnific.com/premium-photo/asset_123.htm", "freepik"),
         ("https://magnific.com/premium-photo/asset_123.htm", "freepik"),
@@ -32,6 +33,7 @@ def test_supported_asset_urls(url, provider):
         "https://127.0.0.1/a",
         "https://169.254.169.254/latest/meta-data",
         "https://elements.envato.com.evil.example/a",
+        "https://app.envato.com.evil.example/a",
         "https://user:pass@elements.envato.com/a",
         "https://elements.envato.com:8080/a",
         "https://elements.envato.com/",

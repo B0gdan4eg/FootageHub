@@ -54,6 +54,7 @@ class LinkProcessor:
         self._envato_restart_lock = asyncio.Lock()
         self._freepik_restart_lock = asyncio.Lock()
         self._motion_restart_lock = asyncio.Lock()
+        self._envato_restart_retry_at = 0.0
         # Active-task tracking: restart must not close a browser with in-flight
         # pages; concurrent tasks keep per-task ids so responses cannot mix.
         self._usage_lock = asyncio.Lock()
@@ -139,7 +140,10 @@ class LinkProcessor:
         if self.envato_http_enabled:
             return
         async with self._envato_restart_lock:
-            if self.envato_request_count >= self.restart_after:
+            healthy = self.envato_downloader and await self.envato_downloader.browser_healthy()
+            if not healthy or self.envato_request_count >= self.restart_after:
+                if time.monotonic() < self._envato_restart_retry_at:
+                    raise RuntimeError("Envato browser recovery is temporarily unavailable")
                 # Не прерываем чужие активные задачи: откладываем рестарт.
                 if await self._active_count("envato") > 0:
                     logger.info(
@@ -159,7 +163,14 @@ class LinkProcessor:
                     await self.envato_downloader.__aexit__(None, None, None)
 
                 # Create new downloader
-                self.envato_downloader = await EnvatoDownloader().__aenter__()
+                try:
+                    self.envato_downloader = await EnvatoDownloader().__aenter__()
+                    if not await self.envato_downloader.browser_healthy():
+                        raise RuntimeError("Envato browser recovery failed its health check")
+                except Exception:
+                    self._envato_restart_retry_at = time.monotonic() + 30
+                    raise
+                self._envato_restart_retry_at = 0.0
                 self.envato_request_count = 0
 
                 print("[LinkProcessor] Envato browser restarted successfully")

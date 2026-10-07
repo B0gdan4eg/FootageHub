@@ -242,6 +242,15 @@ class EnvatoDownloader:
         self._active = 0
         self._last_manual_alert = 0.0
 
+    async def browser_healthy(self):
+        if not self.context:
+            return False
+        try:
+            await asyncio.wait_for(self.context.cookies(), timeout=3)
+            return True
+        except Exception:
+            return False
+
     async def _track_start(self) -> None:
         async with self._active_lock:
             self._active += 1
