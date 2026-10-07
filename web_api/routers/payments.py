@@ -73,7 +73,14 @@ async def create_invoice(
     positive_amount(plan.get("price", 0))
     # Формат order_id для web-пользователей
     order_id = f"WEBUSER_{current_user.id}_{body.plan_key}_{body.provider}_{uuid.uuid4().hex[:16]}"
-    order_id += funnel_tracking.attribution_suffix(body.analytics_id)
+    if body.analytics_id is not None:
+        # Keep attributed orders below WebPay's 64-character merchant order limit.
+        # User, plan and provider are already stored in the Payment row.
+        order_id = (
+            "WEBUSER_"
+            + uuid.uuid4().hex[:16]
+            + funnel_tracking.attribution_suffix(body.analytics_id)
+        )
 
     # Сохраняем платёж в БД
     payment = Payment(

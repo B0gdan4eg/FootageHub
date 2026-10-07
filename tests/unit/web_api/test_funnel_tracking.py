@@ -72,3 +72,27 @@ async def test_completion_emitted_only_after_commit_and_never_on_duplicate():
         db.execute.side_effect = [SimpleNamespace(scalar_one_or_none=lambda: payment)]
         await payments._process_web_payment(ORDER, db, "webpay", "10", "BYN")
         assert capture.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_attributed_invoice_is_compact_and_preserves_payment_ownership():
+    db = AsyncMock()
+    with patch.object(
+        payments, "_load_plans", return_value={"monthly_50": {"price": 100}}
+    ), patch.object(
+        payments,
+        "_create_webpay_invoice",
+        AsyncMock(return_value="https://payment.example/invoice"),
+    ):
+        result = await payments.create_invoice(
+            payments.CreateInvoiceRequest(
+                plan_key="monthly_50", provider="webpay", analytics_id=ANONYMOUS
+            ),
+            SimpleNamespace(id=123),
+            db,
+        )
+    assert len(result["order_id"]) <= 64
+    assert result["order_id"].startswith("WEBUSER_")
+    assert result["order_id"].endswith(tracking.attribution_suffix(ANONYMOUS))
+    record = db.add.call_args.args[0]
+    assert record.user_id == 123 and record.plan_key == "monthly_50"
