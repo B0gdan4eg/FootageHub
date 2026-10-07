@@ -20,11 +20,38 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
 
 Base = declarative_base()
+
+
+class AuthIdentity(Base):
+    __tablename__ = "auth_identities"
+    __table_args__ = (
+        UniqueConstraint("provider", "subject", name="uq_auth_identity_subject"),
+        UniqueConstraint("provider", "user_id", name="uq_auth_identity_user"),
+    )
+    id = Column(Integer, primary_key=True)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    provider = Column(String(16), nullable=False)
+    subject = Column(String(255), nullable=False)
+    email = Column(String(320), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class GoogleOAuthState(Base):
+    __tablename__ = "google_oauth_states"
+    state_hash = Column(String(64), primary_key=True)
+    binding_hash = Column(String(64), nullable=False)
+    nonce = Column(String(128), nullable=False)
+    verifier = Column(String(128), nullable=False)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    return_path = Column(String(1024), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+
 
 # ==================== ENUMS ====================
 

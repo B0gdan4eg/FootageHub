@@ -1,7 +1,7 @@
 -r base.txt
 
 # JWT авторизация
-PyJWT==2.15.1
+PyJWT[crypto]==2.15.1
 passlib[bcrypt]==1.7.4
 
 # Multipart (для загрузки файлов если понадобится)
