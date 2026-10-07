@@ -43,6 +43,16 @@ const config = { ga4: "G-TEST123456", posthog: "phc_test123", posthogHost: "http
 const choice = (statistics, replay) => ({ statistics, replay, expires: Date.now() + 100000 });
 const events = h => (h.window.dataLayer || []).map(args => Array.from(args)).filter(args => args[0] === "event");
 
+test("Google sign-in telemetry keeps method but excludes identity and tokens", () => {
+  const h = harness();
+  h.location.pathname = "/dashboard";
+  h.api.syncAnalytics(config, choice(true, false), "/dashboard");
+  h.api.trackEvent("login", { method: "google", email: "PRIVATE", sub: "PRIVATE", token: "PRIVATE" });
+  const login = h.captures.find(e => e.event === "login");
+  assert.equal(login.properties.method, "google");
+  assert.equal(JSON.stringify(login).includes("PRIVATE"), false);
+});
+
 test("funnel page entries are consent-gated and deduplicated; checkout identity is anonymous", () => {
   const h = harness();
   assert.equal(h.api.checkoutAnalyticsId(), undefined);
