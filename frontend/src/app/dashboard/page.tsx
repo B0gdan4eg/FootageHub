@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { usersApi, downloadsApi, type User } from "@/lib/api";
 import { PageShell } from "@/components/page-shell";
 import { ACCENT } from "@/components/brand";
+import { GoogleSignIn } from "@/components/google-sign-in";
 import { assetFileName, normalizeAssetUrl, takeDownloadIntent } from "@/lib/download-intent";
 
 interface DownloadItem {
@@ -153,6 +154,7 @@ export default function DashboardPage() {
 
   return (
     <PageShell>
+      {user && <GoogleSignIn connect />}
       <main style={{ padding: "40px 0 80px", position: "relative" }}>
         <div className="container-page">
           {/* Header row */}

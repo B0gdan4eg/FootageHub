@@ -10,13 +10,15 @@ export function setToken(token: string): void {
 }
 
 export function clearToken(): void {
+  void fetch((process.env.NEXT_PUBLIC_API_URL || "/api") + "/auth/logout", { method: "POST", credentials: "include", keepalive: true });
+  document.cookie = "auth_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
   document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 }
 
 export function getToken(): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(/(^| )access_token=([^;]+)/);
-  return match ? decodeURIComponent(match[2]) : null;
+  return match ? decodeURIComponent(match[2]) : document.cookie.includes("auth_session=1") ? "cookie-session" : null;
 }
 
 export function isAuthenticated(): boolean {

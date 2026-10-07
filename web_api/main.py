@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from shared import error_tracking, funnel_tracking
+from web_api.auth.google import router as google_router
 from web_api.auth.router import router as auth_router
 from web_api.config import config, validate_security_config
 from web_api.routers.admin import router as admin_router
@@ -52,6 +53,7 @@ app.add_middleware(
 
 # Роутеры
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(google_router, prefix="/api/auth", tags=["auth"])
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(downloads_router, prefix="/api/downloads", tags=["downloads"])
 app.include_router(ai_router, prefix="/api/ai", tags=["ai"])

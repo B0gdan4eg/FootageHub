@@ -9,6 +9,7 @@ import { trackEvent } from "@/lib/analytics";
 import { PageShell } from "@/components/page-shell";
 import Link from "next/link";
 import { safeReturnPath } from "@/lib/navigation";
+import { GoogleSignIn } from "@/components/google-sign-in";
 
 type Status = "init" | "waiting" | "confirmed" | "expired" | "error";
 
@@ -190,6 +191,7 @@ function AuthPageInner() {
             </p>
           </div>
 
+          <GoogleSignIn returnPath={redirect} />
           {/* Init */}
           {status === "init" && (
             <div style={{ textAlign: "center", padding: "30px 0" }}>

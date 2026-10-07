@@ -142,6 +142,10 @@ async def link_bot_account(
     3. Бот-пользователь подтверждает в боте
     4. Web-пользователь опрашивает /link-status/{request_id}
     """
+    if current_user.tg_id is not None or not current_user.phone_number:
+        raise HTTPException(
+            status_code=400, detail="Sign in with Telegram and connect Google in account settings"
+        )
     repo = UserRepository(db)
     bot_user = await repo.get_by_referral_code(body.referral_code)
 

@@ -2,7 +2,7 @@
 
 from typing import AsyncGenerator
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -34,15 +34,21 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
+    request: Request = None,
 ) -> User:
     """Dependency: authenticated user from JWT."""
-    if not credentials:
+    cookie_token = request.cookies.get("fh_session") if request else None
+    if not credentials and cookie_token and request.method not in {"GET", "HEAD", "OPTIONS"}:
+        if request.headers.get("origin") not in config.CORS_ORIGINS:
+            raise HTTPException(status_code=403, detail="Invalid request origin")
+    token = credentials.credentials if credentials else cookie_token
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Не авторизован",
         )
     try:
-        user_id = decode_token(credentials.credentials)
+        user_id = decode_token(token)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
