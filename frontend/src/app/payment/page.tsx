@@ -43,6 +43,10 @@ function PaymentPageInner() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (searchParams.get("payment") === "cancel") trackEvent("payment_cancelled", { provider: "webpay" });
+  }, [searchParams]);
+
+  useEffect(() => {
     paymentsApi
       .plans()
       .then((res) => {

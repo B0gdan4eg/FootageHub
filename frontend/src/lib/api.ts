@@ -4,7 +4,7 @@
  */
 
 import axios from "axios";
-import { assetProvider, trackEvent } from "./analytics";
+import { assetProvider, checkoutAnalyticsId, trackEvent } from "./analytics";
 import { clearToken } from "./auth";
 import { safeReturnPath } from "./navigation";
 
@@ -144,7 +144,7 @@ export const paymentsApi = {
   create: async (plan_key: string, provider: "webpay" | "cryptobot") => {
     trackEvent("begin_checkout", { plan: plan_key, provider });
     try {
-      const result = await api.post<{ invoice_url: string; order_id: string }>("/payments/create", { plan_key, provider });
+      const result = await api.post<{ invoice_url: string; order_id: string }>("/payments/create", { plan_key, provider, analytics_id: checkoutAnalyticsId() });
       trackEvent("payment_redirect", { plan: plan_key, provider });
       return result;
     } catch (error) {

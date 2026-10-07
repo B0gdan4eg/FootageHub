@@ -62,8 +62,18 @@ function allowed() {
 }
 
 type EventName = "login" | "navigation_click" | "plan_selected" | "begin_checkout" |
-  "payment_redirect" | "checkout_error" | "download_requested" | "download_link_ready" | "download_error";
-type EventDetails = { provider?: string; plan?: string; destination?: string; duration_ms?: number };
+  "payment_redirect" | "checkout_error" | "download_requested" | "download_link_ready" | "download_error" |
+  "registration_started" | "registration_qr_ready" | "registration_telegram_opened" |
+  "registration_completed" | "registration_failed" | "payment_page_viewed" | "payment_cancelled";
+type EventDetails = { provider?: string; plan?: string; destination?: string; duration_ms?: number; reason?: string };
+
+export function checkoutAnalyticsId(): string | undefined {
+  try {
+    if (!allowed() || !posthogStarted) return;
+    const id = posthog.get_distinct_id();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : undefined;
+  } catch { return; }
+}
 
 export function trackEvent(name: EventName, details: EventDetails = {}) {
   try {
@@ -76,8 +86,11 @@ export function trackEvent(name: EventName, details: EventDetails = {}) {
     if (details.destination && ["auth", "dashboard", "payment", "ai", "home", "pricing", "telegram_bot", "telegram_channel", "telegram_support"].includes(details.destination)) safe.destination = details.destination;
     if (Number.isFinite(details.duration_ms)) safe.duration_ms = Math.max(0, Math.min(3600000, Math.round(details.duration_ms!)));
     if (name === "login") safe.method = "telegram_qr";
+    if (name.startsWith("registration_")) safe.method = "telegram_qr";
+    if (details.reason && ["session_creation", "expired", "rejected", "consumed", "plans_load"].includes(details.reason)) safe.reason = details.reason;
     if (gaStarted) window.gtag?.("event", name, { ...fields, ...safe, send_to: config.ga4 });
     if (posthogStarted) posthog.capture(name, { ...fields, ...safe });
+    return true;
   } catch { /* Analytics must never interrupt auth, checkout or downloads. */ }
 }
 
@@ -165,7 +178,10 @@ export function syncAnalytics(nextConfig: AnalyticsConfig, nextConsent: Analytic
     }
     if (consent.statistics && lastPosthogPage !== path) {
       posthog.capture("$pageview", fields);
+      if (path === "/auth") trackEvent("registration_started");
+      if (path === "/payment") trackEvent("payment_page_viewed");
       lastPosthogPage = path;
+      window.dispatchEvent?.(new Event("fh-analytics-ready"));
     }
     if (replayAllowed && !replayStarted) {
       posthog.startSessionRecording();
