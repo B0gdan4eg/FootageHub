@@ -14,6 +14,10 @@ from shared.internal_auth import internal_headers, require_internal_auth
     [
         ("https://elements.envato.com/asset-ABC123", "envato"),
         ("https://www.freepik.com/premium-photo/asset_123.htm", "freepik"),
+        ("https://www.magnific.com/premium-photo/asset_123.htm", "freepik"),
+        ("https://magnific.com/premium-photo/asset_123.htm", "freepik"),
+        ("https://ru.freepik.com/premium-video/asset_123", "freepik"),
+        ("https://es.magnific.com/premium-photo/asset_123.htm", "freepik"),
         ("https://motionarray.com/stock-video/asset-123/", "motion"),
     ],
 )
@@ -38,6 +42,22 @@ def test_supported_asset_urls(url, provider):
 def test_server_rejects_private_and_spoofed_asset_urls(url):
     with pytest.raises(ValueError):
         validate_asset_url(url, "envato")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://www.magnific.com.evil.example/asset_123.htm",
+        "https://evil.magnific.com/asset_123.htm",
+        "https://ru.freepik.com.evil.example/asset_123.htm",
+        "https://user:pass@www.magnific.com/asset_123.htm",
+        "https://www.magnific.com:8080/asset_123.htm",
+        "http://www.magnific.com/asset_123.htm",
+    ],
+)
+def test_freepik_rejects_spoofed_and_unsafe_hosts(url):
+    with pytest.raises(ValueError):
+        validate_asset_url(url, "freepik")
 
 
 @pytest.mark.asyncio

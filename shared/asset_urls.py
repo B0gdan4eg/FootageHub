@@ -7,6 +7,31 @@ HOSTS = {
     "motion": {"motionarray.com", "www.motionarray.com"},
 }
 
+# Keep Freepik's canonical and regional resource hosts aligned with its downloader.
+# Exact names avoid accepting arbitrary subdomains or lookalike domains.
+HOSTS["freepik"] = {
+    prefix + root
+    for root in ("freepik.com", "magnific.com")
+    for prefix in (
+        "",
+        "www.",
+        "ru.",
+        "en.",
+        "es.",
+        "fr.",
+        "de.",
+        "it.",
+        "pt.",
+        "br.",
+        "pl.",
+        "nl.",
+        "ja.",
+        "jp.",
+        "ko.",
+        "kr.",
+    )
+}
+
 
 def validate_asset_url(url, platform):
     if not isinstance(url, str) or len(url) > 4096 or any(ord(char) < 32 for char in url):
