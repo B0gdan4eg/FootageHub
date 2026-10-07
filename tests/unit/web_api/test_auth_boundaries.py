@@ -53,8 +53,8 @@ async def test_confirmed_qr_is_consumed_once_under_row_lock(monkeypatch):
     monkeypatch.setattr(auth, "create_access_token", mint)
     first = await auth.qr_status("opaque-token", db)
     assert first["status"] == "CONFIRMED" and first["access_token"] == "issued-token"
-    assert record.status == "CONSUMED"
-    assert await auth.qr_status("opaque-token", db) == {"status": "CONSUMED"}
+    assert record.status == "EXPIRED"
+    assert await auth.qr_status("opaque-token", db) == {"status": "EXPIRED"}
     mint.assert_called_once()
     assert db.execute.call_args.args[0]._for_update_arg is not None
 

@@ -257,7 +257,8 @@ async def get_link_status(
     if req.status == "CONFIRMED":
         new_token = create_access_token(req.bot_user_id)
         response["access_token"] = new_token
-        req.status = "CONSUMED"
+        # The deployed PostgreSQL enum uses EXPIRED for terminal requests.
+        req.status = "EXPIRED"
         await db.commit()
 
     return response
@@ -398,7 +399,8 @@ async def qr_status(token: str, db: AsyncSession = Depends(get_db)):
         if user:
             response["access_token"] = create_access_token(user.id)
             response["user"] = _build_user_response(user).model_dump()
-            session.status = "CONSUMED"
+            # Consume once using an existing enum value; no schema change required.
+            session.status = "EXPIRED"
             await db.commit()
 
     return response
