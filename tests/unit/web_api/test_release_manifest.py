@@ -77,6 +77,8 @@ def test_failed_release_restores_configuration_and_retained_images(tmp_path, mon
 
     def output(args, **kwargs):
         commands.append(args)
+        if args[:2] == ("docker", "inspect"):
+            return json.dumps([{"Mounts": []}])
         if args[:3] == ("docker", "image", "inspect"):
             return "a" * 40 if "org.opencontainers" in args[-1] else "sha256:" + "c" * 64
         if "psql" in args:
@@ -107,3 +109,20 @@ def test_failed_release_restores_configuration_and_retained_images(tmp_path, mon
     recreation = [command for command in commands if "compose" in command and "up" in command]
     assert len(recreation) == (2 if failure == "health" else 0)
     assert all("postgres" not in command for command in recreation)
+
+
+def test_browser_cleanup_preserves_sessions_and_symlink_targets(tmp_path):
+    profile = tmp_path / "profile"
+    profile.mkdir()
+    target = tmp_path / "private-session.json"
+    target.write_text("preserved")
+    lock = profile / "SingletonLock"
+    try:
+        lock.symlink_to(target)
+    except OSError:
+        pytest.skip("Windows symlink creation requires Developer Mode")
+    (profile / "Cookies").write_text("browser-cookie-storage")
+    release.clear_browser_locks(profile)
+    assert not lock.is_symlink()
+    assert target.read_text() == "preserved"
+    assert (profile / "Cookies").read_text() == "browser-cookie-storage"
