@@ -86,6 +86,10 @@ async def google_start(
     require_enabled()
     check_origin(request)
     user = await get_current_user(credentials, db, request) if body.connect else None
+    if user and user.tg_id is None:
+        raise HTTPException(
+            status_code=400, detail="Sign in with Telegram before connecting Google"
+        )
     state, binding, nonce, verifier = [secrets.token_urlsafe(32) for _ in range(4)]
     await db.execute(
         delete(GoogleOAuthState).where(GoogleOAuthState.expires_at < datetime.utcnow())

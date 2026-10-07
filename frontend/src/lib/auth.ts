@@ -9,8 +9,8 @@ export function setToken(token: string): void {
   document.cookie = `access_token=${encodeURIComponent(token)}; expires=${expires}; path=/; SameSite=Lax`;
 }
 
-export function clearToken(): void {
-  void fetch((process.env.NEXT_PUBLIC_API_URL || "/api") + "/auth/logout", { method: "POST", credentials: "include", keepalive: true });
+export async function clearToken(): Promise<void> {
+  await fetch((process.env.NEXT_PUBLIC_API_URL || "/api") + "/auth/logout", { method: "POST", credentials: "include", keepalive: true }).catch(() => {});
   document.cookie = "auth_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
   document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 }

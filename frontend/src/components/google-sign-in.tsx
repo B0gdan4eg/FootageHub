@@ -49,7 +49,7 @@ export function GoogleSignIn({ connect = false, returnPath = "/dashboard" }: { c
     </>}
     {error && <p role="alert" style={{ color: "var(--red, #ef4444)" }}>{error}</p>}
     {connect && <button type="button" onClick={() => {
-      void api.post("/auth/logout").then(() => { clearToken(); window.location.assign("/auth"); }).catch(() => setError("Не удалось выйти. Попробуйте снова."));
+      void clearToken().then(() => window.location.assign("/auth")).catch(() => setError("Не удалось выйти. Попробуйте снова."));
     }} style={{ marginTop: 10 }}>Выйти из аккаунта</button>}
   </div>;
 }

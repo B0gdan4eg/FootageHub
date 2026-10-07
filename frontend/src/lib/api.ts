@@ -27,9 +27,9 @@ api.interceptors.request.use((config) => {
 // Редирект на /auth при 401
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      clearToken();
+      await clearToken();
       if (window.location.pathname !== "/auth") {
         const redirect = safeReturnPath(window.location.pathname + window.location.search);
         window.location.href = `/auth?redirect=${encodeURIComponent(redirect)}`;
