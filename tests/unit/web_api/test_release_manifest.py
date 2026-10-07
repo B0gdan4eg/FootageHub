@@ -1,6 +1,8 @@
 """Reject incomplete or mutable releases before any server mutation."""
 import importlib.util
+import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -53,3 +55,55 @@ def test_partial_release_rejected():
     del value["images"]["media-bot"]
     with pytest.raises(ValueError):
         release.validate_manifest(value)
+
+
+@pytest.mark.parametrize("failure", ["migration", "health"])
+def test_failed_release_restores_configuration_and_retained_images(tmp_path, monkeypatch, failure):
+    root = tmp_path / "server"
+    incoming = tmp_path / "incoming"
+    root.mkdir()
+    incoming.mkdir()
+    original = "services: original-production-config\n"
+    (root / "docker-compose.yml").write_text(original)
+    (root / ".env").write_text("PRIVATE=retained\n")
+    (incoming / "docker-compose.yml").write_text("services: new-config\n")
+    (incoming / "release.json").write_text(json.dumps(manifest()))
+    for provider in ["envato", "freepik", "motion"]:
+        folder = root / "provider-cookies" / provider
+        folder.mkdir(parents=True)
+        (folder / "cookies.json").write_text("[]")
+    (root / "browser-profiles" / "freepik").mkdir(parents=True)
+    commands = []
+
+    def output(args, **kwargs):
+        commands.append(args)
+        if args[:3] == ("docker", "image", "inspect"):
+            return "a" * 40 if "org.opencontainers" in args[-1] else "sha256:" + "c" * 64
+        if "psql" in args:
+            return "old" if failure == "migration" else "head"
+        if "compose" in args and "run" in args:
+            return "head"
+        return ""
+
+    def run(args, **kwargs):
+        commands.append(args)
+        if "pg_dump" in args:
+            kwargs["stdout"].write(b"simulated backup")
+        return SimpleNamespace(returncode=0)
+
+    def unhealthy(*args, **kwargs):
+        raise RuntimeError("unhealthy release")
+
+    monkeypatch.setattr(release.subprocess, "check_output", output)
+    monkeypatch.setattr(release.subprocess, "run", run)
+    monkeypatch.setattr(release.urllib.request, "urlopen", unhealthy)
+    monkeypatch.setattr(release.time, "sleep", lambda seconds: None)
+    with pytest.raises(RuntimeError):
+        release.deploy(root, incoming)
+    assert (root / "docker-compose.yml").read_text() == original
+    assert (root / ".env").read_text() == "PRIVATE=retained\n"
+    assert "rollback-" in (root / ".release.env").read_text()
+    assert not (root / "deployed-release.json").exists()
+    recreation = [command for command in commands if "compose" in command and "up" in command]
+    assert len(recreation) == (2 if failure == "health" else 0)
+    assert all("postgres" not in command for command in recreation)
