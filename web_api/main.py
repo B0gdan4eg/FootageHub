@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from shared import error_tracking
+from shared import error_tracking, funnel_tracking
 from web_api.auth.router import router as auth_router
 from web_api.config import config, validate_security_config
 from web_api.routers.admin import router as admin_router
@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await error_tracking.shutdown()
+        await funnel_tracking.shutdown()
 
 
 app = FastAPI(

@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
+from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -12,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from shared import funnel_tracking
 from shared.db.models import Payment, User
 from shared.db.repositories.subscription_repository import SubscriptionRepository
 from web_api.config import config
@@ -47,6 +49,7 @@ def _load_plans() -> dict:
 class CreateInvoiceRequest(BaseModel):
     plan_key: str
     provider: Literal["webpay", "cryptobot"]
+    analytics_id: UUID | None = None
 
 
 @router.get("/plans")
@@ -70,6 +73,14 @@ async def create_invoice(
     positive_amount(plan.get("price", 0))
     # Формат order_id для web-пользователей
     order_id = f"WEBUSER_{current_user.id}_{body.plan_key}_{body.provider}_{uuid.uuid4().hex[:16]}"
+    if body.analytics_id is not None:
+        # Keep attributed orders below WebPay's 64-character merchant order limit.
+        # User, plan and provider are already stored in the Payment row.
+        order_id = (
+            "WEBUSER_"
+            + uuid.uuid4().hex[:16]
+            + funnel_tracking.attribution_suffix(body.analytics_id)
+        )
 
     # Сохраняем платёж в БД
     payment = Payment(
@@ -230,6 +241,7 @@ async def _process_web_payment(
     except Exception:
         await db.rollback()
         raise
+    funnel_tracking.payment_completed(order_id, payment.plan_key, provider)
 
 
 @router.get("/history")

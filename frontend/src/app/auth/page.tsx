@@ -43,6 +43,17 @@ function AuthPageInner() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const trackedLogin = useRef(false);
+  const trackedQr = useRef<string | null>(null);
+
+  useEffect(() => {
+    const ready = () => {
+      if (status === "waiting" && token && trackedQr.current !== token
+        && trackEvent("registration_qr_ready")) trackedQr.current = token;
+    };
+    ready();
+    window.addEventListener("fh-analytics-ready", ready);
+    return () => window.removeEventListener("fh-analytics-ready", ready);
+  }, [status, token]);
 
   const clearTimers = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -65,6 +76,7 @@ function AuthPageInner() {
       const err = e as { response?: { data?: { detail?: string } } };
       setError(err.response?.data?.detail || "Не удалось создать сессию входа");
       setStatus("error");
+      trackEvent("registration_failed", { reason: "session_creation" });
     }
   }, [clearTimers]);
 
@@ -87,6 +99,7 @@ function AuthPageInner() {
       if (left <= 0) {
         clearTimers();
         setStatus("expired");
+        trackEvent("registration_failed", { reason: "expired" });
       }
     };
     tick();
@@ -101,12 +114,14 @@ function AuthPageInner() {
           if (!trackedLogin.current) {
             trackedLogin.current = true;
             trackEvent("login");
+            trackEvent("registration_completed");
           }
           setStatus("confirmed");
           setTimeout(() => router.push(redirect), 900);
         } else if (["EXPIRED", "REJECTED", "CONSUMED"].includes(res.data.status)) {
           clearTimers();
           setStatus("expired");
+          trackEvent("registration_failed", { reason: res.data.status.toLowerCase() });
         }
       } catch {
         /* временная сетевая ошибка — продолжаем поллинг */
@@ -214,6 +229,7 @@ function AuthPageInner() {
 
               <a
                 href={deeplink}
+                onClick={() => trackEvent("registration_telegram_opened")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-tg"

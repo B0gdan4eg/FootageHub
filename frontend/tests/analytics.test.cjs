@@ -21,6 +21,7 @@ function harness() {
   let options;
   let recording = false;
   const posthog = {
+    get_distinct_id: () => "019a31f2-1234-7000-8000-123456789abc",
     init: (_, config) => { options = config; },
     capture: (event, properties) => {
       const value = options.before_send({ event, properties: { ...properties, $current_url: "SECRET", $initial_current_url: "SECRET", utm_source: "SECRET" } });
@@ -41,6 +42,24 @@ function harness() {
 const config = { ga4: "G-TEST123456", posthog: "phc_test123", posthogHost: "https://eu.i.posthog.com" };
 const choice = (statistics, replay) => ({ statistics, replay, expires: Date.now() + 100000 });
 const events = h => (h.window.dataLayer || []).map(args => Array.from(args)).filter(args => args[0] === "event");
+
+test("funnel page entries are consent-gated and deduplicated; checkout identity is anonymous", () => {
+  const h = harness();
+  assert.equal(h.api.checkoutAnalyticsId(), undefined);
+  h.location.pathname = "/auth";
+  h.api.syncAnalytics(config, choice(true, false), "/auth");
+  h.api.syncAnalytics(config, choice(true, false), "/auth");
+  h.api.trackEvent("registration_qr_ready");
+  assert.equal(h.captures.filter(e => e.event === "registration_started").length, 1);
+  assert.equal(h.api.checkoutAnalyticsId(), "019a31f2-1234-7000-8000-123456789abc");
+  h.location.pathname = "/payment";
+  h.api.syncAnalytics(config, choice(true, false), "/payment");
+  assert.equal(h.captures.filter(e => e.event === "payment_page_viewed").length, 1);
+  h.api.trackEvent("registration_failed", { reason: "PRIVATE", phone: "PRIVATE", token: "PRIVATE" });
+  assert.equal(JSON.stringify(h.captures).includes("PRIVATE"), false);
+  h.api.saveConsent(false, false);
+  assert.equal(h.api.checkoutAnalyticsId(), undefined);
+});
 
 test("no vendor scripts or events without permission", () => {
   const h = harness();
