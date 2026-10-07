@@ -114,7 +114,6 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot, lang:
         if downloaded:
             await message.answer(msg("ALREADY_DOWNLOADED", lang))
 
-            BotServices.link_processor
             file_path = await _submit_download(url, with_license)
 
             if file_path:
@@ -170,7 +169,6 @@ async def handle_link(message: types.Message, state: FSMContext, bot: Bot, lang:
         # Отправляем сообщение о загрузке
         thinking_msg = await message.answer(msg("PROCESSING_LINK", lang))
 
-        BotServices.link_processor
         file_path = await _submit_download(url, with_license)
 
         if file_path:
