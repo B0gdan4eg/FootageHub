@@ -21,7 +21,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     networks:
       - footagehub-network
     healthcheck:
@@ -72,6 +72,7 @@ services:
       - envato_browser_profiles:/app/media_bot/utils/envato_utils/.profiles
       - ./provider-cookies:/var/lib/footagehub/provider-cookies
       - ./browser-profiles/freepik:/app/media_bot/utils/freepik_utils/.profile
+      - ./backups:/opt/backups
     networks:
       - footagehub-network
     ports:
@@ -140,6 +141,7 @@ services:
       - GA4_MEASUREMENT_ID=${GA4_MEASUREMENT_ID:-}
       - POSTHOG_PROJECT_TOKEN=${POSTHOG_PROJECT_TOKEN:-}
       - POSTHOG_HOST=${POSTHOG_HOST:-https://eu.i.posthog.com}
+      - POSTHOG_ERROR_TRACKING_ENABLED=${POSTHOG_ERROR_TRACKING_ENABLED:-1}
     networks:
       - footagehub-network
     ports:

@@ -81,7 +81,7 @@ async def handle_qr_confirm(callback: CallbackQuery):
     tg_id = callback.from_user.id
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(QrLoginSession).where(QrLoginSession.id == session_id)
+            select(QrLoginSession).where(QrLoginSession.id == session_id).with_for_update()
         )
         qr = result.scalar_one_or_none()
 
@@ -128,7 +128,7 @@ async def handle_qr_reject(callback: CallbackQuery):
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(QrLoginSession).where(QrLoginSession.id == session_id)
+            select(QrLoginSession).where(QrLoginSession.id == session_id).with_for_update()
         )
         qr = result.scalar_one_or_none()
         if qr and qr.status == "PENDING":

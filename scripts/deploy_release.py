@@ -154,6 +154,17 @@ def deploy(root, incoming):
             )
         else:
             profile.mkdir(mode=0o700)
+    # Preserve earlier scheduled backups that were written inside the bot container.
+    backup_storage = root / "backups"
+    backup_storage.mkdir(mode=0o700, exist_ok=True)
+    code = "from pathlib import Path; print('\\n'.join(str(p) for p in Path('/opt/backups').glob('*.sql')))"
+    for source in run(
+        "docker", "exec", "footagehub-media-bot", "python", "-c", code, capture=True
+    ).splitlines():
+        destination = backup_storage / Path(source).name
+        if not destination.exists():
+            run("docker", "cp", "footagehub-media-bot:" + source, str(destination))
+            os.chmod(destination, 0o600)
     # Save and validate a database backup before any migrations or container changes.
     dump = backup / "botdb.dump"
     with dump.open("wb") as output:
@@ -171,6 +182,7 @@ def deploy(root, incoming):
             check=True,
         )
     switched = False
+    database_config_applied = False
     try:
         shutil.copy2(incoming / "docker-compose.yml", root / "docker-compose.yml")
         values = {
@@ -215,6 +227,17 @@ def deploy(root, incoming):
             raise RuntimeError(
                 "Pending migrations require a separately reviewed migration/rollback procedure"
             )
+        # Apply only database operational configuration. The existing local image and
+        # persistent volume are retained; schemas have already been checked above.
+        database_config_applied = True
+        compose("up", "-d", "--no-deps", "postgres")
+        for attempt in range(30):
+            state = json.loads(run("docker", "inspect", "footagehub-db", capture=True))[0]["State"]
+            if state.get("Health", {}).get("Status") == "healthy":
+                break
+            if attempt == 29:
+                raise RuntimeError("Database did not become healthy after configuration update")
+            time.sleep(1)
         switched = True
         compose("stop", "media-bot")
         for directory in browser_roots:
@@ -262,6 +285,8 @@ def deploy(root, incoming):
             "\n".join(key + "=" + value for key, value in rollback_values.items()) + "\n"
         )
         os.chmod(root / ".release.env", 0o600)
+        if database_config_applied:
+            compose("up", "-d", "--no-deps", "postgres")
         if switched:
             compose("stop", "media-bot")
             for directory in browser_roots:

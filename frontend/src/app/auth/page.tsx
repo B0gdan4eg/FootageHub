@@ -104,7 +104,7 @@ function AuthPageInner() {
           }
           setStatus("confirmed");
           setTimeout(() => router.push(redirect), 900);
-        } else if (res.data.status === "EXPIRED" || res.data.status === "REJECTED") {
+        } else if (["EXPIRED", "REJECTED", "CONSUMED"].includes(res.data.status)) {
           clearTimers();
           setStatus("expired");
         }

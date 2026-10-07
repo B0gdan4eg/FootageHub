@@ -12,10 +12,3 @@ psutil==7.2.2
 
 # Excel export for admin panel
 openpyxl==3.1.5
-
-# File sending utilities
-aiosend==2.1.2
-
-# Legacy dependencies (to be reviewed)
-dotenv==0.9.9
-unicorn==2.1.3

@@ -98,3 +98,4 @@ provider-cookies/
 browser-profiles/
 .release.env
 **/*cookies*.json
+*.backup

@@ -2,7 +2,8 @@
 
 from datetime import datetime, timedelta
 
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 
 from web_api.config import config
 
@@ -20,10 +21,15 @@ def create_access_token(user_id: int) -> str:
 def decode_token(token: str) -> int:
     """Decode JWT and return user_id (DB primary key)."""
     try:
-        payload = jwt.decode(token, config.JWT_SECRET_KEY, algorithms=[config.JWT_ALGORITHM])
+        payload = jwt.decode(
+            token,
+            config.JWT_SECRET_KEY,
+            algorithms=[config.JWT_ALGORITHM],
+            options={"require": ["sub", "exp", "iat"]},
+        )
         user_id = payload.get("sub")
         if user_id is None:
             raise ValueError("Missing sub claim")
         return int(user_id)
-    except JWTError as e:
+    except InvalidTokenError as e:
         raise ValueError(f"Invalid token: {e}") from e

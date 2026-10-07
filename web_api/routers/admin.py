@@ -105,6 +105,8 @@ async def update_user(
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
     if body.role:
+        if _admin.role != UserRole.ADMIN and body.role != user.role.value:
+            raise HTTPException(status_code=403, detail="Only administrators may change roles")
         try:
             user.role = UserRole(body.role)
         except ValueError:

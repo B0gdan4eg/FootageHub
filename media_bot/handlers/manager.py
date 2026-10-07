@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from aiogram import Bot, Router, types
-from aiogram.filters import Command
+from aiogram.filters import BaseFilter, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import func, select
@@ -18,7 +18,17 @@ from shared.db.repositories import (
 from shared.db.repositories.referral_repository import ReferralRewardRepository
 from shared.db.session import get_session
 
+
+class ManagerAccessFilter(BaseFilter):
+    async def __call__(self, event):
+        if not event.from_user:
+            return False
+        return await is_admin(event.from_user.id) or await is_manager(event.from_user.id)
+
+
 router = Router()
+router.message.filter(ManagerAccessFilter())
+router.callback_query.filter(ManagerAccessFilter())
 
 
 async def is_manager(user_id: int) -> bool:
