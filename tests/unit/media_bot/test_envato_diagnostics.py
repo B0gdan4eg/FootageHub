@@ -218,7 +218,9 @@ class RestartSafetyTests(unittest.IsolatedAsyncioTestCase):
         lp.envato_http_enabled = False
         lp.envato_request_count = 5
         lp.envato_downloader = SimpleNamespace(
-            __aexit__=AsyncMock(), active_tasks=AsyncMock(return_value=0)
+            __aexit__=AsyncMock(),
+            active_tasks=AsyncMock(return_value=0),
+            browser_healthy=AsyncMock(return_value=True),
         )
         await lp._enter("envato")
         with patch("media_bot.utils.envato_utils.test_env.EnvatoDownloader") as factory:
@@ -226,6 +228,38 @@ class RestartSafetyTests(unittest.IsolatedAsyncioTestCase):
             await lp._restart_envato_browser_if_needed()
             factory.assert_not_called()
         await lp._leave("envato")
+
+    async def test_dead_browser_recovers_before_request_limit_and_only_once(self):
+        from media_bot.utils.envato_utils.test_env import LinkProcessor
+
+        lp = LinkProcessor(max_workers=1, restart_after=50)
+        lp.envato_http_enabled = False
+        old = SimpleNamespace(__aexit__=AsyncMock(), browser_healthy=AsyncMock(return_value=False))
+        new = SimpleNamespace(browser_healthy=AsyncMock(return_value=True))
+        lp.envato_downloader = old
+        with patch("media_bot.utils.envato_utils.test_env.EnvatoDownloader") as factory:
+            factory.return_value.__aenter__ = AsyncMock(return_value=new)
+            await asyncio.gather(
+                lp._restart_envato_browser_if_needed(), lp._restart_envato_browser_if_needed()
+            )
+            factory.assert_called_once()
+        old.__aexit__.assert_awaited_once()
+        self.assertIs(lp.envato_downloader, new)
+
+    async def test_failed_recovery_has_cooldown(self):
+        from media_bot.utils.envato_utils.test_env import LinkProcessor
+
+        lp = LinkProcessor(max_workers=1, restart_after=50)
+        lp.envato_http_enabled = False
+        lp.envato_downloader = SimpleNamespace(
+            __aexit__=AsyncMock(), browser_healthy=AsyncMock(return_value=False)
+        )
+        with patch("media_bot.utils.envato_utils.test_env.EnvatoDownloader") as factory:
+            factory.return_value.__aenter__ = AsyncMock(side_effect=RuntimeError("startup failed"))
+            for _ in range(2):
+                with self.assertRaises(RuntimeError):
+                    await lp._restart_envato_browser_if_needed()
+            factory.assert_called_once()
 
     async def test_manager_restart_reports_busy(self):
         from media_bot.utils.envato_utils.test_env import LinkProcessor

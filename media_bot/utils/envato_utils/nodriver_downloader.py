@@ -62,6 +62,15 @@ class EnvatoDownloader(PlaywrightDownloader):
     async def cookies(self):
         return [cookie_dict(c) for c in await self.browser.cookies.get_all()]
 
+    async def browser_healthy(self):
+        if not self.browser:
+            return False
+        try:
+            await asyncio.wait_for(self.browser.main_tab.send(cdp.browser.get_version()), timeout=3)
+            return True
+        except Exception:
+            return False
+
     async def __aenter__(self):
         self.cookie_file = self.cookie_file or get_next_cookie_file()
         self.profile_dir = self.profile_override or _profile_dir_for(self.cookie_file)

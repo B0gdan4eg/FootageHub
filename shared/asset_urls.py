@@ -2,7 +2,7 @@
 from urllib.parse import urlsplit
 
 HOSTS = {
-    "envato": {"elements.envato.com"},
+    "envato": {"elements.envato.com", "app.envato.com"},
     "freepik": {"freepik.com", "www.freepik.com"},
     "motion": {"motionarray.com", "www.motionarray.com"},
 }
